@@ -13,7 +13,7 @@ The project is in active Phase 1 development. The foundation is runnable and tes
 - [x] **Phase 0 — Research and design**: inspect the 0.0.9.627 client baseline, document recovered capabilities, freeze contracts, and define the user flow.
 - [x] **Phase 1 foundation — Local domain core**: SQLite storage, local gateway, letter rules, offline reply fallback, RenderJob state machine, MIDI parsing, tempo and sustain extraction.
 - [x] **Phase 1 music — Local MIDI playback**: offline WAV renderer and local playlist service.
-- [ ] **Phase 2 — Game integration**: restore the writing entry point, map the local gateway to the game client, and add safe backup/rollback patching.
+- [ ] **Phase 2 — Game integration**: restore the writing entry point, map the local gateway to the game client, and add safe backup/rollback patching. Version allow-list and baseline verification are now started in [phase2.md](./docs/phase2.md).
 - [ ] **Phase 3 — Letter experience**: memory, retries, text replies, imported video replies, and external/local model providers.
 - [ ] **Phase 4 — Music experience**: user-facing MIDI upload, preview, audio/video jobs, and playlist UI inside the game flow.
 - [ ] **Phase 5 — Improvisation**: model-assisted composition with both online API and fully local execution paths.
