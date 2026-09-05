@@ -1,0 +1,50 @@
+{
+  "schema": "linli-nocturne.client-baseline",
+  "capturedAt": "2026-09-05T14:44:04.2154514Z",
+  "gameRoot": "D:\\Program Files (x86)\\Steam\\steamapps\\common\\BSide Olivia Lin Test",
+  "version": "0.0.9.627",
+  "files": [
+    {
+      "path": "0.0.9.627/resources/feapp.dat",
+      "exists": true,
+      "length": 27748716,
+      "sha256": "aec900eb0d735bd98b80a32bce3f4c84f67ee0e92b0df811cbc03c37a7426077"
+    },
+    {
+      "path": "0.0.9.627/resources/webplayer.dat",
+      "exists": true,
+      "length": 124331,
+      "sha256": "3dc3cc86786a54ff87d7498e7795d55635e9e2defb20d4f16975c46e324ca94d"
+    },
+    {
+      "path": "0.0.9.627/resources/feplayer.dat",
+      "exists": true,
+      "length": 1516,
+      "sha256": "0289b883a62c391f0f1d24b6088a7fb07d592a98c5b0f6eff3ab931561be0848"
+    },
+    {
+      "path": "0.0.9.627/plugins/Studio/NutStudioUI.dll",
+      "exists": true,
+      "length": 1297376,
+      "sha256": "294dcfe023c84bc83bdd531d8431bf76b2b7a1fbc0941a250ae8f4cf2ed8fa99"
+    },
+    {
+      "path": "0.0.9.627/plugins/Container/NutContainerPlugin.dll",
+      "exists": true,
+      "length": 498144,
+      "sha256": "d78112ca218f805d437d2b03fe4c772c7cb279848dccce16570cbd466fe66ab4"
+    },
+    {
+      "path": "0.0.9.627/NutBase.dll",
+      "exists": true,
+      "length": 5745640,
+      "sha256": "43018d97a13a55ba85c9bf71740ac8323a0f3932b872e3314d504f2542dbea0e"
+    },
+    {
+      "path": "0.0.9.627/assets/songlist.dat",
+      "exists": true,
+      "length": 1162480,
+      "sha256": "6af4a125e1677bb77c0114054c2b8ec14f809a55bf4829fb1f248c267626066f"
+    }
+  ]
+}

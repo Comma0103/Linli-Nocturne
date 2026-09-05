@@ -1,0 +1,8 @@
+{
+  "name": "linli-nocturne",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Local restoration and extension platform for BSide: Olivia Lin",
+  "type": "module",
+  "scripts": { "test": "node --test" }
+}
