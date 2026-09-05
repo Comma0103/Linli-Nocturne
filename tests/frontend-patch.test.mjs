@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { strFromU8, strToU8, zipSync } from 'fflate';
-import { applyFrontendPatch, inspectFrontendArchive, OFFLINE_FEATURE_PATCHES, planFrontendPatch } from '../src/patcher/frontend-archive.js';
+import { strFromU8, strToU8, unzipSync, zipSync } from 'fflate';
+import { applyFrontendPatch, applyOfflineUserSongPatch, inspectFrontendArchive, OFFLINE_FEATURE_PATCHES, planFrontendPatch } from '../src/patcher/frontend-archive.js';
 
 const endpoints = ['/signIn', '/getUserInfo', '/letter/send', '/letter/list', '/letter/detail', '/letter/unread_count', '/letter/share', '/letter/resend', '/addToPlaylist', '/delFromPlaylist', '/searchPlaylist'];
 const midiEndpoints = ['/genObjectUploadUrl', '/midi/generate', '/midi/getGenerateResult', '/midi/cancelGenerate', '/midi/deleteJob', '/midi/listJobs', '/midi/batchGetResult', '/midi/importShareCode', '/searchUserSongs'];
@@ -45,4 +45,19 @@ test('frontend patch applies audited offline feature gates only when all signatu
   assert.match(source, /N3=!0,Ss=!0,wa=\(\{onComplete/);
   assert.doesNotMatch(source, /if\(t\.isOfflineMode\)throw new Ol\(e\)/);
   assert.doesNotMatch(source, /!o\(w\)&&o\(Ss\)\?/);
+});
+
+test('known patched archive can re-enable offline user-song fetch and display', () => {
+  const source = [
+    '/*LinliNocturnePatch:compat-routes-v1*/',
+    '$e();if(w.value){l.value=!1;return}await xe()',
+    'w.value?oe.getSongsByStyle(R.value).filter(q=>f.isDownloaded(q.id)):Q.value?te.value:N.value',
+  ].join(';');
+  const archive = zipSync({ 'assets/main-test.js': strToU8(source) });
+  const result = applyOfflineUserSongPatch(archive);
+  assert.equal(result.alreadyPatched, false);
+  const patched = strFromU8(unzipSync(result.buffer)['assets/main-test.js']);
+  assert.match(patched, /\$e\(\);await xe\(\)/);
+  assert.match(patched, /Q\.value\?te\.value:w\.value\?oe\.getSongsByStyle/);
+  assert.equal(applyOfflineUserSongPatch(result.buffer).alreadyPatched, true);
 });

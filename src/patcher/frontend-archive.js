@@ -12,6 +12,15 @@ export const MIDI_COMPAT_ENDPOINTS = Object.freeze([
 
 const PATCH_MARKER = '/*LinliNocturnePatch:compat-routes-v1*/';
 
+// The currently deployed OliviaSoul-compatible archive has the normal
+// compatibility marker but still lets offline mode suppress the user-song
+// tab. These two audited substitutions are kept separate so they can be
+// applied safely to that known patched archive without reapplying route work.
+export const OFFLINE_USER_SONG_PATCHES = Object.freeze([
+  { id: 'offline-user-song-fetch', from: '$e();if(w.value){l.value=!1;return}await xe()', to: '$e();await xe()', expected: 1 },
+  { id: 'offline-user-song-priority', from: 'w.value?oe.getSongsByStyle(R.value).filter(q=>f.isDownloaded(q.id)):Q.value?te.value:N.value', to: 'Q.value?te.value:w.value?oe.getSongsByStyle(R.value).filter(q=>f.isDownloaded(q.id)):N.value', expected: 1 },
+]);
+
 // These are narrow, version-specific substitutions audited against client
 // 0.0.9.627. Each replacement is counted before writing anything.
 export const OFFLINE_FEATURE_PATCHES = Object.freeze([
@@ -49,6 +58,28 @@ function routeState(source, endpoint) {
 }
 
 function occurrenceCount(source, needle) { return source.split(needle).length - 1; }
+
+export function inspectOfflineUserSongPatches(source) {
+  return Object.fromEntries(OFFLINE_USER_SONG_PATCHES.map(patch => [patch.id, {
+    expected: patch.expected,
+    count: occurrenceCount(source, patch.from),
+    status: occurrenceCount(source, patch.from) === patch.expected ? 'ready' : 'mismatch',
+  }]));
+}
+
+export function applyOfflineUserSongPatch(buffer) {
+  const inspected = inspectFrontendArchive(buffer);
+  if (!inspected.markerPresent) throw new Error('User-song patch requires the known Linli Nocturne archive marker');
+  const plan = inspectOfflineUserSongPatches(inspected.source);
+  if (OFFLINE_USER_SONG_PATCHES.every(patch => occurrenceCount(inspected.source, patch.to) === 1)
+      && OFFLINE_USER_SONG_PATCHES.every(patch => occurrenceCount(inspected.source, patch.from) === 0)) {
+    return { alreadyPatched: true, mainPath: inspected.mainPath, buffer: new Uint8Array(buffer), plan };
+  }
+  const invalid = OFFLINE_USER_SONG_PATCHES.filter(patch => plan[patch.id].status !== 'ready');
+  if (invalid.length) throw new Error(`Offline user-song contract mismatch: ${invalid.map(patch => `${patch.id}(${plan[patch.id].count}/${patch.expected})`).join(', ')}`);
+  const source = OFFLINE_USER_SONG_PATCHES.reduce((text, patch) => text.replace(patch.from, patch.to), inspected.source);
+  return { alreadyPatched: false, mainPath: inspected.mainPath, buffer: zipSync({ ...inspected.entries, [inspected.mainPath]: strToU8(source) }), plan };
+}
 
 export function inspectOfflineFeaturePatches(source) {
   return Object.fromEntries(OFFLINE_FEATURE_PATCHES.map(patch => [patch.id, {
