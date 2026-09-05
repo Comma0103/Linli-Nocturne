@@ -21,6 +21,12 @@ export const OFFLINE_USER_SONG_PATCHES = Object.freeze([
   { id: 'offline-user-song-priority', from: 'w.value?oe.getSongsByStyle(R.value).filter(q=>f.isDownloaded(q.id)):Q.value?te.value:N.value', to: 'Q.value?te.value:w.value?oe.getSongsByStyle(R.value).filter(q=>f.isDownloaded(q.id)):N.value', expected: 1 },
 ]);
 
+export const OFFLINE_MIDI_SUBMIT_PATCHES = Object.freeze([
+  { id: 'offline-midi-submit-handler', from: 'const p=Lt(),{midiWorkflowState:d,proJobInfo:h,midiUploadKey:f,midiFilToFakeVideoMap:y}=de(p),g=b(""),{proStartMidiJob:w,proCancelMidiJob:x}=p', to: 'const p=Lt(),{midiWorkflowState:d,proJobInfo:h,midiUploadKey:f,midiFilToFakeVideoMap:y}=de(p),g=b(""),{proStartMidiJob:w,liteStartMidiJob:K,proCancelMidiJob:x}=p', expected: 1 },
+  { id: 'offline-midi-submit-call', from: 'S?$():await w(f.value,g.value)', to: 'S?$():await K(f.value,g.value)', expected: 1 },
+  { id: 'offline-user-song-recovery', from: '$e();await xe()', to: '$e();await xe();await Lt().liteStartPoll()', expected: 1 },
+]);
+
 // These are narrow, version-specific substitutions audited against client
 // 0.0.9.627. Each replacement is counted before writing anything.
 export const OFFLINE_FEATURE_PATCHES = Object.freeze([
@@ -67,18 +73,30 @@ export function inspectOfflineUserSongPatches(source) {
   }]));
 }
 
-export function applyOfflineUserSongPatch(buffer) {
+function applyKnownPatchSet(buffer, patches, label) {
   const inspected = inspectFrontendArchive(buffer);
-  if (!inspected.markerPresent) throw new Error('User-song patch requires the known Linli Nocturne archive marker');
-  const plan = inspectOfflineUserSongPatches(inspected.source);
-  if (OFFLINE_USER_SONG_PATCHES.every(patch => occurrenceCount(inspected.source, patch.to) === 1)
-      && OFFLINE_USER_SONG_PATCHES.every(patch => occurrenceCount(inspected.source, patch.from) === 0)) {
-    return { alreadyPatched: true, mainPath: inspected.mainPath, buffer: new Uint8Array(buffer), plan };
-  }
-  const invalid = OFFLINE_USER_SONG_PATCHES.filter(patch => plan[patch.id].status !== 'ready');
-  if (invalid.length) throw new Error(`Offline user-song contract mismatch: ${invalid.map(patch => `${patch.id}(${plan[patch.id].count}/${patch.expected})`).join(', ')}`);
-  const source = OFFLINE_USER_SONG_PATCHES.reduce((text, patch) => text.replace(patch.from, patch.to), inspected.source);
+  if (!inspected.markerPresent) throw new Error(`${label} requires the known Linli Nocturne archive marker`);
+  const plan = Object.fromEntries(patches.map(patch => [patch.id, {
+    expected: patch.expected,
+    count: occurrenceCount(inspected.source, patch.from),
+    appliedCount: occurrenceCount(inspected.source, patch.to),
+    status: occurrenceCount(inspected.source, patch.from) === patch.expected ? 'ready'
+      : occurrenceCount(inspected.source, patch.from) === 0 && occurrenceCount(inspected.source, patch.to) === 1 ? 'applied' : 'mismatch',
+  }]));
+  const invalid = patches.filter(patch => plan[patch.id].status === 'mismatch');
+  if (invalid.length) throw new Error(`${label} contract mismatch: ${invalid.map(patch => `${patch.id}(${plan[patch.id].count}/${patch.expected})`).join(', ')}`);
+  const ready = patches.filter(patch => plan[patch.id].status === 'ready');
+  if (ready.length === 0) return { alreadyPatched: true, mainPath: inspected.mainPath, buffer: new Uint8Array(buffer), plan };
+  const source = ready.reduce((text, patch) => text.replace(patch.from, patch.to), inspected.source);
   return { alreadyPatched: false, mainPath: inspected.mainPath, buffer: zipSync({ ...inspected.entries, [inspected.mainPath]: strToU8(source) }), plan };
+}
+
+export function applyOfflineUserSongPatch(buffer) {
+  return applyKnownPatchSet(buffer, OFFLINE_USER_SONG_PATCHES, 'Offline user-song patch');
+}
+
+export function applyOfflineMidiFeaturePatch(buffer) {
+  return applyKnownPatchSet(buffer, [...OFFLINE_USER_SONG_PATCHES, ...OFFLINE_MIDI_SUBMIT_PATCHES], 'Offline MIDI feature patch');
 }
 
 export function inspectOfflineFeaturePatches(source) {

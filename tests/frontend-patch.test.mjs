@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { strFromU8, strToU8, unzipSync, zipSync } from 'fflate';
-import { applyFrontendPatch, applyOfflineUserSongPatch, inspectFrontendArchive, OFFLINE_FEATURE_PATCHES, planFrontendPatch } from '../src/patcher/frontend-archive.js';
+import { applyFrontendPatch, applyOfflineMidiFeaturePatch, applyOfflineUserSongPatch, inspectFrontendArchive, OFFLINE_FEATURE_PATCHES, planFrontendPatch } from '../src/patcher/frontend-archive.js';
 
 const endpoints = ['/signIn', '/getUserInfo', '/letter/send', '/letter/list', '/letter/detail', '/letter/unread_count', '/letter/share', '/letter/resend', '/addToPlaylist', '/delFromPlaylist', '/searchPlaylist'];
 const midiEndpoints = ['/genObjectUploadUrl', '/midi/generate', '/midi/getGenerateResult', '/midi/cancelGenerate', '/midi/deleteJob', '/midi/listJobs', '/midi/batchGetResult', '/midi/importShareCode', '/searchUserSongs'];
@@ -60,4 +60,22 @@ test('known patched archive can re-enable offline user-song fetch and display', 
   assert.match(patched, /\$e\(\);await xe\(\)/);
   assert.match(patched, /Q\.value\?te\.value:w\.value\?oe\.getSongsByStyle/);
   assert.equal(applyOfflineUserSongPatch(result.buffer).alreadyPatched, true);
+});
+
+test('known patched archive uses the lite MIDI job handler in offline mode', () => {
+  const source = [
+    '/*LinliNocturnePatch:compat-routes-v1*/',
+    '$e();if(w.value){l.value=!1;return}await xe()',
+    'w.value?oe.getSongsByStyle(R.value).filter(q=>f.isDownloaded(q.id)):Q.value?te.value:N.value',
+    'const p=Lt(),{midiWorkflowState:d,proJobInfo:h,midiUploadKey:f,midiFilToFakeVideoMap:y}=de(p),g=b("") ,{proStartMidiJob:w,proCancelMidiJob:x}=p',
+    'S?$():await w(f.value,g.value)',
+    '$e();await xe()',
+  ].join(';').replace('g=b("") ,', 'g=b(""),');
+  const archive = zipSync({ 'assets/main-test.js': strToU8(source) });
+  const result = applyOfflineMidiFeaturePatch(archive);
+  assert.equal(result.alreadyPatched, false);
+  const patched = strFromU8(unzipSync(result.buffer)['assets/main-test.js']);
+  assert.match(patched, /liteStartMidiJob:K/);
+  assert.match(patched, /S\?\$\(\):await K\(f\.value,g\.value\)/);
+  assert.match(patched, /\$e\(\);await xe\(\);await Lt\(\)\.liteStartPoll\(\)/);
 });
