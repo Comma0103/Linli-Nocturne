@@ -26,7 +26,7 @@ function visibleLetter(letter) {
     createdAt: toSeconds(letter.created_at), repliedAt: replied ? toSeconds(letter.replied_at) : null, error: null };
 }
 
-export function createLocalGateway({ letterService, musicService = null, userProfile = {} }) {
+export function createLocalGateway({ letterService, musicService = null, midiJobService = null, userProfile = {} }) {
   return createServer(async (request, response) => {
     try {
       const url = new URL(request.url, 'http://localhost');
@@ -57,6 +57,35 @@ export function createLocalGateway({ letterService, musicService = null, userPro
         if (!musicService) return sendJson(response, 200, compatResponse({ list: [], hasMore: false, nextCursor: 0, total: 0 }));
         const list = musicService.compatPlaylist();
         return sendJson(response, 200, compatResponse({ list, hasMore: false, nextCursor: 0, total: list.length }));
+      }
+      if (midiJobService && request.method === 'POST' && url.pathname === '/toy/genObjectUploadUrl') {
+        const body = await readJson(request);
+        return sendJson(response, 200, midiJobService.createUpload({ filename: body.filename, uploadUrl: `${url.protocol}//${request.headers.host}` }));
+      }
+      const upload = url.pathname.match(/^\/toy\/midi\/upload\/([^/]+)$/u);
+      if (midiJobService && request.method === 'PUT' && upload) {
+        const chunks = [];
+        for await (const chunk of request) chunks.push(chunk);
+        midiJobService.receiveUpload(decodeURIComponent(upload[1]), Buffer.concat(chunks));
+        return sendJson(response, 200, { ok: true });
+      }
+      if (midiJobService && request.method === 'POST' && url.pathname === '/toy/midi/generate') {
+        const body = await readJson(request);
+        return sendJson(response, 200, midiJobService.generate({ ...body, mediaBaseUrl: `${url.protocol}//${request.headers.host}` }));
+      }
+      if (midiJobService && request.method === 'GET' && url.pathname === '/toy/midi/getGenerateResult') return sendJson(response, 200, midiJobService.get(url.searchParams.get('jobId')) ?? { state: 'failed', error: 'job_not_found' });
+      if (midiJobService && request.method === 'GET' && url.pathname === '/toy/midi/listJobs') return sendJson(response, 200, midiJobService.list({ pageSize: url.searchParams.get('pageSize'), cursor: url.searchParams.get('cursor') }));
+      if (midiJobService && request.method === 'GET' && url.pathname === '/toy/midi/batchGetResult') return sendJson(response, 200, midiJobService.batch((url.searchParams.get('jobIds') ?? '').split(',').filter(Boolean)));
+      if (midiJobService && request.method === 'POST' && url.pathname === '/toy/midi/cancelGenerate') return sendJson(response, 200, midiJobService.cancel((await readJson(request)).jobId) ?? { state: 'failed', error: 'job_not_found' });
+      if (midiJobService && request.method === 'POST' && url.pathname === '/toy/midi/deleteJob') return sendJson(response, 200, { deleted: midiJobService.delete((await readJson(request)).jobId) });
+      if (midiJobService && request.method === 'POST' && url.pathname === '/toy/midi/importShareCode') return sendJson(response, 409, { code: 409, message: 'midi_share_code_not_supported' });
+      if (midiJobService && request.method === 'GET' && url.pathname === '/toy/searchUserSongs') return sendJson(response, 200, { list: [], hasMore: false, nextCursor: 0, total: 0 });
+      const media = url.pathname.match(/^\/toy\/midi\/media\/([^/]+)$/u);
+      if (midiJobService && request.method === 'GET' && media) {
+        const bytes = midiJobService.mediaBytes(media[1]);
+        if (!bytes) return sendJson(response, 404, { error: 'media_not_found' });
+        response.writeHead(200, { 'content-type': 'audio/wav', 'access-control-allow-origin': '*', 'content-length': bytes.length });
+        return response.end(bytes);
       }
       if (request.method === 'POST' && url.pathname === '/toy/addToPlaylist') {
         if (!musicService) return sendJson(response, 503, { code: 503, message: 'music_service_unavailable' });

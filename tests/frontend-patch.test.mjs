@@ -4,6 +4,7 @@ import { strFromU8, strToU8, zipSync } from 'fflate';
 import { applyFrontendPatch, inspectFrontendArchive, planFrontendPatch } from '../src/patcher/frontend-archive.js';
 
 const endpoints = ['/signIn', '/getUserInfo', '/letter/send', '/letter/list', '/letter/detail', '/letter/unread_count', '/letter/share', '/letter/resend', '/addToPlaylist', '/delFromPlaylist', '/searchPlaylist'];
+const midiEndpoints = ['/genObjectUploadUrl', '/midi/generate', '/midi/getGenerateResult', '/midi/cancelGenerate', '/midi/deleteJob', '/midi/listJobs', '/midi/batchGetResult', '/midi/importShareCode', '/searchUserSongs'];
 const fixture = zipSync({ 'assets/main-fixture.js': strToU8(endpoints.map(endpoint => `fetch("${endpoint}")`).join(';')), 'assets/keep.txt': strToU8('keep') });
 
 test('frontend patch plan validates the archive contract', () => {
@@ -24,4 +25,12 @@ test('frontend patch rewrites routes and preserves unrelated assets', () => {
 test('frontend patch refuses a second application', () => {
   const result = applyFrontendPatch(fixture, { serviceUrl: 'http://127.0.0.1:27149' });
   assert.throws(() => planFrontendPatch(result.buffer, { serviceUrl: 'http://127.0.0.1:27149' }), /already contains/);
+});
+
+test('frontend patch can opt into the audited MIDI routes', () => {
+  const midiFixture = zipSync({ 'assets/main-midi.js': strToU8([...endpoints, ...midiEndpoints].map(endpoint => `fetch("${endpoint}")`).join(';')) });
+  const result = applyFrontendPatch(midiFixture, { serviceUrl: 'http://127.0.0.1:27149', includeMidi: true });
+  assert.equal(result.needsPatch.length, 20);
+  const source = strFromU8(inspectFrontendArchive(result.buffer).entries['assets/main-midi.js']);
+  assert.match(source, /http:\/\/127\.0\.0\.1:27149\/toy\/midi\/generate/);
 });

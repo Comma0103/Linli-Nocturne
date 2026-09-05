@@ -5,6 +5,11 @@ export const COMPAT_ENDPOINTS = Object.freeze([
   '/letter/share', '/letter/resend', '/addToPlaylist', '/delFromPlaylist', '/searchPlaylist'
 ]);
 
+export const MIDI_COMPAT_ENDPOINTS = Object.freeze([
+  '/genObjectUploadUrl', '/midi/generate', '/midi/getGenerateResult', '/midi/cancelGenerate',
+  '/midi/deleteJob', '/midi/listJobs', '/midi/batchGetResult', '/midi/importShareCode', '/searchUserSongs'
+]);
+
 const PATCH_MARKER = '/*LinliNocturnePatch:compat-routes-v1*/';
 
 function findMainEntry(entries) {
@@ -32,13 +37,15 @@ export function inspectFrontendArchive(buffer) {
   return { entries, mainPath, source, markerPresent: source.includes(PATCH_MARKER), routes: Object.fromEntries(COMPAT_ENDPOINTS.map(endpoint => [endpoint, routeState(source, endpoint)])) };
 }
 
-export function planFrontendPatch(buffer, { serviceUrl }) {
+export function planFrontendPatch(buffer, { serviceUrl, includeMidi = false }) {
   if (!serviceUrl || !/^https?:\/\/[^/]+/u.test(serviceUrl)) throw new Error('A valid serviceUrl is required');
   const inspected = inspectFrontendArchive(buffer);
   if (inspected.markerPresent) throw new Error('Frontend archive already contains the current patch marker');
-  const mismatches = COMPAT_ENDPOINTS.filter(endpoint => inspected.routes[endpoint].status === 'mismatch');
+  const endpoints = includeMidi ? [...COMPAT_ENDPOINTS, ...MIDI_COMPAT_ENDPOINTS] : [...COMPAT_ENDPOINTS];
+  const routes = Object.fromEntries(endpoints.map(endpoint => [endpoint, routeState(inspected.source, endpoint)]));
+  const mismatches = endpoints.filter(endpoint => routes[endpoint].status === 'mismatch');
   if (mismatches.length) throw new Error(`Frontend endpoint contract mismatch: ${mismatches.join(', ')}`);
-  return { mainPath: inspected.mainPath, entryCount: Object.keys(inspected.entries).length, serviceUrl: serviceUrl.replace(/\/$/u, ''), endpoints: [...COMPAT_ENDPOINTS], alreadyLocal: COMPAT_ENDPOINTS.filter(endpoint => inspected.routes[endpoint].status === 'local'), needsPatch: COMPAT_ENDPOINTS.filter(endpoint => inspected.routes[endpoint].status === 'remote') };
+  return { mainPath: inspected.mainPath, entryCount: Object.keys(inspected.entries).length, serviceUrl: serviceUrl.replace(/\/$/u, ''), includeMidi, endpoints, alreadyLocal: endpoints.filter(endpoint => routes[endpoint].status === 'local'), needsPatch: endpoints.filter(endpoint => routes[endpoint].status === 'remote') };
 }
 
 export function applyFrontendPatch(buffer, options) {
