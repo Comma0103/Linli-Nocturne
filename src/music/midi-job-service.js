@@ -17,10 +17,14 @@ function makeRenderJob(jobId, filename) {
 }
 
 export class MidiJobService {
-  constructor({ clock = () => new Date(), store = null, mediaRoot = null } = {}) {
+  constructor({ clock = () => new Date(), store = null, mediaRoot = null, playbackBaseUrl = '' } = {}) {
     this.clock = clock;
     this.store = store;
     this.mediaRoot = mediaRoot;
+    // The API may remain HTTP for compatibility, while media playback can be
+    // served over HTTPS so the game's HTTPS CEF page does not block it as
+    // mixed content.
+    this.playbackBaseUrl = playbackBaseUrl;
     if (mediaRoot) mkdirSync(mediaRoot, { recursive: true });
     this.uploads = new Map();
     this.jobs = new Map();
@@ -50,7 +54,8 @@ export class MidiJobService {
       const midi = inspectMidi(upload.buffer);
       const rendered = renderMidiToWav(upload.buffer);
       this.media.set(jobId, rendered.wav);
-      const mediaUrl = `${mediaBaseUrl.replace(/\/$/u, '')}/toy/midi/media/${jobId}`;
+      const playbackBaseUrl = this.playbackBaseUrl || mediaBaseUrl;
+      const mediaUrl = `${playbackBaseUrl.replace(/\/$/u, '')}/toy/midi/media/${jobId}`;
       const mediaPath = this.mediaRoot ? join(this.mediaRoot, `${jobId}.wav`) : null;
       if (mediaPath) writeFileSync(mediaPath, rendered.wav);
       const renderJob = transitionJob(makeRenderJob(jobId, upload.filename ?? filename), RenderJobStatus.PRODUCED, { progress: 1 });
@@ -94,19 +99,23 @@ export class MidiJobService {
       id: job.jobId,
       name: job.filename,
       filename: job.filename,
-      audioUrl: job.info?.audioUrl ?? '',
-      videoUrl: job.info?.videoUrls?.[0] ?? job.info?.audioUrl ?? '',
+      audioUrl: this.playbackBaseUrl ? `${this.playbackBaseUrl.replace(/\/$/u, '')}/toy/midi/media/${job.jobId}` : (job.info?.audioUrl ?? ''),
+      videoUrl: this.playbackBaseUrl ? `${this.playbackBaseUrl.replace(/\/$/u, '')}/toy/midi/media/${job.jobId}` : (job.info?.videoUrls?.[0] ?? job.info?.audioUrl ?? ''),
       // Lite's native player does not play a song from videoUrl alone. It
       // selects a TOD/view entry from this array before forwarding the URL to
       // NutWebPlayer. Local MIDI renders are audio-only, so all three TOD
       // slots intentionally point to the same rendered media while keeping
       // the native song contract intact.
       videoByTodView: (() => {
-        const mediaUrl = job.info?.videoUrls?.[0] ?? job.info?.audioUrl ?? '';
+        const storedMediaUrl = job.info?.videoUrls?.[0] ?? job.info?.audioUrl ?? '';
+        const mediaUrl = this.playbackBaseUrl
+          ? `${this.playbackBaseUrl.replace(/\/$/u, '')}/toy/midi/media/${job.jobId}`
+          : storedMediaUrl;
+        const duration = job.info?.duration ?? 0;
         return mediaUrl ? [
-          { url: mediaUrl, tod: 'TOD12', view: 'NI', coverUrl: '' },
-          { url: mediaUrl, tod: 'TOD17', view: 'NI', coverUrl: '' },
-          { url: mediaUrl, tod: 'TOD20', view: 'NI', coverUrl: '' },
+          { url: mediaUrl, tod: 'TOD12', view: 'NI', coverUrl: '', duration },
+          { url: mediaUrl, tod: 'TOD17', view: 'NI', coverUrl: '', duration },
+          { url: mediaUrl, tod: 'TOD20', view: 'NI', coverUrl: '', duration },
         ] : [];
       })(),
       nameKey: job.jobId,

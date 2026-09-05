@@ -30,14 +30,29 @@ test('MIDI jobs survive service recreation through SQLite metadata and media fil
     audioUrl: 'http://127.0.0.1:27149/toy/midi/media/' + job.jobId,
     videoUrl: 'http://127.0.0.1:27149/toy/midi/media/' + job.jobId,
     videoByTodView: [
-      { url: 'http://127.0.0.1:27149/toy/midi/media/' + job.jobId, tod: 'TOD12', view: 'NI', coverUrl: '' },
-      { url: 'http://127.0.0.1:27149/toy/midi/media/' + job.jobId, tod: 'TOD17', view: 'NI', coverUrl: '' },
-      { url: 'http://127.0.0.1:27149/toy/midi/media/' + job.jobId, tod: 'TOD20', view: 'NI', coverUrl: '' },
+      { url: 'http://127.0.0.1:27149/toy/midi/media/' + job.jobId, tod: 'TOD12', view: 'NI', coverUrl: '', duration: second.get(job.jobId).info.duration },
+      { url: 'http://127.0.0.1:27149/toy/midi/media/' + job.jobId, tod: 'TOD17', view: 'NI', coverUrl: '', duration: second.get(job.jobId).info.duration },
+      { url: 'http://127.0.0.1:27149/toy/midi/media/' + job.jobId, tod: 'TOD20', view: 'NI', coverUrl: '', duration: second.get(job.jobId).info.duration },
     ],
     nameKey: job.jobId, performanceType: 'Solo', duration: second.get(job.jobId).info.duration, source: 'linli-nocturne',
   });
   assert.ok(second.mediaBytes(job.jobId).length > 44);
   assert.equal(second.delete(job.jobId), true);
   assert.equal(second.get(job.jobId), null);
+  store.close();
+});
+
+test('MIDI user songs can expose an HTTPS playback origin independently of the API origin', () => {
+  const store = new SqliteStore();
+  const mediaRoot = mkdtempSync(join(tmpdir(), 'Linli MIDI HTTPS Media-'));
+  const service = new MidiJobService({ store, mediaRoot, playbackBaseUrl: 'https://localhost:27150' });
+  const upload = service.createUpload({ filename: 'https.mid', uploadUrl: 'http://127.0.0.1:27149' });
+  service.receiveUpload(upload.key, midi);
+  const job = service.generate({ midiUrl: upload.url, filename: 'https.mid', mediaBaseUrl: 'http://127.0.0.1:27149' });
+  const song = service.listUserSongs().list[0];
+  assert.match(song.videoUrl, new RegExp(`^https://localhost:27150/toy/midi/media/${job.jobId}$`));
+  assert.equal(song.audioUrl, song.videoUrl);
+  assert.equal(song.videoByTodView[0].duration, job.info.duration);
+  assert.ok(song.videoByTodView.every((view) => view.url === song.videoUrl));
   store.close();
 });
