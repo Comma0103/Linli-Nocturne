@@ -106,6 +106,8 @@ for (const naming of ['snake_case', 'camelCase']) test(`MIDI client contract: up
   assert.equal(batch.dailyLimit, 3);
   const commaBatch = await clientRequest(`/toy/midi/batchGetResult?${field('jobIds')}=${job.jobId},${failed.jobId}`);
   assert.deepEqual(commaBatch.results.map(item => item.jobId), [job.jobId, failed.jobId]);
+  const fallbackBatch = await clientRequest('/toy/midi/batchGetResult');
+  assert.deepEqual(new Set(fallbackBatch.results.map(item => item.jobId)), new Set([job.jobId, failed.jobId]));
   const canceled = await clientRequest('/toy/midi/cancelGenerate', { [field('jobId')]: job.jobId });
   assert.equal(canceled.state, 3); // A completed task must stay completed.
   const deleted = await clientRequest('/toy/midi/deleteJob', { [field('jobId')]: failed.jobId });

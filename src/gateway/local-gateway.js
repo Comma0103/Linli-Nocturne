@@ -87,7 +87,11 @@ export function createLocalGateway({ letterService, musicService = null, midiJob
       if (midiJobService && request.method === 'GET' && url.pathname === '/toy/midi/getGenerateResult') return sendJson(response, 200, compatResponse(clientMidiJob(midiJobService.get(url.searchParams.get('job_id') ?? url.searchParams.get('jobId')))));
       if (midiJobService && request.method === 'GET' && url.pathname === '/toy/midi/listJobs') return sendJson(response, 200, compatResponse(clientMidiPage(midiJobService.list(midiPageParams(url.searchParams)))));
       if (midiJobService && request.method === 'GET' && url.pathname === '/toy/midi/batchGetResult') {
-        const { list } = midiJobService.batch(midiJobIds(url.searchParams));
+        const ids = midiJobIds(url.searchParams);
+        // A few 0.0.9.627 builds drop array query parameters while in lite
+        // mode. Returning the newest tasks keeps the client history usable;
+        // explicit IDs still take precedence when they are present.
+        const list = ids.length ? midiJobService.batch(ids).list : midiJobService.list({ pageSize: 20 }).list;
         return sendJson(response, 200, compatResponse({ results: list.map(clientMidiJob), ...midiJobService.dailyUsage() }));
       }
       if (midiJobService && request.method === 'POST' && url.pathname === '/toy/midi/cancelGenerate') {

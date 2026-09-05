@@ -17,5 +17,6 @@ export function midiPageParams(params) {
 
 export function midiJobIds(params) {
   // The original client serializes snake_case arrays as repeated query keys.
-  return [...params.getAll('job_ids'), ...params.getAll('jobIds')].flatMap(value => value.split(',')).filter(Boolean);
+  return [...params.getAll('job_ids'), ...params.getAll('job_ids[]'), ...params.getAll('jobIds'), ...params.getAll('jobIds[]')]
+    .flatMap(value => value.split(',')).filter(Boolean);
 }
