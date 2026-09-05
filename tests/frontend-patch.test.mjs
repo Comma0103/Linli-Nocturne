@@ -71,6 +71,9 @@ test('known patched archive uses the lite MIDI job handler in offline mode', () 
     'S?$():await K(f.value,g.value)',
     '$e();await xe()',
     '!o(w)||o(D).length>0?',
+    'J=b(R.value),Q=j(()=>J.value===so)',
+    'He(async()=>{if(w.value){await W().finally(()=>{a.value=!1}),Po();return}',
+    'o(w)&&o(Ce).length===0?',
   ].join(';');
   const archive = zipSync({ 'assets/main-test.js': strToU8(source) });
   const result = applyOfflineMidiFeaturePatch(archive);
@@ -80,4 +83,7 @@ test('known patched archive uses the lite MIDI job handler in offline mode', () 
   assert.match(patched, /S\?\$\(\):\(await K\(f\.value,g\.value\),await p\.liteStartPoll\(\)\)/);
   assert.match(patched, /\$e\(\);await xe\(\);await Lt\(\)\.liteStartPoll\(\)/);
   assert.match(patched, /!o\(w\)\|\|o\(D\)\.length>0\|\|o\(Ss\)\?/);
+  assert.match(patched, /J=b\(w\.value\?so:R\.value\),Q=j\(\(\)=>J\.value===so\)/);
+  assert.match(patched, /if\(w\.value\)\{await P\(\);await W\(\)/);
+  assert.match(patched, /o\(w\)&&!o\(Q\)&&o\(Ce\)\.length===0\?/);
 });

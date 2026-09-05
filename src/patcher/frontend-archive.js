@@ -27,6 +27,9 @@ export const OFFLINE_MIDI_SUBMIT_PATCHES = Object.freeze([
   { id: 'offline-midi-submit-refresh', from: 'S?$():await K(f.value,g.value)', to: 'S?$():(await K(f.value,g.value),await p.liteStartPoll())', expected: 1 },
   { id: 'offline-user-song-recovery', from: '$e();await xe()', to: '$e();await xe();await Lt().liteStartPoll()', expected: 1 },
   { id: 'offline-upload-section', from: '!o(w)||o(D).length>0?', to: '!o(w)||o(D).length>0||o(Ss)?', expected: 1 },
+  { id: 'offline-user-tab-default', from: 'J=b(R.value),Q=j(()=>J.value===so)', to: 'J=b(w.value?so:R.value),Q=j(()=>J.value===so)', expected: 1 },
+  { id: 'offline-user-tab-load', from: 'He(async()=>{if(w.value){await W().finally(()=>{a.value=!1}),Po();return}', to: 'He(async()=>{if(w.value){await P();await W().finally(()=>{a.value=!1}),Po();return}', expected: 1 },
+  { id: 'offline-user-tab-empty-state', from: 'o(w)&&o(Ce).length===0?', to: 'o(w)&&!o(Q)&&o(Ce).length===0?', expected: 1 },
 ]);
 
 // These are narrow, version-specific substitutions audited against client
