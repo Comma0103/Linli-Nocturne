@@ -20,6 +20,13 @@ export class MusicService {
       manifest: track.manifest, createdAt: this.clock().toISOString() });
   }
 
+  addCompatPlaylistItem(item) {
+    return this.store.addCompatPlaylistItem({ ...item, createdAt: this.clock().toISOString(), manifest: item.manifest ?? { schemaVersion: 1, source: 'compatibility' } });
+  }
+
+  compatPlaylist() { return this.store.compatPlaylist(); }
+  removeCompatPlaylistItem(itemType, itemId) { return this.store.deleteCompatPlaylistItem(itemType, itemId); }
+
   playlist() { return this.store.listPlaylist(); }
   removeFromPlaylist(id) { return this.store.deletePlaylistItem(id); }
 }

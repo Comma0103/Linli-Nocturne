@@ -4,5 +4,10 @@
   "private": true,
   "description": "Local restoration and extension platform for BSide: Olivia Lin",
   "type": "module",
-  "scripts": { "test": "node --test" }
+  "scripts": {
+    "test": "node --test"
+  },
+  "dependencies": {
+    "fflate": "^0.8.3"
+  }
 }

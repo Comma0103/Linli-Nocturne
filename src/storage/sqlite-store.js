@@ -26,7 +26,20 @@ export class SqliteStore {
         source_name TEXT NOT NULL,
         audio_path TEXT,
         manifest_json TEXT NOT NULL,
-        created_at TEXT NOT NULL
+        created_at TEXT NOT NULL,
+        item_type INTEGER,
+        item_id TEXT,
+        name TEXT,
+        name_key TEXT,
+        icon_url TEXT,
+        song_id TEXT,
+        performance_id TEXT,
+        duration REAL,
+        video_duration REAL,
+        video_url TEXT,
+        performance_type TEXT,
+        video_by_tod_view TEXT,
+        UNIQUE(item_type, item_id)
       );
     `);
   }
@@ -77,6 +90,37 @@ export class SqliteStore {
     );
     return this.getPlaylistItem(item.id);
   }
+
+  addCompatPlaylistItem(item) {
+    const existing = this.db.prepare('SELECT * FROM playlist_items WHERE item_type = ? AND item_id = ?').get(item.itemType, item.itemId);
+    if (existing) return this.getCompatPlaylistItem(existing.id);
+    const id = item.id ?? `${item.itemType}:${item.itemId}`;
+    this.db.prepare(`INSERT INTO playlist_items
+      (id, title, source_name, audio_path, manifest_json, created_at, item_type, item_id, name, name_key, icon_url, song_id, performance_id, duration, video_duration, video_url, performance_type, video_by_tod_view)
+      VALUES (?, ?, ?, NULL, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`).run(
+      id, item.name ?? item.itemId, item.sourceName ?? 'compatibility', JSON.stringify(item.manifest ?? {}), item.createdAt,
+      item.itemType, item.itemId, item.name ?? item.itemId, item.nameKey ?? '', item.iconUrl ?? item.coverUrl ?? '',
+      item.songId ?? '', item.performanceId ?? '', item.duration ?? 0, item.videoDuration ?? item.duration ?? 0,
+      item.videoUrl ?? item.mediaUrl ?? '', item.performanceType ?? '', item.videoByTodView == null ? null : JSON.stringify(item.videoByTodView)
+    );
+    return this.getCompatPlaylistItem(id);
+  }
+
+  getCompatPlaylistItem(id) {
+    const item = this.db.prepare('SELECT * FROM playlist_items WHERE id = ?').get(id);
+    return item ? this.compatPlaylistPayload(item) : null;
+  }
+
+  compatPlaylist() { return this.db.prepare('SELECT * FROM playlist_items WHERE item_type IS NOT NULL ORDER BY created_at DESC').all().map(item => this.compatPlaylistPayload(item)); }
+
+  compatPlaylistPayload(item) {
+    return { itemType: item.item_type, itemId: item.item_id, id: item.item_id, name: item.name ?? item.title, nameKey: item.name_key ?? '',
+      iconUrl: item.icon_url ?? '', coverUrl: item.icon_url ?? '', songId: item.song_id ?? '', performanceId: item.performance_id ?? '',
+      duration: item.duration ?? 0, videoDuration: item.video_duration ?? item.duration ?? 0, videoUrl: item.video_url ?? '',
+      performanceType: item.performance_type ?? '', videoByTodView: item.video_by_tod_view ? JSON.parse(item.video_by_tod_view) : undefined };
+  }
+
+  deleteCompatPlaylistItem(itemType, itemId) { return this.db.prepare('DELETE FROM playlist_items WHERE item_type = ? AND item_id = ?').run(itemType, itemId).changes > 0; }
 
   getPlaylistItem(id) {
     const item = this.db.prepare('SELECT * FROM playlist_items WHERE id = ?').get(id);

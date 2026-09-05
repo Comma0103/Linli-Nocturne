@@ -11,12 +11,67 @@ async function readJson(request) {
   return JSON.parse(Buffer.concat(chunks).toString('utf8') || '{}');
 }
 
-export function createLocalGateway({ letterService }) {
+function compatResponse(data) { return { code: 0, message: 'success', data }; }
+
+function toSeconds(value) {
+  const parsed = Date.parse(value ?? '');
+  return Number.isFinite(parsed) ? Math.floor(parsed / 1000) : 0;
+}
+
+function visibleLetter(letter) {
+  const replied = letter.status === 'replied';
+  return { letterId: letter.id, content: letter.body, summary: letter.body.length > 20 ? `${letter.body.slice(0, 20)}...` : letter.body,
+    material: null, letterStatus: replied ? 'replied' : 'llm_processing', auditStatus: 0, replyType: replied ? 1 : 0,
+    replyText: replied ? letter.reply : null, replyVideoUrl: null, isRead: replied ? (letter.read_at ? 1 : 0) : 1,
+    createdAt: toSeconds(letter.created_at), repliedAt: replied ? toSeconds(letter.replied_at) : null, error: null };
+}
+
+export function createLocalGateway({ letterService, musicService = null, userProfile = {} }) {
   return createServer(async (request, response) => {
     try {
       const url = new URL(request.url, 'http://localhost');
       if (request.method === 'OPTIONS') return sendJson(response, 204, {});
       if (request.method === 'GET' && url.pathname === '/health') return sendJson(response, 200, { ok: true, service: 'linli-nocturne' });
+      if (request.method === 'POST' && url.pathname === '/toy/signIn') return sendJson(response, 200, compatResponse({ uid: userProfile.uid ?? 'linli-local', status: 2, isNew: false, modelGatewayToken: null, userInfo: userProfile }));
+      if (request.method === 'GET' && url.pathname === '/toy/getUserInfo') return sendJson(response, 200, compatResponse({ uid: userProfile.uid ?? 'linli-local', status: 2, userInfo: userProfile }));
+      if (request.method === 'POST' && url.pathname === '/toy/letter/send') {
+        const body = await readJson(request);
+        const letter = letterService.send({ recipient: body.person ?? body.recipient, body: body.content ?? body.body });
+        return sendJson(response, 200, compatResponse({ letterId: letter.id, remainingToday: Math.max(0, letterService.limits.dailyLimit - letterService.store.countToday(letter.recipient, new Date(new Date(letter.created_at).setHours(0, 0, 0, 0)).toISOString())) }));
+      }
+      if (request.method === 'GET' && url.pathname === '/toy/letter/list') {
+        const letters = letterService.list().map(visibleLetter);
+        return sendJson(response, 200, compatResponse({ list: letters, hasMore: false, nextCursor: 0, total: letters.length }));
+      }
+      if (request.method === 'GET' && url.pathname === '/toy/letter/detail') {
+        const id = url.searchParams.get('letterId') ?? url.searchParams.get('letter_id');
+        const letter = letterService.detail(id);
+        if (!letter) return sendJson(response, 404, { code: 404, message: 'letter_not_found' });
+        if (letter.status === 'replied' && !letter.read_at) letterService.markRead(id);
+        return sendJson(response, 200, compatResponse(visibleLetter(letterService.detail(id))));
+      }
+      if (request.method === 'GET' && url.pathname === '/toy/letter/unread_count') return sendJson(response, 200, compatResponse({ unreadCount: letterService.unreadCount() }));
+      if (request.method === 'POST' && url.pathname === '/toy/letter/share') return sendJson(response, 200, compatResponse({ shareId: (await readJson(request)).letterId }));
+      if (request.method === 'POST' && url.pathname === '/toy/letter/resend') return sendJson(response, 409, { code: 409, message: 'only_failed_letters_can_be_resent' });
+      if (request.method === 'GET' && url.pathname === '/toy/searchPlaylist') {
+        if (!musicService) return sendJson(response, 200, compatResponse({ list: [], hasMore: false, nextCursor: 0, total: 0 }));
+        const list = musicService.compatPlaylist();
+        return sendJson(response, 200, compatResponse({ list, hasMore: false, nextCursor: 0, total: list.length }));
+      }
+      if (request.method === 'POST' && url.pathname === '/toy/addToPlaylist') {
+        if (!musicService) return sendJson(response, 503, { code: 503, message: 'music_service_unavailable' });
+        const body = await readJson(request);
+        const itemType = Number(body.itemType ?? body.item_type);
+        const itemId = String(body.itemId ?? body.item_id ?? body.id ?? body.songId ?? body.song_id ?? body.performanceId ?? body.performance_id ?? '').trim();
+        if (!Number.isInteger(itemType) || !itemId) return sendJson(response, 400, { code: 400, message: 'playlist_item_incomplete' });
+        return sendJson(response, 200, compatResponse(musicService.addCompatPlaylistItem({ ...body, itemType, itemId })));
+      }
+      if (request.method === 'POST' && url.pathname === '/toy/delFromPlaylist') {
+        if (!musicService) return sendJson(response, 503, { code: 503, message: 'music_service_unavailable' });
+        const body = await readJson(request);
+        const deleted = musicService.removeCompatPlaylistItem(Number(body.itemType ?? body.item_type), String(body.itemId ?? body.item_id ?? ''));
+        return sendJson(response, 200, compatResponse({ ...body, deleted }));
+      }
       if (request.method === 'POST' && url.pathname === '/letter/send') return sendJson(response, 200, letterService.send(await readJson(request)));
       if (request.method === 'GET' && url.pathname === '/letter/send/list') return sendJson(response, 200, { letters: letterService.list() });
       if (request.method === 'GET' && url.pathname === '/letter/send/unread_count') return sendJson(response, 200, { count: letterService.unreadCount() });
