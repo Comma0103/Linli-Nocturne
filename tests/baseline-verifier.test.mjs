@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { mkdtempSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { requireSupportedVersion, sha256File, verifyBaseline } from '../src/patcher/baseline-verifier.js';
+import { readGameVersion, requireSupportedVersion, sha256File, verifyBaseline } from '../src/patcher/baseline-verifier.js';
 
 test('baseline verifier detects unchanged and changed client files', () => {
   const root = mkdtempSync(join(tmpdir(), 'linli-baseline-'));
@@ -21,4 +21,10 @@ test('baseline verifier detects unchanged and changed client files', () => {
 test('unknown game versions are rejected before patching', () => {
   assert.equal(requireSupportedVersion('0.0.9.627', ['0.0.9.627']), '0.0.9.627');
   assert.throws(() => requireSupportedVersion('0.0.9.999', ['0.0.9.627']), /Unsupported game version/);
+});
+
+test('game metadata accepts the four-part client version format', () => {
+  const root = mkdtempSync(join(tmpdir(), 'linli-version-'));
+  writeFileSync(join(root, 'version.json'), JSON.stringify({ client: 'ToyPianist-win-x64-rel-v0.0.9.627' }));
+  assert.equal(readGameVersion(root).version, '0.0.9.627');
 });
