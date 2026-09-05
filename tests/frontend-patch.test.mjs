@@ -75,6 +75,7 @@ test('known patched archive uses the lite MIDI job handler in offline mode', () 
     'He(async()=>{if(w.value){await W().finally(()=>{a.value=!1}),Po();return}',
     'o(w)&&o(Ce).length===0?',
     'q.filter(Be=>!f.isDownloaded(Be.id)&&!f.isDownloading(Be.id)).forEach(Be=>f.startDownload(Be))',
+    'const K=B.iconUrl??"",W=B.videoUrl??"",',
     'Ct({cmd:"play",song:Le})',
     'Ct({cmd:"play",song:K})',
   ].join(';');
@@ -90,6 +91,7 @@ test('known patched archive uses the lite MIDI job handler in offline mode', () 
   assert.match(patched, /if\(w\.value\)\{await P\(\);await W\(\)/);
   assert.match(patched, /o\(w\)&&!o\(Q\)&&o\(Ce\)\.length===0\?/);
   assert.match(patched, /Q\.value\?f\.downloadMap\.set\(Be\.id,\{progress:100,state:"completed"/);
+  assert.match(patched, /const K=B\.iconUrl\?\?"",W=B\.videoUrl\?\?B\.audioUrl\?\?"",/);
   assert.match(patched, /Ct\(\{cmd:"play",url:W,loop:!1,mute:!1\}\)/);
-  assert.match(patched, /Ct\(\{cmd:"play",url:K\.videoUrl\?\?"",loop:!1,mute:!1\}\)/);
+  assert.match(patched, /Ct\(\{cmd:"play",url:K\.videoUrl\?\?K\.audioUrl\?\?"",loop:!1,mute:!1\}\)/);
 });

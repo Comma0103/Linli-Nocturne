@@ -30,8 +30,9 @@ export const OFFLINE_MIDI_SUBMIT_PATCHES = Object.freeze([
   { id: 'offline-user-tab-load', from: 'He(async()=>{if(w.value){await W().finally(()=>{a.value=!1}),Po();return}', to: 'He(async()=>{if(w.value){await P();await W().finally(()=>{a.value=!1}),Po();return}', expected: 1 },
   { id: 'offline-user-tab-empty-state', from: 'o(w)&&o(Ce).length===0?', to: 'o(w)&&!o(Q)&&o(Ce).length===0?', expected: 1 },
   { id: 'offline-user-song-download-bypass', from: 'q.filter(Be=>!f.isDownloaded(Be.id)&&!f.isDownloading(Be.id)).forEach(Be=>f.startDownload(Be))', to: 'q.filter(Be=>!f.isDownloaded(Be.id)&&!f.isDownloading(Be.id)).forEach(Be=>Q.value?f.downloadMap.set(Be.id,{progress:100,state:"completed",totalBytes:0,downloadedBytes:0,downloadSpeed:0,styleType:Be.styleType,name:Be.name,nameKey:Be.nameKey,performanceType:Be.performanceType??""}):f.startDownload(Be))', expected: 1 },
+  { id: 'offline-songlist-media-url', from: 'const K=B.iconUrl??"",W=B.videoUrl??"",', to: 'const K=B.iconUrl??"",W=B.videoUrl??B.audioUrl??"",', expected: 1 },
   { id: 'offline-songlist-play-url', from: 'Ct({cmd:"play",song:Le})', to: 'Ct({cmd:"play",url:W,loop:!1,mute:!1})', expected: 1 },
-  { id: 'offline-songlist-toggle-url', from: 'Ct({cmd:"play",song:K})', to: 'Ct({cmd:"play",url:K.videoUrl??"",loop:!1,mute:!1})', expected: 1 },
+  { id: 'offline-songlist-toggle-url', from: 'Ct({cmd:"play",song:K})', to: 'Ct({cmd:"play",url:K.videoUrl??K.audioUrl??"",loop:!1,mute:!1})', expected: 1 },
 ]);
 
 // These are narrow, version-specific substitutions audited against client
