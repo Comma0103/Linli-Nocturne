@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { strFromU8, strToU8, zipSync } from 'fflate';
-import { applyFrontendPatch, inspectFrontendArchive, planFrontendPatch } from '../src/patcher/frontend-archive.js';
+import { applyFrontendPatch, inspectFrontendArchive, OFFLINE_FEATURE_PATCHES, planFrontendPatch } from '../src/patcher/frontend-archive.js';
 
 const endpoints = ['/signIn', '/getUserInfo', '/letter/send', '/letter/list', '/letter/detail', '/letter/unread_count', '/letter/share', '/letter/resend', '/addToPlaylist', '/delFromPlaylist', '/searchPlaylist'];
 const midiEndpoints = ['/genObjectUploadUrl', '/midi/generate', '/midi/getGenerateResult', '/midi/cancelGenerate', '/midi/deleteJob', '/midi/listJobs', '/midi/batchGetResult', '/midi/importShareCode', '/searchUserSongs'];
@@ -33,4 +33,16 @@ test('frontend patch can opt into the audited MIDI routes', () => {
   assert.equal(result.needsPatch.length, 20);
   const source = strFromU8(inspectFrontendArchive(result.buffer).entries['assets/main-midi.js']);
   assert.match(source, /http:\/\/127\.0\.0\.1:27149\/toy\/midi\/generate/);
+});
+
+test('frontend patch applies audited offline feature gates only when all signatures match', () => {
+  const offlineSource = [...endpoints, ...midiEndpoints].map(endpoint => `fetch("${endpoint}")`).concat([
+    ...OFFLINE_FEATURE_PATCHES.flatMap(patch => Array.from({ length: patch.expected }, () => patch.from)),
+  ]).join(';');
+  const fixtureWithOfflineGates = zipSync({ 'assets/main-offline.js': strToU8(offlineSource) });
+  const result = applyFrontendPatch(fixtureWithOfflineGates, { serviceUrl: 'http://127.0.0.1:27149', includeMidi: true, includeOfflineFeatures: true });
+  const source = strFromU8(inspectFrontendArchive(result.buffer).entries['assets/main-offline.js']);
+  assert.match(source, /N3=!0,Ss=!0,wa=\(\{onComplete/);
+  assert.doesNotMatch(source, /if\(t\.isOfflineMode\)throw new Ol\(e\)/);
+  assert.doesNotMatch(source, /!o\(w\)&&o\(Ss\)\?/);
 });
