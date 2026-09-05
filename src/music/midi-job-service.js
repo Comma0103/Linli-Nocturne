@@ -1,12 +1,17 @@
 import { randomUUID } from 'node:crypto';
+import { mkdirSync, readFileSync, unlinkSync, writeFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { inspectMidi } from './midi-manifest.js';
 import { renderMidiToWav } from './audio-renderer.js';
 
 const TERMINAL = new Set(['finished', 'failed', 'canceled']);
 
 export class MidiJobService {
-  constructor({ clock = () => new Date() } = {}) {
+  constructor({ clock = () => new Date(), store = null, mediaRoot = null } = {}) {
     this.clock = clock;
+    this.store = store;
+    this.mediaRoot = mediaRoot;
+    if (mediaRoot) mkdirSync(mediaRoot, { recursive: true });
     this.uploads = new Map();
     this.jobs = new Map();
     this.media = new Map();
@@ -36,13 +41,17 @@ export class MidiJobService {
       const rendered = renderMidiToWav(upload.buffer);
       this.media.set(jobId, rendered.wav);
       const mediaUrl = `${mediaBaseUrl.replace(/\/$/u, '')}/toy/midi/media/${jobId}`;
-      const job = { jobId, state: 'finished', filename: upload.filename ?? filename, createdAt,
+      const mediaPath = this.mediaRoot ? join(this.mediaRoot, `${jobId}.wav`) : null;
+      if (mediaPath) writeFileSync(mediaPath, rendered.wav);
+      const job = { jobId, state: 'finished', filename: upload.filename ?? filename, createdAt, mediaPath,
         info: { videoUrls: [mediaUrl], audioUrl: mediaUrl, duration: rendered.duration, timingManifest: rendered.timingManifest, midi } };
       this.jobs.set(jobId, job);
+      this.store?.insertMidiJob(job);
       return job;
     } catch (error) {
       const job = { jobId, state: 'failed', filename: upload.filename ?? filename, createdAt, error: error.message };
       this.jobs.set(jobId, job);
+      this.store?.insertMidiJob(job);
       return job;
     }
   }
@@ -52,13 +61,17 @@ export class MidiJobService {
     try { return decodeURIComponent(new URL(raw, 'http://localhost').pathname.split('/').pop()); } catch { return raw; }
   }
 
-  get(jobId) { return this.jobs.get(String(jobId)) ?? null; }
+  get(jobId) {
+    const id = String(jobId);
+    return this.jobs.get(id) ?? this.store?.getMidiJob(id) ?? null;
+  }
 
   list({ pageSize = 20, cursor = 0 } = {}) {
-    const all = [...this.jobs.values()].sort((a, b) => b.createdAt.localeCompare(a.createdAt));
     const offset = Number.isFinite(Number(cursor)) ? Math.max(0, Number(cursor)) : 0;
-    const list = all.slice(offset, offset + Math.min(100, Math.max(1, Number(pageSize) || 20)));
-    return { list, hasMore: offset + list.length < all.length, nextCursor: offset + list.length, total: all.length };
+    const limit = Math.min(100, Math.max(1, Number(pageSize) || 20));
+    const all = this.store ? this.store.listMidiJobs(limit, offset) : [...this.jobs.values()].sort((a, b) => b.createdAt.localeCompare(a.createdAt)).slice(offset, offset + limit);
+    const total = this.store ? this.store.countMidiJobs() : this.jobs.size;
+    return { list: all, hasMore: offset + all.length < total, nextCursor: offset + all.length, total };
   }
 
   batch(ids = []) { return { list: ids.map(id => this.get(id)).filter(Boolean) }; }
@@ -66,14 +79,26 @@ export class MidiJobService {
   cancel(jobId) {
     const job = this.get(jobId);
     if (!job) return null;
-    if (!TERMINAL.has(job.state)) job.state = 'canceled';
+    if (!TERMINAL.has(job.state)) { job.state = 'canceled'; this.store?.updateMidiJob(job); }
     return job;
   }
 
   delete(jobId) {
-    this.media.delete(String(jobId));
-    return this.jobs.delete(String(jobId));
+    const id = String(jobId);
+    const job = this.get(id);
+    this.media.delete(id);
+    if (job?.mediaPath) { try { unlinkSync(job.mediaPath); } catch {} }
+    const deleted = this.store ? this.store.deleteMidiJob(id) : this.jobs.delete(id);
+    this.jobs.delete(id);
+    return deleted;
   }
 
-  mediaBytes(jobId) { return this.media.get(String(jobId)) ?? null; }
+  mediaBytes(jobId) {
+    const id = String(jobId);
+    const inMemory = this.media.get(id);
+    if (inMemory) return inMemory;
+    const job = this.get(id);
+    if (!job?.mediaPath) return null;
+    try { return readFileSync(job.mediaPath); } catch { return null; }
+  }
 }

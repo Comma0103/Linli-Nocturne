@@ -41,6 +41,16 @@ export class SqliteStore {
         video_by_tod_view TEXT,
         UNIQUE(item_type, item_id)
       );
+      CREATE TABLE IF NOT EXISTS midi_jobs (
+        job_id TEXT PRIMARY KEY,
+        state TEXT NOT NULL,
+        filename TEXT NOT NULL,
+        created_at TEXT NOT NULL,
+        error TEXT,
+        info_json TEXT NOT NULL,
+        media_path TEXT
+      );
+      CREATE INDEX IF NOT EXISTS idx_midi_jobs_created_at ON midi_jobs(created_at DESC);
     `);
   }
 
@@ -132,6 +142,32 @@ export class SqliteStore {
   }
 
   deletePlaylistItem(id) { return this.db.prepare('DELETE FROM playlist_items WHERE id = ?').run(id).changes > 0; }
+
+  insertMidiJob(job) {
+    this.db.prepare(`INSERT INTO midi_jobs (job_id, state, filename, created_at, error, info_json, media_path)
+      VALUES (?, ?, ?, ?, ?, ?, ?)`).run(job.jobId, job.state, job.filename, job.createdAt, job.error ?? null, JSON.stringify(job.info ?? {}), job.mediaPath ?? null);
+    return this.getMidiJob(job.jobId);
+  }
+
+  getMidiJob(jobId) {
+    const job = this.db.prepare('SELECT * FROM midi_jobs WHERE job_id = ?').get(jobId);
+    return job ? { jobId: job.job_id, state: job.state, filename: job.filename, createdAt: job.created_at, error: job.error, info: JSON.parse(job.info_json), mediaPath: job.media_path } : null;
+  }
+
+  listMidiJobs(limit = 20, offset = 0) {
+    return this.db.prepare('SELECT * FROM midi_jobs ORDER BY created_at DESC LIMIT ? OFFSET ?').all(limit, offset)
+      .map(job => ({ jobId: job.job_id, state: job.state, filename: job.filename, createdAt: job.created_at, error: job.error, info: JSON.parse(job.info_json), mediaPath: job.media_path }));
+  }
+
+  countMidiJobs() { return this.db.prepare('SELECT COUNT(*) AS count FROM midi_jobs').get().count; }
+
+  updateMidiJob(job) {
+    this.db.prepare('UPDATE midi_jobs SET state = ?, error = ?, info_json = ?, media_path = ? WHERE job_id = ?')
+      .run(job.state, job.error ?? null, JSON.stringify(job.info ?? {}), job.mediaPath ?? null, job.jobId);
+    return this.getMidiJob(job.jobId);
+  }
+
+  deleteMidiJob(jobId) { return this.db.prepare('DELETE FROM midi_jobs WHERE job_id = ?').run(jobId).changes > 0; }
 
   close() { this.db.close(); }
 }
