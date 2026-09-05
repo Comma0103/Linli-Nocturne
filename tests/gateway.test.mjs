@@ -47,6 +47,9 @@ test('local gateway supports the original MIDI upload and polling contract', asy
   assert.equal(job.state, 'finished');
   const result = await (await fetch(`${base}/toy/midi/getGenerateResult?jobId=${job.jobId}`)).json();
   assert.equal(result.info.videoUrls.length, 1);
+  const userSongs = await (await fetch(`${base}/toy/searchUserSongs?pageSize=1&cursor=0`)).json();
+  assert.equal(userSongs.list[0].userSongId, job.jobId);
+  assert.equal(userSongs.hasMore, false);
   const media = await fetch(result.info.audioUrl);
   assert.equal(media.headers.get('content-type'), 'audio/wav');
   assert.equal((await media.arrayBuffer()).byteLength > 44, true);

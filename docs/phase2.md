@@ -18,11 +18,12 @@
 - 已执行暂存副本启动冒烟：启动器能够正常启动并退出，但在当前无完整 Steam 运行上下文的环境中没有留下游戏进程，因此信件/MIDI 的真实界面联调仍需在 Steam 客户端上下文中完成。
 - 已修复真实 CEF 客户端的凭据 CORS 预检：动态允许 `Origin` 和客户端声明的自定义请求头，实测已从 `OPTIONS` 进入 `GET /toy/searchPlaylist` 与 `GET /toy/letter/unread_count`。
 - 已将原生离线入口检查整理为带签名校验的 DLL 补丁模块和可重复脚本，并在当前 Steam 安装的受控备份后写入 `NutStudioUI.dll` 的 4 个检查点和 `NutContainerPlugin.dll` 的 1 个检查点；游戏通过 Steam 重新启动后已加载信件和曲库组件请求。
+- MIDI 任务现在携带统一 `RenderJob` 的 `status`、`progress`、`attempt`、`errorCode`、渲染器标识和版本，并在 SQLite 重建服务后保持这些字段；`searchUserSongs` 已接入本地已完成任务并支持游标分页。
 
 ## 下一步
 
 1. 将 MIDI 任务字段进一步对齐统一 RenderJob 状态机，并补齐用户曲目和历史任务分页。
-2. 在 Steam 客户端上下文中确认入口可见，并验证信件、MIDI 上传和播放的完整链路。
-3. 将当前 DLL/前端补丁、备份和回滚流程整理为后续安装器入口，并继续推进 MIDI 任务状态和用户曲目分页。
+2. 在 Steam 客户端上下文中验证信件提交、MIDI 上传、结果轮询和播放的完整链路。
+3. 将当前 DLL/前端补丁、备份和回滚流程整理为后续安装器入口，并补齐真实游戏重启后的纯原装前端验收。
 
 任何未知版本、基线不一致或备份失败都必须停止补丁流程。

@@ -88,7 +88,7 @@ export function createLocalGateway({ letterService, musicService = null, midiJob
       if (midiJobService && request.method === 'POST' && url.pathname === '/toy/midi/cancelGenerate') return sendJson(response, 200, midiJobService.cancel((await readJson(request)).jobId) ?? { state: 'failed', error: 'job_not_found' });
       if (midiJobService && request.method === 'POST' && url.pathname === '/toy/midi/deleteJob') return sendJson(response, 200, { deleted: midiJobService.delete((await readJson(request)).jobId) });
       if (midiJobService && request.method === 'POST' && url.pathname === '/toy/midi/importShareCode') return sendJson(response, 409, { code: 409, message: 'midi_share_code_not_supported' });
-      if (midiJobService && request.method === 'GET' && url.pathname === '/toy/searchUserSongs') return sendJson(response, 200, { list: [], hasMore: false, nextCursor: 0, total: 0 });
+      if (midiJobService && request.method === 'GET' && url.pathname === '/toy/searchUserSongs') return sendJson(response, 200, midiJobService.listUserSongs({ pageSize: url.searchParams.get('pageSize'), cursor: url.searchParams.get('cursor') }));
       const media = url.pathname.match(/^\/toy\/midi\/media\/([^/]+)$/u);
       if (midiJobService && request.method === 'GET' && media) {
         const bytes = midiJobService.mediaBytes(media[1]);

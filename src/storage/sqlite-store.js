@@ -151,12 +151,18 @@ export class SqliteStore {
 
   getMidiJob(jobId) {
     const job = this.db.prepare('SELECT * FROM midi_jobs WHERE job_id = ?').get(jobId);
-    return job ? { jobId: job.job_id, state: job.state, filename: job.filename, createdAt: job.created_at, error: job.error, info: JSON.parse(job.info_json), mediaPath: job.media_path } : null;
+    if (!job) return null;
+    const info = JSON.parse(job.info_json);
+    const renderJob = info.renderJob ?? null;
+    return { jobId: job.job_id, state: job.state, filename: job.filename, createdAt: job.created_at, error: job.error,
+      status: renderJob?.status ?? (job.state === 'finished' ? 'produced' : job.state === 'canceled' ? 'cancelled' : job.state),
+      progress: renderJob?.progress ?? (job.state === 'finished' ? 1 : 0), attempt: renderJob?.attempt ?? 0,
+      errorCode: renderJob?.errorCode ?? null, info, mediaPath: job.media_path };
   }
 
   listMidiJobs(limit = 20, offset = 0) {
     return this.db.prepare('SELECT * FROM midi_jobs ORDER BY created_at DESC LIMIT ? OFFSET ?').all(limit, offset)
-      .map(job => ({ jobId: job.job_id, state: job.state, filename: job.filename, createdAt: job.created_at, error: job.error, info: JSON.parse(job.info_json), mediaPath: job.media_path }));
+      .map(job => this.getMidiJob(job.job_id));
   }
 
   countMidiJobs() { return this.db.prepare('SELECT COUNT(*) AS count FROM midi_jobs').get().count; }

@@ -1,10 +1,20 @@
 import { randomUUID } from 'node:crypto';
 import { mkdirSync, readFileSync, unlinkSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
+import { createRenderJob, RenderJobStatus, transitionJob } from '../core/render-job.js';
 import { inspectMidi } from './midi-manifest.js';
 import { renderMidiToWav } from './audio-renderer.js';
 
 const TERMINAL = new Set(['finished', 'failed', 'canceled']);
+const RENDERER_ID = 'builtin.audio';
+const RENDERER_VERSION = '0.1.0';
+
+function makeRenderJob(jobId, filename) {
+  let renderJob = { ...createRenderJob({ kind: 'audio', inputAssetIds: [filename], rendererId: RENDERER_ID, rendererVersion: RENDERER_VERSION }), id: jobId };
+  renderJob = transitionJob(renderJob, RenderJobStatus.VALIDATING);
+  renderJob = transitionJob(renderJob, RenderJobStatus.RENDERING, { attempt: 1 });
+  return renderJob;
+}
 
 export class MidiJobService {
   constructor({ clock = () => new Date(), store = null, mediaRoot = null } = {}) {
@@ -43,13 +53,16 @@ export class MidiJobService {
       const mediaUrl = `${mediaBaseUrl.replace(/\/$/u, '')}/toy/midi/media/${jobId}`;
       const mediaPath = this.mediaRoot ? join(this.mediaRoot, `${jobId}.wav`) : null;
       if (mediaPath) writeFileSync(mediaPath, rendered.wav);
+      const renderJob = transitionJob(makeRenderJob(jobId, upload.filename ?? filename), RenderJobStatus.PRODUCED, { progress: 1 });
       const job = { jobId, state: 'finished', filename: upload.filename ?? filename, createdAt, mediaPath,
-        info: { videoUrls: [mediaUrl], audioUrl: mediaUrl, duration: rendered.duration, timingManifest: rendered.timingManifest, midi } };
+        status: renderJob.status, progress: renderJob.progress, attempt: renderJob.attempt, errorCode: null,
+        info: { videoUrls: [mediaUrl], audioUrl: mediaUrl, duration: rendered.duration, timingManifest: rendered.timingManifest, midi, renderJob } };
       this.jobs.set(jobId, job);
       this.store?.insertMidiJob(job);
       return job;
     } catch (error) {
-      const job = { jobId, state: 'failed', filename: upload.filename ?? filename, createdAt, error: error.message };
+      const renderJob = transitionJob(makeRenderJob(jobId, upload.filename ?? filename), RenderJobStatus.FAILED, { errorCode: error.code ?? 'render_failed', error: error.message });
+      const job = { jobId, state: 'failed', filename: upload.filename ?? filename, createdAt, status: renderJob.status, progress: renderJob.progress, attempt: renderJob.attempt, errorCode: renderJob.errorCode, error: error.message, info: { renderJob } };
       this.jobs.set(jobId, job);
       this.store?.insertMidiJob(job);
       return job;
@@ -74,12 +87,32 @@ export class MidiJobService {
     return { list: all, hasMore: offset + all.length < total, nextCursor: offset + all.length, total };
   }
 
+  listUserSongs({ pageSize = 20, cursor = 0 } = {}) {
+    const page = this.list({ pageSize, cursor });
+    const list = page.list.filter(job => job.state === 'finished').map(job => ({
+      userSongId: job.jobId,
+      id: job.jobId,
+      name: job.filename,
+      filename: job.filename,
+      audioUrl: job.info?.audioUrl ?? '',
+      videoUrl: job.info?.videoUrls?.[0] ?? job.info?.audioUrl ?? '',
+      duration: job.info?.duration ?? 0,
+      source: 'linli-nocturne',
+    }));
+    return { list, hasMore: page.hasMore, nextCursor: page.nextCursor, total: page.total };
+  }
+
   batch(ids = []) { return { list: ids.map(id => this.get(id)).filter(Boolean) }; }
 
   cancel(jobId) {
     const job = this.get(jobId);
     if (!job) return null;
-    if (!TERMINAL.has(job.state)) { job.state = 'canceled'; this.store?.updateMidiJob(job); }
+    if (!TERMINAL.has(job.state)) {
+      job.state = 'canceled';
+      job.status = RenderJobStatus.CANCELLED;
+      if (job.info?.renderJob) job.info = { ...job.info, renderJob: { ...job.info.renderJob, status: RenderJobStatus.CANCELLED, updatedAt: this.clock().toISOString() } };
+      this.store?.updateMidiJob(job);
+    }
     return job;
   }
 
