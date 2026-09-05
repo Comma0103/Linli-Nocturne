@@ -32,6 +32,7 @@
 - 已补充本地媒体兼容回退：用户曲目缺少 `videoUrl` 时，曲库构造的 `song` 对象会使用 `audioUrl`；补丁器同时支持从前一版错误 URL 命令状态幂等迁移回原生 `song` 契约。
 - 已确认上传曲目演奏失败的直接原因：CEF 控制台报告从 HTTPS 游戏页面请求 `http://127.0.0.1` 媒体时发生 mixed content 拦截。现已为本地媒体增加独立 HTTPS 端点，用户曲目的 `videoUrl`、`audioUrl` 和 `videoByTodView` 统一使用 HTTPS 地址，并补齐每个 TOD 条目的 `duration` 字段；API 仍保持原有 HTTP 兼容地址。
 - HTTPS 媒体请求通过后，日志进一步确认原生 `play` 命令已发出但 WAV 没有产生 `timeupdate`；官方页面使用 `<video>` 播放器，因此本地音频现在会封装成音频轨 MP4（不添加画面轨），并以 `video/mp4` 返回，避免把“能发出播放命令”误判为“播放器已开始播放”。
+- 原生桥接还要求 `VideoTodViewItem.duration` 为整数秒；本地任务保留小数时长用于音频和任务记录，但发送到原生层时会转换为整数，并在媒体服务端记录实际请求字节数，便于区分证书、网络和播放器解码问题。
 
 ## 下一步
 

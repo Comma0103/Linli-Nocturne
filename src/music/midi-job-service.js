@@ -115,7 +115,10 @@ export class MidiJobService {
         const mediaUrl = this.playbackBaseUrl
           ? `${this.playbackBaseUrl.replace(/\/$/u, '')}/toy/midi/media/${job.jobId}`
           : storedMediaUrl;
-        const duration = job.info?.duration ?? 0;
+        // The native VideoTodViewItem contract stores duration as an integer
+        // number of seconds. Keep the richer fractional duration in RenderJob
+        // metadata, but send an integer at the native bridge boundary.
+        const duration = Math.max(0, Math.round(Number(job.info?.duration ?? 0)));
         return mediaUrl ? [
           { url: mediaUrl, tod: 'TOD12', view: 'NI', coverUrl: '', duration },
           { url: mediaUrl, tod: 'TOD17', view: 'NI', coverUrl: '', duration },
