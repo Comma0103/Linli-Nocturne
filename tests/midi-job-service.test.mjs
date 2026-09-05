@@ -29,7 +29,12 @@ test('MIDI jobs survive service recreation through SQLite metadata and media fil
     userSongId: job.jobId, id: job.jobId, name: 'persist.mid', filename: 'persist.mid',
     audioUrl: 'http://127.0.0.1:27149/toy/midi/media/' + job.jobId,
     videoUrl: 'http://127.0.0.1:27149/toy/midi/media/' + job.jobId,
-    duration: second.get(job.jobId).info.duration, source: 'linli-nocturne',
+    videoByTodView: [
+      { url: 'http://127.0.0.1:27149/toy/midi/media/' + job.jobId, tod: 'TOD12', view: 'NI', coverUrl: '' },
+      { url: 'http://127.0.0.1:27149/toy/midi/media/' + job.jobId, tod: 'TOD17', view: 'NI', coverUrl: '' },
+      { url: 'http://127.0.0.1:27149/toy/midi/media/' + job.jobId, tod: 'TOD20', view: 'NI', coverUrl: '' },
+    ],
+    nameKey: job.jobId, performanceType: 'Solo', duration: second.get(job.jobId).info.duration, source: 'linli-nocturne',
   });
   assert.ok(second.mediaBytes(job.jobId).length > 44);
   assert.equal(second.delete(job.jobId), true);

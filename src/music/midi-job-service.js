@@ -96,6 +96,21 @@ export class MidiJobService {
       filename: job.filename,
       audioUrl: job.info?.audioUrl ?? '',
       videoUrl: job.info?.videoUrls?.[0] ?? job.info?.audioUrl ?? '',
+      // Lite's native player does not play a song from videoUrl alone. It
+      // selects a TOD/view entry from this array before forwarding the URL to
+      // NutWebPlayer. Local MIDI renders are audio-only, so all three TOD
+      // slots intentionally point to the same rendered media while keeping
+      // the native song contract intact.
+      videoByTodView: (() => {
+        const mediaUrl = job.info?.videoUrls?.[0] ?? job.info?.audioUrl ?? '';
+        return mediaUrl ? [
+          { url: mediaUrl, tod: 'TOD12', view: 'NI', coverUrl: '' },
+          { url: mediaUrl, tod: 'TOD17', view: 'NI', coverUrl: '' },
+          { url: mediaUrl, tod: 'TOD20', view: 'NI', coverUrl: '' },
+        ] : [];
+      })(),
+      nameKey: job.jobId,
+      performanceType: 'Solo',
       duration: job.info?.duration ?? 0,
       source: 'linli-nocturne',
     }));
