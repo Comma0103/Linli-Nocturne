@@ -108,7 +108,7 @@ export function createLocalGateway({ letterService, musicService = null, midiJob
       if (midiJobService && request.method === 'GET' && media) {
         const bytes = midiJobService.mediaBytes(media[1]);
         if (!bytes) return sendJson(response, 404, { error: 'media_not_found' });
-        response.writeHead(200, { 'content-type': 'audio/wav', 'access-control-allow-origin': '*', 'content-length': bytes.length });
+        response.writeHead(200, { 'content-type': midiJobService.mediaContentType ?? 'audio/wav', 'access-control-allow-origin': '*', 'content-length': bytes.length });
         return response.end(bytes);
       }
       if (request.method === 'POST' && url.pathname === '/toy/addToPlaylist') {

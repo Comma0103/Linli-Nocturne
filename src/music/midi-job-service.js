@@ -17,7 +17,7 @@ function makeRenderJob(jobId, filename) {
 }
 
 export class MidiJobService {
-  constructor({ clock = () => new Date(), store = null, mediaRoot = null, playbackBaseUrl = '' } = {}) {
+  constructor({ clock = () => new Date(), store = null, mediaRoot = null, playbackBaseUrl = '', mediaEncoder = null, mediaExtension = 'wav', mediaContentType = 'audio/wav' } = {}) {
     this.clock = clock;
     this.store = store;
     this.mediaRoot = mediaRoot;
@@ -25,6 +25,9 @@ export class MidiJobService {
     // served over HTTPS so the game's HTTPS CEF page does not block it as
     // mixed content.
     this.playbackBaseUrl = playbackBaseUrl;
+    this.mediaEncoder = mediaEncoder;
+    this.mediaExtension = mediaExtension;
+    this.mediaContentType = mediaContentType;
     if (mediaRoot) mkdirSync(mediaRoot, { recursive: true });
     this.uploads = new Map();
     this.jobs = new Map();
@@ -53,11 +56,12 @@ export class MidiJobService {
     try {
       const midi = inspectMidi(upload.buffer);
       const rendered = renderMidiToWav(upload.buffer);
-      this.media.set(jobId, rendered.wav);
+      const mediaBytes = this.mediaEncoder ? this.mediaEncoder(rendered.wav) : rendered.wav;
+      this.media.set(jobId, mediaBytes);
       const playbackBaseUrl = this.playbackBaseUrl || mediaBaseUrl;
       const mediaUrl = `${playbackBaseUrl.replace(/\/$/u, '')}/toy/midi/media/${jobId}`;
-      const mediaPath = this.mediaRoot ? join(this.mediaRoot, `${jobId}.wav`) : null;
-      if (mediaPath) writeFileSync(mediaPath, rendered.wav);
+      const mediaPath = this.mediaRoot ? join(this.mediaRoot, `${jobId}.${this.mediaExtension}`) : null;
+      if (mediaPath) writeFileSync(mediaPath, mediaBytes);
       const renderJob = transitionJob(makeRenderJob(jobId, upload.filename ?? filename), RenderJobStatus.PRODUCED, { progress: 1 });
       const job = { jobId, state: 'finished', filename: upload.filename ?? filename, createdAt, mediaPath,
         status: renderJob.status, progress: renderJob.progress, attempt: renderJob.attempt, errorCode: null,
@@ -168,6 +172,14 @@ export class MidiJobService {
     if (inMemory) return inMemory;
     const job = this.get(id);
     if (!job?.mediaPath) return null;
-    try { return readFileSync(job.mediaPath); } catch { return null; }
+    try {
+      const bytes = readFileSync(job.mediaPath);
+      if (this.mediaEncoder && job.mediaPath.toLowerCase().endsWith('.wav')) {
+        const encoded = this.mediaEncoder(bytes);
+        this.media.set(id, encoded);
+        return encoded;
+      }
+      return bytes;
+    } catch { return null; }
   }
 }
