@@ -17,7 +17,7 @@
 - 已将补丁写入独立物理暂存副本：副本先通过原装基线校验，再写入 20 个兼容路由和 13 组离线功能补丁；回读校验显示只有 `feapp.dat` 发生预期变化。
 - 已执行暂存副本启动冒烟：启动器能够正常启动并退出，但在当前无完整 Steam 运行上下文的环境中没有留下游戏进程，因此信件/MIDI 的真实界面联调仍需在 Steam 客户端上下文中完成。
 - 已修复真实 CEF 客户端的凭据 CORS 预检：动态允许 `Origin` 和客户端声明的自定义请求头，实测已从 `OPTIONS` 进入 `GET /toy/searchPlaylist` 与 `GET /toy/letter/unread_count`。
-- 已将原生离线入口检查整理为带签名校验的 DLL 补丁模块，并在当前 Steam 安装的受控备份后写入 `NutStudioUI.dll` 的 4 个检查点和 `NutContainerPlugin.dll` 的 1 个检查点；游戏通过 Steam 重新启动后已加载信件和曲库组件请求。
+- 已将原生离线入口检查整理为带签名校验的 DLL 补丁模块和可重复脚本，并在当前 Steam 安装的受控备份后写入 `NutStudioUI.dll` 的 4 个检查点和 `NutContainerPlugin.dll` 的 1 个检查点；游戏通过 Steam 重新启动后已加载信件和曲库组件请求。
 
 ## 下一步
 

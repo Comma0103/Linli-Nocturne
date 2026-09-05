@@ -21,7 +21,7 @@
 
 开发阶段可以使用受控的 `modified` 样本继续做只读分析，但不能把它作为发布安装器的成功条件。这样既能复用现有的 MIDI、信件和网关代码，也能保证发布版插件以原装游戏为输入。
 
-开发阶段如需接入游戏，使用 `scripts/stage-client.ps1` 创建独立物理副本，并用 `scripts/patch-staged-client.mjs` 在副本上写入补丁。补丁脚本会再次校验原装基线；当前游戏目录不会被写入。`-UseHardLinks` 只适合快速分析，不应作为启动测试副本。
+开发阶段如需接入游戏，使用 `scripts/stage-client.ps1` 创建独立物理副本，并用 `scripts/patch-staged-client.mjs` 在副本上写入前端补丁。原生入口检查则由 `scripts/patch-native-features.mjs` 写入；运行它前必须先完成备份并确认游戏进程已退出。补丁脚本会对 DLL 签名逐一校验，当前游戏目录不会被暂存流程写入。`-UseHardLinks` 只适合快速分析，不应作为启动测试副本。
 
 ## 与 OliviaSoul 的关系
 
