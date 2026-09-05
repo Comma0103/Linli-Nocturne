@@ -24,7 +24,9 @@ export const OFFLINE_USER_SONG_PATCHES = Object.freeze([
 export const OFFLINE_MIDI_SUBMIT_PATCHES = Object.freeze([
   { id: 'offline-midi-submit-handler', from: 'const p=Lt(),{midiWorkflowState:d,proJobInfo:h,midiUploadKey:f,midiFilToFakeVideoMap:y}=de(p),g=b(""),{proStartMidiJob:w,proCancelMidiJob:x}=p', to: 'const p=Lt(),{midiWorkflowState:d,proJobInfo:h,midiUploadKey:f,midiFilToFakeVideoMap:y}=de(p),g=b(""),{proStartMidiJob:w,liteStartMidiJob:K,proCancelMidiJob:x}=p', expected: 1 },
   { id: 'offline-midi-submit-call', from: 'S?$():await w(f.value,g.value)', to: 'S?$():await K(f.value,g.value)', expected: 1 },
+  { id: 'offline-midi-submit-refresh', from: 'S?$():await K(f.value,g.value)', to: 'S?$():(await K(f.value,g.value),await p.liteStartPoll())', expected: 1 },
   { id: 'offline-user-song-recovery', from: '$e();await xe()', to: '$e();await xe();await Lt().liteStartPoll()', expected: 1 },
+  { id: 'offline-upload-section', from: '!o(w)||o(D).length>0?', to: '!o(w)||o(D).length>0||o(Ss)?', expected: 1 },
 ]);
 
 // These are narrow, version-specific substitutions audited against client

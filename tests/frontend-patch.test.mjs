@@ -67,15 +67,17 @@ test('known patched archive uses the lite MIDI job handler in offline mode', () 
     '/*LinliNocturnePatch:compat-routes-v1*/',
     '$e();if(w.value){l.value=!1;return}await xe()',
     'w.value?oe.getSongsByStyle(R.value).filter(q=>f.isDownloaded(q.id)):Q.value?te.value:N.value',
-    'const p=Lt(),{midiWorkflowState:d,proJobInfo:h,midiUploadKey:f,midiFilToFakeVideoMap:y}=de(p),g=b("") ,{proStartMidiJob:w,proCancelMidiJob:x}=p',
-    'S?$():await w(f.value,g.value)',
+    'const p=Lt(),{midiWorkflowState:d,proJobInfo:h,midiUploadKey:f,midiFilToFakeVideoMap:y}=de(p),g=b(""),{proStartMidiJob:w,liteStartMidiJob:K,proCancelMidiJob:x}=p',
+    'S?$():await K(f.value,g.value)',
     '$e();await xe()',
-  ].join(';').replace('g=b("") ,', 'g=b(""),');
+    '!o(w)||o(D).length>0?',
+  ].join(';');
   const archive = zipSync({ 'assets/main-test.js': strToU8(source) });
   const result = applyOfflineMidiFeaturePatch(archive);
   assert.equal(result.alreadyPatched, false);
   const patched = strFromU8(unzipSync(result.buffer)['assets/main-test.js']);
   assert.match(patched, /liteStartMidiJob:K/);
-  assert.match(patched, /S\?\$\(\):await K\(f\.value,g\.value\)/);
+  assert.match(patched, /S\?\$\(\):\(await K\(f\.value,g\.value\),await p\.liteStartPoll\(\)\)/);
   assert.match(patched, /\$e\(\);await xe\(\);await Lt\(\)\.liteStartPoll\(\)/);
+  assert.match(patched, /!o\(w\)\|\|o\(D\)\.length>0\|\|o\(Ss\)\?/);
 });
