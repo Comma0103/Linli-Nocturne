@@ -50,7 +50,7 @@ export function createLocalGateway({ letterService, musicService = null, midiJob
       }
       if (request.method === 'GET' && url.pathname === '/toy/letter/list') {
         const letters = letterService.list().map(visibleLetter);
-        return sendJson(response, 200, compatResponse({ list: letters, hasMore: false, nextCursor: 0, total: letters.length }));
+        return sendJson(response, 200, compatResponse({ list: letters, hasMore: false, nextCursor: 0, total: letters.length, remainingToday: letterService.remainingToday() }));
       }
       if (request.method === 'GET' && url.pathname === '/toy/letter/detail') {
         const id = url.searchParams.get('letterId') ?? url.searchParams.get('letter_id');

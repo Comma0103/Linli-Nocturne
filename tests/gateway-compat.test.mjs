@@ -19,7 +19,9 @@ test('toy compatibility routes expose local letters and playlist shapes', async 
   assert.equal((await sent.json()).code, 0);
   await fetch(`${base}/letter/process`, { method: 'POST' });
   const list = await fetch(`${base}/toy/letter/list`);
-  assert.equal((await list.json()).data.list[0].content, '兼容测试');
+  const listPayload = await list.json();
+  assert.equal(listPayload.data.list[0].content, '兼容测试');
+  assert.equal(listPayload.data.remainingToday, 2);
   const added = await fetch(`${base}/toy/addToPlaylist`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ itemType: 3, itemId: 'local-1', name: '本地曲目' }) });
   assert.equal((await added.json()).data.itemId, 'local-1');
   const playlist = await fetch(`${base}/toy/searchPlaylist`);

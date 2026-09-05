@@ -34,6 +34,11 @@ export class LetterService {
   }
 
   list() { return this.store.listLetters(); }
+  remainingToday(recipient = '林离') {
+    const now = this.clock();
+    const start = new Date(now.getTime() - (now.getTime() % DAY_MS)).toISOString();
+    return Math.max(0, this.limits.dailyLimit - this.store.countToday(recipient, start));
+  }
   detail(id) { return this.store.getLetter(id); }
   unreadCount() { return this.store.countUnread(); }
   markRead(id) { return this.store.markRead(id, this.clock().toISOString()); }
