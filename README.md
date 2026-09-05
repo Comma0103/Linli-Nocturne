@@ -1,41 +1,41 @@
 # Linli Nocturne（林离·余音）
 
-> An offline-first restoration and extension platform for **BSide: Olivia Lin**.
+> 面向中国大陆玩家的《BSide: Olivia Lin》本地功能复原与扩展项目。
 
-Linli Nocturne brings back letters, replies, MIDI performance, local music playback, video replies, and a future-ready path to 3D finger-synchronised performances after the original service became unavailable.
+林离·余音致力于在原服务停止后，恢复信件、回信、MIDI 演奏、本地音乐、视频回信，并为未来的 3D 手指同步演奏保留可扩展的技术路径。
 
-## Project status
+## 项目状态
 
-The project is in active Phase 1 development. The foundation is runnable and tested; game-facing patching and the desktop installer are still under construction.
+项目正在进行 Phase 2 开发。基础领域服务已经可以运行并通过测试；游戏前端补丁和面向普通用户的安装器仍在开发中。
 
-## Roadmap
+## 开发路线
 
-- [x] **Phase 0 — Research and design**: inspect the 0.0.9.627 client baseline, document recovered capabilities, freeze contracts, and define the user flow.
-- [x] **Phase 1 foundation — Local domain core**: SQLite storage, local gateway, letter rules, offline reply fallback, RenderJob state machine, MIDI parsing, tempo and sustain extraction.
-- [x] **Phase 1 music — Local MIDI playback**: offline WAV renderer and local playlist service.
-- [ ] **Phase 2 — Game integration**: restore the writing entry point, map the local gateway to the game client, and add safe backup/rollback patching. Version allow-list and baseline verification are now started in [phase2.md](./docs/phase2.md).
-- [ ] **Phase 3 — Letter experience**: memory, retries, text replies, imported video replies, and external/local model providers.
-- [ ] **Phase 4 — Music experience**: user-facing MIDI upload, preview, audio/video jobs, and playlist UI inside the game flow.
-- [ ] **Phase 5 — Improvisation**: model-assisted composition with both online API and fully local execution paths.
-- [ ] **Phase 6 — 3D performance**: timing manifests, finger tracks, camera tracks, action tracks, and a replaceable 3D renderer.
-- [ ] **Phase 7 — Distribution**: non-technical-user installer, diagnostics, backup/restore, release packaging, and public documentation.
+- [x] **Phase 0 — 调研与设计**：调研 0.0.9.627 客户端基线、整理原有功能、冻结接口、设计用户流程。
+- [x] **Phase 1 — 本地领域核心**：SQLite 存储、本地网关、写信规则、离线回信、RenderJob 状态机、MIDI 解析、Tempo 和延音踏板提取。
+- [x] **Phase 1 音乐基础**：离线 WAV 音频渲染和本地歌单。
+- [ ] **Phase 2 — 游戏接入**：恢复写信入口、将本地网关接入游戏客户端、实现安全备份和回滚补丁。
+- [ ] **Phase 3 — 信件体验**：记忆、失败重试、文字回信、视频回信导入，以及外部/本地模型提供方。
+- [ ] **Phase 4 — 音乐体验**：用户上传 MIDI、预览、音频/视频任务和游戏内歌单界面。
+- [ ] **Phase 5 — 即兴创作**：支持外部 API 和完全本地运行的模型辅助作曲。
+- [ ] **Phase 6 — 3D 演奏**：时间轴、手指轨道、镜头轨道、动作轨道和可替换的 3D Renderer。
+- [ ] **Phase 7 — 发布发行**：面向普通用户的安装器、诊断、备份恢复、发行包和完整文档。
 
-Unchecked items are planned targets. Renderers and model providers are replaceable so the project can improve without rewriting game integration.
+未勾选项目是计划目标，不代表原服务可以被百分之百复刻。渲染器和模型提供方均采用可替换设计，后续可以持续改进而不必重写游戏接入层。
 
-## Features
+## 当前功能
 
-- **Letters** — original-style daily limit and five-minute delay by default, with an advanced bypass switch.
-- **Model providers** — offline fallback today; external API and local model adapters share one contract.
-- **MIDI** — Standard MIDI File parsing, note/tempo/sustain events, timing manifests, and local WAV rendering.
-- **Playlist** — SQLite-backed local playlist entries ready for game-client exposure.
-- **Media pipeline** — one RenderJob model for audio, video, and the future 3D renderer.
-- **Recovery first** — game files are baselined before patching; user data and generated media live outside the Steam directory.
+- **信件**：默认遵循原游戏每日最多 3 封、每封延迟 5 分钟的规则，并提供高级 bypass 开关。
+- **模型提供方**：当前包含离线降级实现，外部 API 和本地模型共用统一接口。
+- **MIDI**：支持标准 MIDI 文件解析、音符/Tempo/延音踏板事件、时间轴清单和本地 WAV 渲染。
+- **本地歌单**：基于 SQLite 保存歌单条目，后续可暴露给游戏客户端。
+- **媒体任务**：音频、视频和未来 3D Renderer 共用 RenderJob 模型。
+- **可恢复性**：补丁前先建立游戏文件基线；用户数据和生成媒体放在 Steam 目录之外。
 
-## Installation
+## 安装
 
-### Current developer build
+### 当前开发版
 
-Requirements: Windows 10/11, Node.js 22+ (Node.js 24 is currently used), pnpm 9+, and an installed copy of BSide: Olivia Lin for later integration phases.
+环境要求：Windows 10/11、Node.js 22 及以上（当前使用 Node.js 24）、pnpm 9 及以上。后续游戏接入阶段还需要安装《BSide: Olivia Lin》本体。
 
 ```powershell
 git clone https://github.com/Comma0103/Linli-Nocturne.git
@@ -43,11 +43,11 @@ cd Linli-Nocturne
 pnpm test
 ```
 
-The current build runs the domain core and tests. It does not yet patch or modify the game automatically.
+当前版本可以运行领域核心和测试，暂时不会自动修改游戏文件。
 
-## Usage today
+## 当前用法
 
-The current developer API can render a MIDI file and add it to the local playlist:
+当前开发接口可以解析 MIDI、生成本地 WAV，并加入 SQLite 歌单：
 
 ```js
 import { SqliteStore } from './src/storage/sqlite-store.js';
@@ -55,37 +55,43 @@ import { MusicService } from './src/music/music-service.js';
 
 const store = new SqliteStore('./data/linli.sqlite');
 const music = new MusicService({ store });
-const track = music.importMidi({ buffer: midiBytes, sourceName: 'my-song.mid', title: 'My Song' });
+const track = music.importMidi({ buffer: midiBytes, sourceName: 'my-song.mid', title: '我的曲目' });
 music.addToPlaylist(track);
 ```
 
-For letters, use `LetterService` with `ModelAdapter`; the default rules preserve the original daily limit and delay. The local HTTP gateway is the compatibility layer for the future game client.
+写信功能使用 `LetterService` 和 `ModelAdapter`；默认规则与原游戏保持一致。本地 HTTP 网关是后续游戏客户端的兼容层。
 
-## Architecture
+## 架构
 
 ```text
-Game client
-    ↓ compatible local HTTP gateway
-Domain services ── SQLite store
+游戏客户端
+    ↓ 兼容本地 HTTP 网关
+领域服务 ── SQLite 存储
     ├─ LetterService + ModelAdapter
-    ├─ MusicService + MIDI parser
-    └─ RenderJob + Audio/Video/Future3D renderers
+    ├─ MusicService + MIDI Parser
+    └─ RenderJob + Audio/Video/Future3D Renderer
 ```
 
-Design documents live in [`docs/`](./docs/): [requirements](./docs/requirements.md), [architecture](./docs/architecture.md), [ordinary-user flow](./docs/ui-flow.md), [RenderJob state machine](./docs/render-job.md), [Phase 0](./docs/phase0.md), and [Phase 1](./docs/phase1.md).
+设计文档位于 [`docs/`](./docs/)：
 
-## Development
+- [需求说明](./docs/requirements.md)
+- [初始架构](./docs/architecture.md)
+- [普通用户流程](./docs/ui-flow.md)
+- [RenderJob 状态机](./docs/render-job.md)
+- [Phase 0](./docs/phase0.md)、[Phase 1](./docs/phase1.md)、[Phase 2](./docs/phase2.md)
+
+## 开发与测试
 
 ```powershell
 pnpm test
 ```
 
-Every feature should ship with its contract, tests, and documentation update. Small commits keep the local tree and public review history easy to follow.
+每项功能都应同时提交接口、测试和文档更新。采用小步提交，方便本地开发、远程审阅和后续维护。
 
-## Scope and preservation
+## 范围与保存原则
 
-This repository does not distribute original game assets, modified proprietary DLLs, user letters, generated private media, or API keys. The patcher will create a baseline, backup, validation record, and rollback path before touching a game installation.
+本仓库不分发原始游戏资源、修改后的专有 DLL、用户信件、用户私有媒体或 API Key。补丁器在修改游戏安装目录前，必须创建基线、备份、校验记录和回滚路径。
 
-## License
+## 许可证
 
-Code is released under the [MIT License](./LICENSE). Game assets and third-party materials remain subject to their original owners' terms.
+代码采用 [MIT License](./LICENSE)。游戏资源和第三方材料仍受其原权利人的许可条款约束。
