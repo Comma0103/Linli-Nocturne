@@ -34,11 +34,6 @@ export const OFFLINE_MIDI_SUBMIT_PATCHES = Object.freeze([
   { id: 'offline-songlist-toggle-url', from: 'Ct({cmd:"play",song:K})', to: 'Ct({cmd:"play",url:K.videoUrl??"",loop:!1,mute:!1})', expected: 1 },
 ]);
 
-export const WEBPLAYER_AUDIO_PATCHES = Object.freeze([
-  { id: 'webplayer-audio-a', from: 'N("video",{ref_key:"videoRefA"', to: 'N("audio",{ref_key:"videoRefA"', expected: 1 },
-  { id: 'webplayer-audio-b', from: 'N("video",{ref_key:"videoRefB"', to: 'N("audio",{ref_key:"videoRefB"', expected: 1 },
-]);
-
 // These are narrow, version-specific substitutions audited against client
 // 0.0.9.627. Each replacement is counted before writing anything.
 export const OFFLINE_FEATURE_PATCHES = Object.freeze([
@@ -109,26 +104,6 @@ export function applyOfflineUserSongPatch(buffer) {
 
 export function applyOfflineMidiFeaturePatch(buffer) {
   return applyKnownPatchSet(buffer, [...OFFLINE_USER_SONG_PATCHES, ...OFFLINE_MIDI_SUBMIT_PATCHES], 'Offline MIDI feature patch');
-}
-
-export function applyWebplayerAudioPatch(buffer) {
-  const entries = unzipSync(new Uint8Array(buffer));
-  const mainPath = Object.keys(entries).find(path => /^assets\/main-[^/]+\.js$/u.test(path));
-  if (!mainPath) throw new Error('Webplayer archive has no main entry');
-  const source = strFromU8(entries[mainPath]);
-  const plan = Object.fromEntries(WEBPLAYER_AUDIO_PATCHES.map(patch => [patch.id, {
-    expected: patch.expected,
-    count: occurrenceCount(source, patch.from),
-    appliedCount: occurrenceCount(source, patch.to),
-    status: occurrenceCount(source, patch.from) === patch.expected ? 'ready'
-      : occurrenceCount(source, patch.from) === 0 && occurrenceCount(source, patch.to) === 1 ? 'applied' : 'mismatch',
-  }]));
-  const invalid = WEBPLAYER_AUDIO_PATCHES.filter(patch => plan[patch.id].status === 'mismatch');
-  if (invalid.length) throw new Error(`Webplayer audio patch contract mismatch: ${invalid.map(patch => `${patch.id}(${plan[patch.id].count}/${patch.expected})`).join(', ')}`);
-  const ready = WEBPLAYER_AUDIO_PATCHES.filter(patch => plan[patch.id].status === 'ready');
-  if (ready.length === 0) return { alreadyPatched: true, mainPath, buffer: new Uint8Array(buffer), plan };
-  const patched = ready.reduce((text, patch) => text.replace(patch.from, patch.to), source);
-  return { alreadyPatched: false, mainPath, buffer: zipSync({ ...entries, [mainPath]: strToU8(patched) }), plan };
 }
 
 export function inspectOfflineFeaturePatches(source) {

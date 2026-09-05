@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { strFromU8, strToU8, unzipSync, zipSync } from 'fflate';
-import { applyFrontendPatch, applyOfflineMidiFeaturePatch, applyOfflineUserSongPatch, applyWebplayerAudioPatch, inspectFrontendArchive, OFFLINE_FEATURE_PATCHES, planFrontendPatch } from '../src/patcher/frontend-archive.js';
+import { applyFrontendPatch, applyOfflineMidiFeaturePatch, applyOfflineUserSongPatch, inspectFrontendArchive, OFFLINE_FEATURE_PATCHES, planFrontendPatch } from '../src/patcher/frontend-archive.js';
 
 const endpoints = ['/signIn', '/getUserInfo', '/letter/send', '/letter/list', '/letter/detail', '/letter/unread_count', '/letter/share', '/letter/resend', '/addToPlaylist', '/delFromPlaylist', '/searchPlaylist'];
 const midiEndpoints = ['/genObjectUploadUrl', '/midi/generate', '/midi/getGenerateResult', '/midi/cancelGenerate', '/midi/deleteJob', '/midi/listJobs', '/midi/batchGetResult', '/midi/importShareCode', '/searchUserSongs'];
@@ -92,13 +92,4 @@ test('known patched archive uses the lite MIDI job handler in offline mode', () 
   assert.match(patched, /Q\.value\?f\.downloadMap\.set\(Be\.id,\{progress:100,state:"completed"/);
   assert.match(patched, /Ct\(\{cmd:"play",url:W,loop:!1,mute:!1\}\)/);
   assert.match(patched, /Ct\(\{cmd:"play",url:K\.videoUrl\?\?"",loop:!1,mute:!1\}\)/);
-});
-
-test('webplayer audio patch switches both playback elements to audio', () => {
-  const archive = zipSync({ 'assets/main-webplayer.js': strToU8('N("video",{ref_key:"videoRefA"});N("video",{ref_key:"videoRefB"})') });
-  const result = applyWebplayerAudioPatch(archive);
-  const source = strFromU8(unzipSync(result.buffer)['assets/main-webplayer.js']);
-  assert.match(source, /N\("audio",\{ref_key:"videoRefA"\}/);
-  assert.match(source, /N\("audio",\{ref_key:"videoRefB"\}/);
-  assert.equal(applyWebplayerAudioPatch(result.buffer).alreadyPatched, true);
 });
