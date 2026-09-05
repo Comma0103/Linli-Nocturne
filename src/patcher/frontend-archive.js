@@ -30,6 +30,13 @@ export const OFFLINE_MIDI_SUBMIT_PATCHES = Object.freeze([
   { id: 'offline-user-tab-load', from: 'He(async()=>{if(w.value){await W().finally(()=>{a.value=!1}),Po();return}', to: 'He(async()=>{if(w.value){await P();await W().finally(()=>{a.value=!1}),Po();return}', expected: 1 },
   { id: 'offline-user-tab-empty-state', from: 'o(w)&&o(Ce).length===0?', to: 'o(w)&&!o(Q)&&o(Ce).length===0?', expected: 1 },
   { id: 'offline-user-song-download-bypass', from: 'q.filter(Be=>!f.isDownloaded(Be.id)&&!f.isDownloading(Be.id)).forEach(Be=>f.startDownload(Be))', to: 'q.filter(Be=>!f.isDownloaded(Be.id)&&!f.isDownloading(Be.id)).forEach(Be=>Q.value?f.downloadMap.set(Be.id,{progress:100,state:"completed",totalBytes:0,downloadedBytes:0,downloadSpeed:0,styleType:Be.styleType,name:Be.name,nameKey:Be.nameKey,performanceType:Be.performanceType??""}):f.startDownload(Be))', expected: 1 },
+  { id: 'offline-songlist-play-url', from: 'Ct({cmd:"play",song:Le})', to: 'Ct({cmd:"play",url:W,loop:!1,mute:!1})', expected: 1 },
+  { id: 'offline-songlist-toggle-url', from: 'Ct({cmd:"play",song:K})', to: 'Ct({cmd:"play",url:K.videoUrl??"",loop:!1,mute:!1})', expected: 1 },
+]);
+
+export const WEBPLAYER_AUDIO_PATCHES = Object.freeze([
+  { id: 'webplayer-audio-a', from: 'N("video",{ref_key:"videoRefA"', to: 'N("audio",{ref_key:"videoRefA"', expected: 1 },
+  { id: 'webplayer-audio-b', from: 'N("video",{ref_key:"videoRefB"', to: 'N("audio",{ref_key:"videoRefB"', expected: 1 },
 ]);
 
 // These are narrow, version-specific substitutions audited against client
@@ -102,6 +109,26 @@ export function applyOfflineUserSongPatch(buffer) {
 
 export function applyOfflineMidiFeaturePatch(buffer) {
   return applyKnownPatchSet(buffer, [...OFFLINE_USER_SONG_PATCHES, ...OFFLINE_MIDI_SUBMIT_PATCHES], 'Offline MIDI feature patch');
+}
+
+export function applyWebplayerAudioPatch(buffer) {
+  const entries = unzipSync(new Uint8Array(buffer));
+  const mainPath = Object.keys(entries).find(path => /^assets\/main-[^/]+\.js$/u.test(path));
+  if (!mainPath) throw new Error('Webplayer archive has no main entry');
+  const source = strFromU8(entries[mainPath]);
+  const plan = Object.fromEntries(WEBPLAYER_AUDIO_PATCHES.map(patch => [patch.id, {
+    expected: patch.expected,
+    count: occurrenceCount(source, patch.from),
+    appliedCount: occurrenceCount(source, patch.to),
+    status: occurrenceCount(source, patch.from) === patch.expected ? 'ready'
+      : occurrenceCount(source, patch.from) === 0 && occurrenceCount(source, patch.to) === 1 ? 'applied' : 'mismatch',
+  }]));
+  const invalid = WEBPLAYER_AUDIO_PATCHES.filter(patch => plan[patch.id].status === 'mismatch');
+  if (invalid.length) throw new Error(`Webplayer audio patch contract mismatch: ${invalid.map(patch => `${patch.id}(${plan[patch.id].count}/${patch.expected})`).join(', ')}`);
+  const ready = WEBPLAYER_AUDIO_PATCHES.filter(patch => plan[patch.id].status === 'ready');
+  if (ready.length === 0) return { alreadyPatched: true, mainPath, buffer: new Uint8Array(buffer), plan };
+  const patched = ready.reduce((text, patch) => text.replace(patch.from, patch.to), source);
+  return { alreadyPatched: false, mainPath, buffer: zipSync({ ...entries, [mainPath]: strToU8(patched) }), plan };
 }
 
 export function inspectOfflineFeaturePatches(source) {
