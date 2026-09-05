@@ -32,27 +32,85 @@ test('local gateway smoke test covers health, send, process and list', async () 
   store.close();
 });
 
-test('local gateway supports the original MIDI upload and polling contract', async () => {
+for (const naming of ['snake_case', 'camelCase']) test(`MIDI client contract: upload, generation and polling with ${naming} requests`, async t => {
   const store = new SqliteStore();
   const service = new LetterService({ store, modelAdapter: new ModelAdapter(new FallbackLetterProvider()), limits: { bypass: true } });
-  const server = createLocalGateway({ letterService: service, midiJobService: new MidiJobService() });
+  const midiService = new MidiJobService({ store });
+  const server = createLocalGateway({ letterService: service, midiJobService: midiService });
   await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
+  t.after(async () => { await new Promise(resolve => server.close(resolve)); store.close(); });
   const { port } = server.address();
   const base = `http://127.0.0.1:${port}`;
-  const upload = await (await fetch(`${base}/toy/genObjectUploadUrl`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ filename: 'test.mid', type: 12 }) })).json();
+  const field = name => naming === 'snake_case' ? name.replace(/[A-Z]/g, char => `_${char.toLowerCase()}`) : name;
+  const origin = 'https://olivia.local';
+  const clientRequest = async (path, body) => {
+    const response = await fetch(`${base}${path}`, {
+      method: body === undefined ? 'GET' : 'POST',
+      headers: { origin, 'content-type': 'application/json', 'x-pkg_version': '0.0.9.627' },
+      body: body === undefined ? undefined : JSON.stringify(body),
+    });
+    assert.equal(response.status, 200);
+    assert.equal(response.headers.get('access-control-allow-origin'), origin);
+    assert.equal(response.headers.get('access-control-allow-credentials'), 'true');
+    const envelope = await response.json();
+    // The game's response interceptor rejects a missing/nonzero code before the
+    // upload component ever receives the URL. HTTP 200 alone is insufficient.
+    assert.equal(envelope.code, 0, `game would reject ${path} as a network error`);
+    assert.equal(envelope.message, 'success');
+    assert.ok(envelope.data);
+    return envelope.data;
+  };
+  const upload = await clientRequest('/toy/genObjectUploadUrl', { filename: 'test.mid', type: 12 });
   assert.ok(upload.key);
-  const uploaded = await fetch(upload.url, { method: 'PUT', body: midi });
+  const preflight = await fetch(upload.url, { method: 'OPTIONS', headers: {
+    origin, 'access-control-request-method': 'PUT', 'access-control-request-headers': 'content-type',
+  } });
+  assert.equal(preflight.status, 204);
+  assert.equal(preflight.headers.get('access-control-allow-origin'), origin);
+  assert.match(preflight.headers.get('access-control-allow-methods'), /PUT/);
+  const uploaded = await fetch(upload.url, { method: 'PUT', headers: { origin, ...upload.headers }, body: midi });
   assert.equal(uploaded.status, 200);
-  const job = await (await fetch(`${base}/toy/midi/generate`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ midiUrl: upload.url, filename: 'test.mid' }) })).json();
-  assert.equal(job.state, 'finished');
-  const result = await (await fetch(`${base}/toy/midi/getGenerateResult?jobId=${job.jobId}`)).json();
+  // The real upload callback returns the storage key, then snake-cases midiUrl.
+  const job = await clientRequest('/toy/midi/generate', { [field('midiUrl')]: upload.key, filename: 'test.mid' });
+  assert.equal(job.state, 3); // De.Finished in the original client.
+  assert.equal(midiService.get(job.jobId).state, 'finished');
+  assert.equal(job.status, 'produced');
+  assert.equal('mediaPath' in job, false);
+  const result = await clientRequest(`/toy/midi/getGenerateResult?${field('jobId')}=${job.jobId}`);
+  assert.equal(result.state, 3);
   assert.equal(result.info.videoUrls.length, 1);
-  const userSongs = await (await fetch(`${base}/toy/searchUserSongs?pageSize=1&cursor=0`)).json();
+  const userSongs = await clientRequest(`/toy/searchUserSongs?${field('pageSize')}=1&cursor=0`);
   assert.equal(userSongs.list[0].userSongId, job.jobId);
   assert.equal(userSongs.hasMore, false);
   const media = await fetch(result.info.audioUrl);
   assert.equal(media.headers.get('content-type'), 'audio/wav');
   assert.equal((await media.arrayBuffer()).byteLength > 44, true);
-  await new Promise(resolve => server.close(resolve));
-  store.close();
+
+  const invalidUpload = await clientRequest('/toy/genObjectUploadUrl', { filename: 'broken.mid' });
+  await fetch(invalidUpload.url, { method: 'PUT', body: 'invalid MIDI' });
+  const failed = await clientRequest('/toy/midi/generate', { [field('midiUrl')]: invalidUpload.url });
+  assert.equal(failed.state, 5);
+  const page = await clientRequest(`/toy/midi/listJobs?${field('pageSize')}=1&cursor=0`);
+  assert.equal(page.list.length, 1);
+  assert.equal(typeof page.list[0].state, 'number');
+  assert.equal(page.total, 2);
+  assert.equal(page.hasMore, true);
+  const nextPage = await clientRequest(`/toy/midi/listJobs?${field('pageSize')}=1&cursor=${page.nextCursor}`);
+  assert.equal(nextPage.list.length, 1);
+  assert.notEqual(nextPage.list[0].jobId, page.list[0].jobId);
+  assert.equal(nextPage.hasMore, false);
+
+  const batch = await clientRequest(`/toy/midi/batchGetResult?${field('jobIds')}=${job.jobId}&${field('jobIds')}=${failed.jobId}`);
+  assert.deepEqual(batch.results.map(item => item.state), [3, 5]);
+  assert.equal(batch.generatedToday, 1);
+  assert.equal(batch.dailyLimit, 3);
+  const commaBatch = await clientRequest(`/toy/midi/batchGetResult?${field('jobIds')}=${job.jobId},${failed.jobId}`);
+  assert.deepEqual(commaBatch.results.map(item => item.jobId), [job.jobId, failed.jobId]);
+  const canceled = await clientRequest('/toy/midi/cancelGenerate', { [field('jobId')]: job.jobId });
+  assert.equal(canceled.state, 3); // A completed task must stay completed.
+  const deleted = await clientRequest('/toy/midi/deleteJob', { [field('jobId')]: failed.jobId });
+  assert.equal(deleted.deleted, true);
+  const missing = await clientRequest(`/toy/midi/getGenerateResult?${field('jobId')}=${failed.jobId}`);
+  assert.equal(missing.state, 5);
+  assert.equal(missing.error, 'job_not_found');
 });

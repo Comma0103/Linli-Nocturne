@@ -104,6 +104,18 @@ export class MidiJobService {
 
   batch(ids = []) { return { list: ids.map(id => this.get(id)).filter(Boolean) }; }
 
+  dailyUsage() {
+    const start = new Date(this.clock());
+    start.setHours(0, 0, 0, 0);
+    const end = new Date(start);
+    end.setDate(end.getDate() + 1);
+    const generatedToday = this.store
+      ? this.store.countFinishedMidiJobsBetween(start.toISOString(), end.toISOString())
+      : [...this.jobs.values()].filter(job => job.state === 'finished' && job.createdAt >= start.toISOString() && job.createdAt < end.toISOString()).length;
+    // Display contract only; configurable MIDI quota enforcement is a later task.
+    return { generatedToday, dailyLimit: 3 };
+  }
+
   cancel(jobId) {
     const job = this.get(jobId);
     if (!job) return null;

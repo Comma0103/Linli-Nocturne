@@ -167,6 +167,11 @@ export class SqliteStore {
 
   countMidiJobs() { return this.db.prepare('SELECT COUNT(*) AS count FROM midi_jobs').get().count; }
 
+  countFinishedMidiJobsBetween(startIso, endIso) {
+    return this.db.prepare("SELECT COUNT(*) AS count FROM midi_jobs WHERE state = 'finished' AND created_at >= ? AND created_at < ?")
+      .get(startIso, endIso).count;
+  }
+
   updateMidiJob(job) {
     this.db.prepare('UPDATE midi_jobs SET state = ?, error = ?, info_json = ?, media_path = ? WHERE job_id = ?')
       .run(job.state, job.error ?? null, JSON.stringify(job.info ?? {}), job.mediaPath ?? null, job.jobId);

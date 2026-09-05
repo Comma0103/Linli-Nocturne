@@ -1,4 +1,5 @@
 import { createServer } from 'node:http';
+import { clientMidiJob, clientMidiPage, midiJobIds, midiPageParams } from './midi-compat.js';
 
 function sendJson(response, status, payload) {
   response.writeHead(status, {
@@ -69,7 +70,7 @@ export function createLocalGateway({ letterService, musicService = null, midiJob
       }
       if (midiJobService && request.method === 'POST' && url.pathname === '/toy/genObjectUploadUrl') {
         const body = await readJson(request);
-        return sendJson(response, 200, midiJobService.createUpload({ filename: body.filename, uploadUrl: `${url.protocol}//${request.headers.host}` }));
+        return sendJson(response, 200, compatResponse(midiJobService.createUpload({ filename: body.filename, uploadUrl: `${url.protocol}//${request.headers.host}` })));
       }
       const upload = url.pathname.match(/^\/toy\/midi\/upload\/([^/]+)$/u);
       if (midiJobService && request.method === 'PUT' && upload) {
@@ -80,15 +81,25 @@ export function createLocalGateway({ letterService, musicService = null, midiJob
       }
       if (midiJobService && request.method === 'POST' && url.pathname === '/toy/midi/generate') {
         const body = await readJson(request);
-        return sendJson(response, 200, midiJobService.generate({ ...body, mediaBaseUrl: `${url.protocol}//${request.headers.host}` }));
+        const job = midiJobService.generate({ ...body, midiUrl: body.midi_url ?? body.midiUrl, mediaBaseUrl: `${url.protocol}//${request.headers.host}` });
+        return sendJson(response, 200, compatResponse(clientMidiJob(job)));
       }
-      if (midiJobService && request.method === 'GET' && url.pathname === '/toy/midi/getGenerateResult') return sendJson(response, 200, midiJobService.get(url.searchParams.get('jobId')) ?? { state: 'failed', error: 'job_not_found' });
-      if (midiJobService && request.method === 'GET' && url.pathname === '/toy/midi/listJobs') return sendJson(response, 200, midiJobService.list({ pageSize: url.searchParams.get('pageSize'), cursor: url.searchParams.get('cursor') }));
-      if (midiJobService && request.method === 'GET' && url.pathname === '/toy/midi/batchGetResult') return sendJson(response, 200, midiJobService.batch((url.searchParams.get('jobIds') ?? '').split(',').filter(Boolean)));
-      if (midiJobService && request.method === 'POST' && url.pathname === '/toy/midi/cancelGenerate') return sendJson(response, 200, midiJobService.cancel((await readJson(request)).jobId) ?? { state: 'failed', error: 'job_not_found' });
-      if (midiJobService && request.method === 'POST' && url.pathname === '/toy/midi/deleteJob') return sendJson(response, 200, { deleted: midiJobService.delete((await readJson(request)).jobId) });
+      if (midiJobService && request.method === 'GET' && url.pathname === '/toy/midi/getGenerateResult') return sendJson(response, 200, compatResponse(clientMidiJob(midiJobService.get(url.searchParams.get('job_id') ?? url.searchParams.get('jobId')))));
+      if (midiJobService && request.method === 'GET' && url.pathname === '/toy/midi/listJobs') return sendJson(response, 200, compatResponse(clientMidiPage(midiJobService.list(midiPageParams(url.searchParams)))));
+      if (midiJobService && request.method === 'GET' && url.pathname === '/toy/midi/batchGetResult') {
+        const { list } = midiJobService.batch(midiJobIds(url.searchParams));
+        return sendJson(response, 200, compatResponse({ results: list.map(clientMidiJob), ...midiJobService.dailyUsage() }));
+      }
+      if (midiJobService && request.method === 'POST' && url.pathname === '/toy/midi/cancelGenerate') {
+        const body = await readJson(request);
+        return sendJson(response, 200, compatResponse(clientMidiJob(midiJobService.cancel(body.job_id ?? body.jobId))));
+      }
+      if (midiJobService && request.method === 'POST' && url.pathname === '/toy/midi/deleteJob') {
+        const body = await readJson(request);
+        return sendJson(response, 200, compatResponse({ deleted: midiJobService.delete(body.job_id ?? body.jobId) }));
+      }
       if (midiJobService && request.method === 'POST' && url.pathname === '/toy/midi/importShareCode') return sendJson(response, 409, { code: 409, message: 'midi_share_code_not_supported' });
-      if (midiJobService && request.method === 'GET' && url.pathname === '/toy/searchUserSongs') return sendJson(response, 200, midiJobService.listUserSongs({ pageSize: url.searchParams.get('pageSize'), cursor: url.searchParams.get('cursor') }));
+      if (midiJobService && request.method === 'GET' && url.pathname === '/toy/searchUserSongs') return sendJson(response, 200, compatResponse(midiJobService.listUserSongs(midiPageParams(url.searchParams))));
       const media = url.pathname.match(/^\/toy\/midi\/media\/([^/]+)$/u);
       if (midiJobService && request.method === 'GET' && media) {
         const bytes = midiJobService.mediaBytes(media[1]);
