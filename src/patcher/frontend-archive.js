@@ -32,6 +32,7 @@ export const OFFLINE_MIDI_SUBMIT_PATCHES = Object.freeze([
   { id: 'offline-user-song-download-bypass', from: 'q.filter(Be=>!f.isDownloaded(Be.id)&&!f.isDownloading(Be.id)).forEach(Be=>f.startDownload(Be))', to: 'q.filter(Be=>!f.isDownloaded(Be.id)&&!f.isDownloading(Be.id)).forEach(Be=>Q.value?f.downloadMap.set(Be.id,{progress:100,state:"completed",totalBytes:0,downloadedBytes:0,downloadSpeed:0,styleType:Be.styleType,name:Be.name,nameKey:Be.nameKey,performanceType:Be.performanceType??""}):f.startDownload(Be))', expected: 1 },
   { id: 'offline-songlist-media-url', from: 'const K=B.iconUrl??"",W=B.videoUrl??"",', to: 'const K=B.iconUrl??"",W=B.videoUrl??B.audioUrl??"",', expected: 1 },
   { id: 'offline-songlist-play-url', from: 'Ct({cmd:"play",song:Le})', to: 'Ct({cmd:"play",url:W,loop:!1,mute:!1})', expected: 1 },
+  { id: 'offline-songlist-toggle-audio-fallback', from: 'Ct({cmd:"play",url:K.videoUrl??"",loop:!1,mute:!1})', to: 'Ct({cmd:"play",url:K.videoUrl??K.audioUrl??"",loop:!1,mute:!1})', expected: 1, optional: true },
   { id: 'offline-songlist-toggle-url', from: 'Ct({cmd:"play",song:K})', to: 'Ct({cmd:"play",url:K.videoUrl??K.audioUrl??"",loop:!1,mute:!1})', expected: 1 },
 ]);
 
@@ -84,18 +85,19 @@ export function inspectOfflineUserSongPatches(source) {
 function applyKnownPatchSet(buffer, patches, label) {
   const inspected = inspectFrontendArchive(buffer);
   if (!inspected.markerPresent) throw new Error(`${label} requires the known Linli Nocturne archive marker`);
-  const plan = Object.fromEntries(patches.map(patch => [patch.id, {
-    expected: patch.expected,
-    count: occurrenceCount(inspected.source, patch.from),
-    appliedCount: occurrenceCount(inspected.source, patch.to),
-    status: occurrenceCount(inspected.source, patch.from) === patch.expected ? 'ready'
-      : occurrenceCount(inspected.source, patch.from) === 0 && occurrenceCount(inspected.source, patch.to) === 1 ? 'applied' : 'mismatch',
-  }]));
-  const invalid = patches.filter(patch => plan[patch.id].status === 'mismatch');
+  let source = inspected.source;
+  const plan = {};
+  for (const patch of patches) {
+    const count = occurrenceCount(source, patch.from);
+    const appliedCount = occurrenceCount(source, patch.to);
+    const status = count === patch.expected ? 'ready'
+      : count === 0 && appliedCount >= 1 ? 'applied' : 'mismatch';
+    plan[patch.id] = { expected: patch.expected, count, appliedCount, status };
+    if (status === 'ready') source = source.replace(patch.from, patch.to);
+  }
+  const invalid = patches.filter(patch => !patch.optional && plan[patch.id].status === 'mismatch');
   if (invalid.length) throw new Error(`${label} contract mismatch: ${invalid.map(patch => `${patch.id}(${plan[patch.id].count}/${patch.expected})`).join(', ')}`);
-  const ready = patches.filter(patch => plan[patch.id].status === 'ready');
-  if (ready.length === 0) return { alreadyPatched: true, mainPath: inspected.mainPath, buffer: new Uint8Array(buffer), plan };
-  const source = ready.reduce((text, patch) => text.replace(patch.from, patch.to), inspected.source);
+  if (source === inspected.source) return { alreadyPatched: true, mainPath: inspected.mainPath, buffer: new Uint8Array(buffer), plan };
   return { alreadyPatched: false, mainPath: inspected.mainPath, buffer: zipSync({ ...inspected.entries, [inspected.mainPath]: strToU8(source) }), plan };
 }
 
