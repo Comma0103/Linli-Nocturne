@@ -81,6 +81,7 @@ music.addToPlaylist(track);
 - [RenderJob 状态机](./docs/render-job.md)
 - [Phase 0](./docs/phase0.md)、[Phase 1](./docs/phase1.md)、[Phase 2](./docs/phase2.md)
 - [原装游戏基线与插件接入](./docs/original-installation.md)
+- [原版前端接口审计](./docs/frontend-audit.md)
 
 ## 开发与测试
 
