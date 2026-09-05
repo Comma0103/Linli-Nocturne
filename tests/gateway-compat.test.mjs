@@ -27,3 +27,26 @@ test('toy compatibility routes expose local letters and playlist shapes', async 
   await new Promise(resolve => server.close(resolve));
   store.close();
 });
+
+test('toy compatibility routes allow browser CORS preflight and follow-up reads', async () => {
+  const store = new SqliteStore();
+  const letters = new LetterService({ store, modelAdapter: new ModelAdapter(new FallbackLetterProvider()), limits: { bypass: true } });
+  const server = createLocalGateway({ letterService: letters });
+  await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
+  const base = `http://127.0.0.1:${server.address().port}`;
+  const preflight = await fetch(`${base}/toy/letter/list?page_size=20`, {
+    method: 'OPTIONS',
+    headers: { origin: 'http://localhost', 'access-control-request-method': 'GET', 'access-control-request-headers': 'content-type,x-device_id' },
+  });
+  assert.equal(preflight.status, 204);
+  assert.equal(preflight.headers.get('access-control-allow-origin'), 'http://localhost');
+  assert.equal(preflight.headers.get('access-control-allow-credentials'), 'true');
+  assert.match(preflight.headers.get('access-control-allow-methods'), /GET/);
+  assert.match(preflight.headers.get('access-control-allow-headers'), /content-type/);
+  assert.match(preflight.headers.get('access-control-allow-headers'), /x-device_id/);
+  const list = await fetch(`${base}/toy/letter/list?page_size=20`);
+  assert.equal(list.status, 200);
+  assert.deepEqual((await list.json()).data.list, []);
+  await new Promise(resolve => server.close(resolve));
+  store.close();
+});

@@ -1,7 +1,14 @@
 import { createServer } from 'node:http';
 
 function sendJson(response, status, payload) {
-  response.writeHead(status, { 'content-type': 'application/json; charset=utf-8', 'access-control-allow-origin': '*' });
+  response.writeHead(status, {
+    'content-type': 'application/json; charset=utf-8',
+    'access-control-allow-origin': response.getHeader('access-control-allow-origin') ?? '*',
+    'access-control-allow-credentials': 'true',
+    'access-control-allow-methods': 'GET,POST,PUT,OPTIONS',
+    'access-control-allow-headers': response.getHeader('access-control-allow-headers') ?? 'content-type,authorization',
+    vary: 'Origin',
+  });
   response.end(JSON.stringify(payload));
 }
 
@@ -29,6 +36,8 @@ function visibleLetter(letter) {
 export function createLocalGateway({ letterService, musicService = null, midiJobService = null, userProfile = {} }) {
   return createServer(async (request, response) => {
     try {
+      response.setHeader('access-control-allow-origin', request.headers.origin ?? '*');
+      response.setHeader('access-control-allow-headers', request.headers['access-control-request-headers'] ?? 'content-type,authorization');
       const url = new URL(request.url, 'http://localhost');
       if (request.method === 'OPTIONS') return sendJson(response, 204, {});
       if (request.method === 'GET' && url.pathname === '/health') return sendJson(response, 200, { ok: true, service: 'linli-nocturne' });
