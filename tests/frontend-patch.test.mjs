@@ -69,7 +69,7 @@ test('known patched archive uses the lite MIDI job handler in offline mode', () 
     'w.value?oe.getSongsByStyle(R.value).filter(q=>f.isDownloaded(q.id)):Q.value?te.value:N.value',
     'const p=Lt(),{midiWorkflowState:d,proJobInfo:h,midiUploadKey:f,midiFilToFakeVideoMap:y}=de(p),g=b(""),{proStartMidiJob:w,proCancelMidiJob:x}=p',
     'S?$():await w(f.value,g.value)',
-    '$e();await xe()',
+    '$e();await xe();await Lt().liteStartPoll();await Lt().liteStartPoll();await Lt().liteStartPoll(),!(q!==c||!Q.value)',
     '!o(w)||o(D).length>0?',
     'J=b(R.value),Q=j(()=>J.value===so)',
     'He(async()=>{if(w.value){await W().finally(()=>{a.value=!1}),Po();return}',
@@ -82,7 +82,7 @@ test('known patched archive uses the lite MIDI job handler in offline mode', () 
   const patched = strFromU8(unzipSync(result.buffer)['assets/main-test.js']);
   assert.match(patched, /liteStartMidiJob:K/);
   assert.match(patched, /S\?\$\(\):\(await K\(f\.value,g\.value\),await p\.liteStartPoll\(\)\)/);
-  assert.match(patched, /\$e\(\);await xe\(\);await Lt\(\)\.liteStartPoll\(\)/);
+  assert.match(patched, /\$e\(\);await xe\(\);await Lt\(\)\.liteStartPoll\(\),!\(q!==c\|\|!Q\.value\)/);
   assert.match(patched, /!o\(w\)\|\|o\(D\)\.length>0\|\|o\(Ss\)\?/);
   assert.match(patched, /J=b\(w\.value\?so:R\.value\),Q=j\(\(\)=>J\.value===so\)/);
   assert.match(patched, /if\(w\.value\)\{await P\(\);await W\(\)/);

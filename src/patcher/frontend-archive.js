@@ -24,7 +24,7 @@ export const OFFLINE_USER_SONG_PATCHES = Object.freeze([
 export const OFFLINE_MIDI_SUBMIT_PATCHES = Object.freeze([
   { id: 'offline-midi-submit-handler', from: 'const p=Lt(),{midiWorkflowState:d,proJobInfo:h,midiUploadKey:f,midiFilToFakeVideoMap:y}=de(p),g=b(""),{proStartMidiJob:w,proCancelMidiJob:x}=p', to: 'const p=Lt(),{midiWorkflowState:d,proJobInfo:h,midiUploadKey:f,midiFilToFakeVideoMap:y}=de(p),g=b(""),{proStartMidiJob:w,liteStartMidiJob:K,proCancelMidiJob:x}=p', expected: 1 },
   { id: 'offline-midi-submit-call', from: 'S?$():await w(f.value,g.value)', to: 'S?$():(await K(f.value,g.value),await p.liteStartPoll())', expected: 1 },
-  { id: 'offline-user-song-recovery', from: '$e();await xe()', to: '$e();await xe();await Lt().liteStartPoll()', expected: 1 },
+  { id: 'offline-user-song-recovery-dedupe', from: '$e();await xe();await Lt().liteStartPoll();await Lt().liteStartPoll();await Lt().liteStartPoll(),!(q!==c||!Q.value)', to: '$e();await xe();await Lt().liteStartPoll(),!(q!==c||!Q.value)', expected: 1 },
   { id: 'offline-upload-section', from: '!o(w)||o(D).length>0?', to: '!o(w)||o(D).length>0||o(Ss)?', expected: 1 },
   { id: 'offline-user-tab-default', from: 'J=b(R.value),Q=j(()=>J.value===so)', to: 'J=b(w.value?so:R.value),Q=j(()=>J.value===so)', expected: 1 },
   { id: 'offline-user-tab-load', from: 'He(async()=>{if(w.value){await W().finally(()=>{a.value=!1}),Po();return}', to: 'He(async()=>{if(w.value){await P();await W().finally(()=>{a.value=!1}),Po();return}', expected: 1 },
