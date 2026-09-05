@@ -1,0 +1,25 @@
+import { randomUUID } from 'node:crypto';
+import { inspectMidi } from './midi-manifest.js';
+import { renderMidiToWav } from './audio-renderer.js';
+
+export class MusicService {
+  constructor({ store, clock = () => new Date() }) { this.store = store; this.clock = clock; }
+
+  renderMidi(buffer) {
+    inspectMidi(buffer);
+    return renderMidiToWav(buffer);
+  }
+
+  importMidi({ buffer, sourceName = 'untitled.mid', title = sourceName.replace(/\.mid(i)?$/i, '') }) {
+    const rendered = this.renderMidi(buffer);
+    return { id: randomUUID(), title, sourceName, audio: rendered.wav, duration: rendered.duration, manifest: rendered.timingManifest };
+  }
+
+  addToPlaylist(track, audioPath = null) {
+    return this.store.addPlaylistItem({ id: track.id, title: track.title, sourceName: track.sourceName, audioPath,
+      manifest: track.manifest, createdAt: this.clock().toISOString() });
+  }
+
+  playlist() { return this.store.listPlaylist(); }
+  removeFromPlaylist(id) { return this.store.deletePlaylistItem(id); }
+}

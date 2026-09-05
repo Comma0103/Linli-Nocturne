@@ -20,6 +20,14 @@ export class SqliteStore {
         read_at TEXT
       );
       CREATE INDEX IF NOT EXISTS idx_letters_status_available ON letters(status, available_at);
+      CREATE TABLE IF NOT EXISTS playlist_items (
+        id TEXT PRIMARY KEY,
+        title TEXT NOT NULL,
+        source_name TEXT NOT NULL,
+        audio_path TEXT,
+        manifest_json TEXT NOT NULL,
+        created_at TEXT NOT NULL
+      );
     `);
   }
 
@@ -61,6 +69,25 @@ export class SqliteStore {
   countUnread() {
     return this.db.prepare("SELECT COUNT(*) AS count FROM letters WHERE status = 'replied' AND read_at IS NULL").get().count;
   }
+
+  addPlaylistItem(item) {
+    this.db.prepare(`INSERT INTO playlist_items
+      (id, title, source_name, audio_path, manifest_json, created_at) VALUES (?, ?, ?, ?, ?, ?)`).run(
+      item.id, item.title, item.sourceName, item.audioPath ?? null, JSON.stringify(item.manifest), item.createdAt
+    );
+    return this.getPlaylistItem(item.id);
+  }
+
+  getPlaylistItem(id) {
+    const item = this.db.prepare('SELECT * FROM playlist_items WHERE id = ?').get(id);
+    return item ? { ...item, manifest: JSON.parse(item.manifest_json) } : null;
+  }
+
+  listPlaylist() {
+    return this.db.prepare('SELECT * FROM playlist_items ORDER BY created_at DESC').all().map(item => ({ ...item, manifest: JSON.parse(item.manifest_json) }));
+  }
+
+  deletePlaylistItem(id) { return this.db.prepare('DELETE FROM playlist_items WHERE id = ?').run(id).changes > 0; }
 
   close() { this.db.close(); }
 }
