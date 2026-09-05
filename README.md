@@ -30,6 +30,7 @@
 - **本地歌单**：基于 SQLite 保存歌单条目，后续可暴露给游戏客户端。
 - **媒体任务**：音频、视频和未来 3D Renderer 共用 RenderJob 模型。
 - **可恢复性**：补丁前先建立游戏文件基线；用户数据和生成媒体放在 Steam 目录之外。
+- **原装接入**：安装器会区分原装、已被其他工具修改和未知状态；用户不需要预先安装 OliviaSoul。
 
 ## 安装
 
@@ -79,6 +80,7 @@ music.addToPlaylist(track);
 - [普通用户流程](./docs/ui-flow.md)
 - [RenderJob 状态机](./docs/render-job.md)
 - [Phase 0](./docs/phase0.md)、[Phase 1](./docs/phase1.md)、[Phase 2](./docs/phase2.md)
+- [原装游戏基线与插件接入](./docs/original-installation.md)
 
 ## 开发与测试
 

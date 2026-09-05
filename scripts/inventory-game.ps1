@@ -16,6 +16,8 @@ $files = @(
 )
 $result = [ordered]@{
   schema = "linli-nocturne.client-baseline"
+  provenance = "observed-install"
+  provenanceNote = "该输出只记录当前目录，不代表原装文件；如果目录曾被第三方工具修改，必须另行取得并审核原版基线。"
   capturedAt = (Get-Date).ToUniversalTime().ToString("o")
   gameRoot = $root
   version = $Version

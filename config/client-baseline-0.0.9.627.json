@@ -1,5 +1,7 @@
 {
   "schema": "linli-nocturne.client-baseline",
+  "provenance": "reconstructed-pristine",
+  "provenanceNote": "前四项来自 OliviaSoul 在执行补丁前保存的原版备份；其余三项来自 Steam 安装中未被 OliviaSoul 修改的文件。当前游戏目录可能已被第三方工具修改，不能用来重新生成本文件。",
   "capturedAt": "2026-09-05T14:44:04.2154514Z",
   "gameRoot": "D:\\Program Files (x86)\\Steam\\steamapps\\common\\BSide Olivia Lin Test",
   "version": "0.0.9.627",
@@ -7,14 +9,14 @@
     {
       "path": "0.0.9.627/resources/feapp.dat",
       "exists": true,
-      "length": 27748716,
-      "sha256": "aec900eb0d735bd98b80a32bce3f4c84f67ee0e92b0df811cbc03c37a7426077"
+      "length": 27740616,
+      "sha256": "c88f1dd4cb7c95e4902d74dd0c247962ffd65559e3907497b416078d3a6698b5"
     },
     {
       "path": "0.0.9.627/resources/webplayer.dat",
       "exists": true,
-      "length": 124331,
-      "sha256": "3dc3cc86786a54ff87d7498e7795d55635e9e2defb20d4f16975c46e324ca94d"
+      "length": 123532,
+      "sha256": "565b5e3e113c2a9dfb90d5fa4f2a0ccda9b0151c118ae3365e6ee0c8624a451d"
     },
     {
       "path": "0.0.9.627/resources/feplayer.dat",
@@ -26,13 +28,13 @@
       "path": "0.0.9.627/plugins/Studio/NutStudioUI.dll",
       "exists": true,
       "length": 1297376,
-      "sha256": "294dcfe023c84bc83bdd531d8431bf76b2b7a1fbc0941a250ae8f4cf2ed8fa99"
+      "sha256": "3756767fc01c2a1c034a56c1ae2920651f13021a1b4cc0c3ed291fc92a9728e1"
     },
     {
       "path": "0.0.9.627/plugins/Container/NutContainerPlugin.dll",
       "exists": true,
       "length": 498144,
-      "sha256": "d78112ca218f805d437d2b03fe4c772c7cb279848dccce16570cbd466fe66ab4"
+      "sha256": "53b61d8e9766c5b1cf2af29ed1a4ac7985052db65c37aa1829c71416050e31d1"
     },
     {
       "path": "0.0.9.627/NutBase.dll",
