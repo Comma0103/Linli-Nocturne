@@ -9,7 +9,7 @@
 - [x] 设计数据库迁移
 - [x] 设计 RenderJob 状态机
 - [x] 设计普通用户安装和配置流程
-- [ ] 修复 OliviaSoul 路径空格测试问题
+- [x] 修复 OliviaSoul 路径空格测试问题
 - [x] 提交首个本地 Git commit
 
 进入 Phase 1 的门槛：
