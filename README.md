@@ -76,17 +76,19 @@
 
 自动领取待处理信件，防止进程内重复处理，恢复过期 `processing` 租约，并在达到最大尝试次数后失败。
 
-#### [x] Phase 3-4：信件记忆和连续对话
+#### [x] Phase 3-4：信件记忆和连续对话（`2c20767`）
 
 把必要的历史内容整理为受限记忆，让回信能够参考上下文，同时限制保存范围和长度；默认关闭，启用后可使用 SQLite 或其他 MemoryProvider。
 
-#### [x] Phase 3-M1：跨阶段模块化边界修复
+#### [x] Phase 3-M1：跨阶段模块化边界修复（`637b33c`）
 
 抽出 AudioRenderer、GamePlaybackAdapter、PersonaProvider、ModuleRegistry 和统一模块设置；保留原版游戏契约在适配器边界内，SQLite 继续作为固定事实源。
 
-#### [ ] Phase 3-5：视频回信资产流程
+#### [x] Phase 3-5：视频回信资产流程（`bf6f88f`）
 
 实现视频回信的导入、格式检查、保存、播放、替换、删除和清晰的处理中/成功/失败状态。
+
+设计和验收标准见 [Phase 3-5 视频回信资产流程](./docs/phase3-letter-video.md)。
 
 #### [ ] Phase 3-6：Phase 3 总体验收
 

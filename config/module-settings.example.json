@@ -13,7 +13,8 @@
     "encoder": "builtin.audio-only-mp4"
   },
   "media": {
-    "renderer": "builtin.audio"
+    "renderer": "builtin.audio",
+    "videoImporter": "builtin.ffprobe.mp4"
   },
   "threeD": {
     "renderer": null

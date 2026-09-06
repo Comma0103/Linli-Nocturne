@@ -15,5 +15,6 @@ export function resolveModuleSelections(settings, { registries, store = null, op
   const renderer = registries.renderer.resolve(settings.music?.renderer ?? 'builtin.audio', options.renderer ?? {});
   const playbackAdapter = registries.playback.resolve(settings.music?.playbackAdapter ?? 'olivia-lin.native', options.playback ?? {});
   const mediaEncoder = settings.music?.encoder ? registries.encoder.resolve(settings.music.encoder, options.encoder ?? {}) : null;
-  return { letters: { modelAdapter, memoryProvider, personaProvider }, music: { renderer, playbackAdapter, mediaEncoder } };
+  const videoImporter = settings.media?.videoImporter ? registries.videoImporter.resolve(settings.media.videoImporter, options.videoImporter ?? {}) : null;
+  return { letters: { modelAdapter, memoryProvider, personaProvider }, music: { renderer, playbackAdapter, mediaEncoder }, media: { videoImporter } };
 }

@@ -5,7 +5,7 @@ export const DEFAULT_MODULE_SETTINGS = Object.freeze({
   version: 1,
   letters: Object.freeze({ provider: 'offline-fallback', harness: null, persona: 'default', memory: 'disabled', fallback: true }),
   music: Object.freeze({ renderer: 'builtin.audio', playbackAdapter: 'olivia-lin.native', encoder: 'builtin.audio-only-mp4' }),
-  media: Object.freeze({ renderer: 'builtin.audio' }),
+  media: Object.freeze({ renderer: 'builtin.audio', videoImporter: 'builtin.ffprobe.mp4' }),
   threeD: Object.freeze({ renderer: null }),
 });
 
@@ -31,6 +31,7 @@ function assertRegistrySelection(settings, registries = {}) {
     ['playbackAdapter', settings.music?.playbackAdapter, registries.playback],
     ['encoder', settings.music?.encoder, registries.encoder],
     ['renderer', settings.media?.renderer, registries.renderer],
+    ['videoImporter', settings.media?.videoImporter, registries.videoImporter],
     ['renderer', settings.threeD?.renderer, registries.threeD],
   ];
   for (const [name, id, registry] of selections) {

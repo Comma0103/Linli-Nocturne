@@ -63,6 +63,31 @@ export class SqliteStore {
         media_path TEXT
       );
       CREATE INDEX IF NOT EXISTS idx_midi_jobs_created_at ON midi_jobs(created_at DESC);
+      CREATE TABLE IF NOT EXISTS video_jobs (
+        job_id TEXT PRIMARY KEY,
+        letter_id TEXT NOT NULL,
+        asset_id TEXT NOT NULL,
+        file_name TEXT NOT NULL,
+        adapter_id TEXT NOT NULL,
+        adapter_version TEXT NOT NULL,
+        status TEXT NOT NULL,
+        error_code TEXT,
+        error TEXT,
+        metadata_json TEXT NOT NULL,
+        media_path TEXT,
+        size INTEGER,
+        created_at TEXT NOT NULL,
+        published_at TEXT,
+        deleted_at TEXT
+      );
+      CREATE INDEX IF NOT EXISTS idx_video_jobs_letter_created ON video_jobs(letter_id, created_at DESC);
+      CREATE TABLE IF NOT EXISTS letter_video_assets (
+        letter_id TEXT PRIMARY KEY,
+        asset_id TEXT NOT NULL,
+        job_id TEXT NOT NULL,
+        active INTEGER NOT NULL DEFAULT 1,
+        updated_at TEXT NOT NULL
+      );
     `);
     const letterColumns = new Set(this.db.prepare('PRAGMA table_info(letters)').all().map(column => column.name));
     const additions = [
@@ -269,6 +294,69 @@ export class SqliteStore {
   }
 
   deleteMidiJob(jobId) { return this.db.prepare('DELETE FROM midi_jobs WHERE job_id = ?').run(jobId).changes > 0; }
+
+  createVideoJob(job) {
+    const result = this.db.prepare(`INSERT INTO video_jobs
+      (job_id, letter_id, asset_id, file_name, adapter_id, adapter_version, status, metadata_json, created_at)
+      SELECT ?, ?, ?, ?, ?, ?, 'queued', '{}', ?
+      WHERE NOT EXISTS (SELECT 1 FROM video_jobs WHERE letter_id = ? AND status IN ('queued', 'validating', 'rendering'))`).run(job.jobId, job.letterId, job.assetId, job.fileName, job.adapterId, job.adapterVersion, job.createdAt, job.letterId);
+    if (result.changes === 0) return null;
+    return this.getVideoJob(job.jobId);
+  }
+
+  updateVideoJob(jobId, patch = {}) {
+    const current = this.getVideoJob(jobId);
+    if (!current) return null;
+    this.db.prepare(`UPDATE video_jobs SET status = ?, metadata_json = ?, error_code = ?, error = ?, media_path = ?, size = ?, published_at = ? WHERE job_id = ?`)
+      .run(patch.status ?? current.status, JSON.stringify(patch.metadata ?? current.metadata ?? {}), patch.errorCode ?? current.errorCode ?? null, patch.error ?? current.error ?? null, patch.path ?? current.mediaPath ?? null, patch.size ?? current.size ?? null, patch.publishedAt ?? current.publishedAt ?? null, jobId);
+    return this.getVideoJob(jobId);
+  }
+
+  failVideoJob(jobId, errorCode, error, at) {
+    return this.updateVideoJob(jobId, { status: 'failed', errorCode, error });
+  }
+
+  publishVideoJob(jobId, { path, size, metadata, fileName, publishedAt }) {
+    const job = this.getVideoJob(jobId);
+    if (!job) return null;
+    this.db.exec('BEGIN IMMEDIATE');
+    try {
+      this.db.prepare('UPDATE video_jobs SET status = \'published\', metadata_json = ?, media_path = ?, size = ?, published_at = ?, file_name = ?, error_code = NULL, error = NULL WHERE job_id = ?')
+        .run(JSON.stringify(metadata ?? {}), path, size, publishedAt, fileName ?? job.fileName, jobId);
+      this.db.prepare('UPDATE letter_video_assets SET active = 0 WHERE letter_id = ?').run(job.letterId);
+      this.db.prepare('INSERT INTO letter_video_assets (letter_id, asset_id, job_id, active, updated_at) VALUES (?, ?, ?, 1, ?) ON CONFLICT(letter_id) DO UPDATE SET asset_id = excluded.asset_id, job_id = excluded.job_id, active = 1, updated_at = excluded.updated_at')
+        .run(job.letterId, job.assetId, job.jobId, publishedAt);
+      this.db.exec('COMMIT');
+    } catch (error) { this.db.exec('ROLLBACK'); throw error; }
+    return this.getVideoJob(jobId);
+  }
+
+  getVideoJob(jobId) {
+    const row = this.db.prepare('SELECT * FROM video_jobs WHERE job_id = ?').get(jobId);
+    return row ? { jobId: row.job_id, letterId: row.letter_id, assetId: row.asset_id, fileName: row.file_name, adapterId: row.adapter_id, adapterVersion: row.adapter_version, status: row.status, errorCode: row.error_code, error: row.error, metadata: JSON.parse(row.metadata_json || '{}'), mediaPath: row.media_path, size: row.size, createdAt: row.created_at, publishedAt: row.published_at, deletedAt: row.deleted_at } : null;
+  }
+
+  listVideoJobs(letterId) { return this.db.prepare('SELECT job_id FROM video_jobs WHERE letter_id = ? ORDER BY created_at DESC').all(letterId).map(row => this.getVideoJob(row.job_id)); }
+  getVideoAsset(assetId) {
+    const row = this.db.prepare(`SELECT v.*, a.active FROM video_jobs v LEFT JOIN letter_video_assets a ON a.asset_id = v.asset_id WHERE v.asset_id = ? ORDER BY v.created_at DESC LIMIT 1`).get(assetId);
+    return row ? { ...this.getVideoJob(row.job_id), active: row.active === 1 } : null;
+  }
+  getActiveVideo(letterId) {
+    const row = this.db.prepare('SELECT job_id FROM letter_video_assets WHERE letter_id = ? AND active = 1').get(letterId);
+    return row ? this.getVideoJob(row.job_id) : null;
+  }
+  listActiveVideos() { return this.db.prepare('SELECT letter_id, job_id FROM letter_video_assets WHERE active = 1').all().map(row => ({ letterId: row.letter_id, ...this.getVideoJob(row.job_id) })); }
+  deleteActiveVideo(letterId, at) {
+    const current = this.getActiveVideo(letterId);
+    if (!current) return false;
+    this.db.exec('BEGIN IMMEDIATE');
+    try {
+      this.db.prepare('UPDATE letter_video_assets SET active = 0, updated_at = ? WHERE letter_id = ?').run(at, letterId);
+      this.db.prepare("UPDATE video_jobs SET status = 'archived', deleted_at = ? WHERE job_id = ?").run(at, current.jobId);
+      this.db.exec('COMMIT');
+    } catch (error) { this.db.exec('ROLLBACK'); throw error; }
+    return true;
+  }
 
   close() { this.db.close(); }
 }

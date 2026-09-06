@@ -5,6 +5,7 @@ import { FilePersonaProvider, NoopPersonaProvider, StaticPersonaProvider } from 
 import { createRendererRegistry } from '../music/renderer-registry.js';
 import { GamePlaybackAdapter, OliviaLinPlaybackAdapter } from '../music/playback-adapter.js';
 import { createAudioOnlyMp4Encoder } from '../music/media-encoder.js';
+import { FfprobeMp4Adapter } from '../letters/video-import-adapter.js';
 
 export function createDefaultModuleRegistries({ store = null } = {}) {
   const provider = new ModuleRegistry('provider')
@@ -24,5 +25,7 @@ export function createDefaultModuleRegistries({ store = null } = {}) {
     .register({ id: 'generic', version: '1.0.0', label: '通用播放器适配', create: options => new GamePlaybackAdapter(options) });
   const encoder = new ModuleRegistry('encoder')
     .register({ id: 'builtin.audio-only-mp4', version: '1.0.0', label: '内置音频 MP4 编码器', create: options => createAudioOnlyMp4Encoder(options) });
-  return { provider, harness, persona, memory, renderer: createRendererRegistry(), playback, encoder };
+  const videoImporter = new ModuleRegistry('videoImporter')
+    .register({ id: 'builtin.ffprobe.mp4', version: '1.0.0', label: '内置 FFprobe MP4 检查器', create: options => new FfprobeMp4Adapter(options) });
+  return { provider, harness, persona, memory, renderer: createRendererRegistry(), playback, encoder, videoImporter };
 }

@@ -14,6 +14,7 @@ Game Client -> Local Gateway -> Domain Services -> Stores and Renderers
 - MediaStore：校验、元数据、Range 读取、备份。
 - DesktopApp：安装、配置、启动、诊断和恢复。
 - ModuleRegistry/ModuleSettings：登记可用实现，保存用户对 provider、renderer、播放适配器、人格和记忆的选择；敏感凭据不进入设置文件。
+- VideoReplyService：将外部 MP4 作为信件附属资产导入、检查、发布和替换；视频检查器通过 `media.videoImporter` 选择。
 
 关键实体：
 Letter、MemoryEpisode、MidiAsset、RenderJob、PlaylistItem、ClientBaseline、ModelProfile。
