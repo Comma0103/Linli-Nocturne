@@ -50,6 +50,14 @@ pnpm test
 
 当前版本可以运行领域核心和测试，暂时不会自动修改游戏文件。
 
+可以先对游戏目录做只读接入检查（不会修改文件）：
+
+```powershell
+node scripts/plan-install.mjs "D:\Program Files (x86)\Steam\steamapps\common\BSide Olivia Lin Test" "D:\Aesthetic\Linli-Nocturne-Backups"
+```
+
+只有输出 `canApply: true` 时，后续安装器才会进入备份和补丁步骤。
+
 ## 当前用法
 
 当前开发接口可以解析 MIDI、生成本地 WAV，并加入 SQLite 歌单：
