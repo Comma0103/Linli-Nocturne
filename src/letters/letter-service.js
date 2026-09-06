@@ -1,20 +1,24 @@
 import { randomUUID } from 'node:crypto';
 import { createDayBoundary, DEFAULT_TIME_ZONE } from '../core/time-boundary.js';
+import { NoopMemoryProvider } from './memory-provider.js';
 
 export class LetterLimitError extends Error {
   constructor(message, code) { super(message); this.name = 'LetterLimitError'; this.code = code; }
 }
 
 export class LetterService {
-  constructor({ store, modelAdapter, clock = () => new Date(), timeZone = DEFAULT_TIME_ZONE, limits = {} }) {
+  constructor({ store, modelAdapter, memoryProvider = new NoopMemoryProvider(), clock = () => new Date(), timeZone = DEFAULT_TIME_ZONE, limits = {} }) {
     this.store = store;
     this.modelAdapter = modelAdapter;
+    if (!memoryProvider || typeof memoryProvider.recall !== 'function' || typeof memoryProvider.remember !== 'function') throw new TypeError('memoryProvider.recall and remember are required');
+    this.memoryProvider = memoryProvider;
     this.clock = clock;
     this.dayBoundary = createDayBoundary(timeZone);
     const maxAttempts = Number.isInteger(limits.maxAttempts) ? limits.maxAttempts : 3;
     const retryDelayMs = Number.isFinite(limits.retryDelayMs) ? limits.retryDelayMs : 60 * 1000;
+    const memoryContextMaxChars = Number.isFinite(limits.memoryContextMaxChars) ? limits.memoryContextMaxChars : 4_000;
     this.limits = { dailyLimit: limits.dailyLimit ?? 3, delayMs: limits.delayMs ?? 5 * 60 * 1000, bypass: limits.bypass ?? false,
-      maxAttempts: Math.max(1, maxAttempts), retryDelayMs: Math.max(0, retryDelayMs) };
+      maxAttempts: Math.max(1, maxAttempts), retryDelayMs: Math.max(0, retryDelayMs), memoryContextMaxChars: Math.max(0, Math.floor(memoryContextMaxChars)) };
   }
 
   send({ recipient = '林离', body }) {
@@ -33,8 +37,13 @@ export class LetterService {
     const letter = this.store.claimNextLetter(this.clock().toISOString(), this.limits.maxAttempts);
     if (!letter) return null;
     try {
-      const result = await this.modelAdapter.generateReply({ recipient: letter.recipient, prompt: letter.body });
-      return this.store.markReplied(letter.id, result.text, this.clock().toISOString());
+      let memory = { context: '' };
+      try { memory = await this.memoryProvider.recall({ recipient: letter.recipient, letter }); } catch { /* memory is auxiliary */ }
+      const memoryContext = String(memory?.context ?? '').slice(0, this.limits.memoryContextMaxChars);
+      const result = await this.modelAdapter.generateReply({ recipient: letter.recipient, prompt: letter.body, memory: memoryContext });
+      const replied = this.store.markReplied(letter.id, result.text, this.clock().toISOString());
+      try { await this.memoryProvider.remember({ recipient: letter.recipient, letter, reply: result.text, createdAt: replied?.replied_at ?? this.clock().toISOString() }); } catch { /* memory is auxiliary */ }
+      return replied;
     } catch (error) {
       const errorCode = /^[a-z][a-z0-9_.:-]*$/iu.test(error?.code ?? '') ? error.code : 'provider_failed';
       return this.store.markFailed(letter.id, errorCode, this.clock().toISOString(), {

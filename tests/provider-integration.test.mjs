@@ -57,6 +57,20 @@ test('OpenAI 兼容 provider 发送规范请求并返回统一文字', async t =
   ]);
 });
 
+test('OpenAI 兼容 provider 接收统一的有限记忆上下文', async () => {
+  let received;
+  const provider = new OpenAICompatibleProvider({
+    endpoint: 'https://model.invalid/v1', model: 'fake-model',
+    fetchImpl: async (_url, init) => {
+      received = JSON.parse(init.body);
+      return { ok: true, json: async () => ({ choices: [{ message: { content: '带上下文的回信' } }] }) };
+    },
+  });
+  await provider.generate({ prompt: '今天好吗', memory: '来信：昨天很好\n回信：我也记得。' });
+  assert.match(received.messages.at(-1).content, /此前对话记忆/u);
+  assert.match(received.messages.at(-1).content, /昨天很好/u);
+});
+
 test('OliviaSoul v18 Harness provider 复用现成脚本并清理临时信件', async () => {
   let observed;
   const provider = new OliviaSoulHarnessProvider({

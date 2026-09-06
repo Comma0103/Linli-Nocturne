@@ -24,6 +24,14 @@ export class SqliteStore {
         next_attempt_at TEXT
       );
       CREATE INDEX IF NOT EXISTS idx_letters_status_available ON letters(status, available_at);
+      CREATE TABLE IF NOT EXISTS memory_episodes (
+        id TEXT PRIMARY KEY,
+        recipient TEXT NOT NULL,
+        source_letter_id TEXT NOT NULL UNIQUE,
+        content TEXT NOT NULL,
+        created_at TEXT NOT NULL
+      );
+      CREATE INDEX IF NOT EXISTS idx_memory_episodes_recipient_created ON memory_episodes(recipient, created_at DESC);
       CREATE TABLE IF NOT EXISTS playlist_items (
         id TEXT PRIMARY KEY,
         title TEXT NOT NULL,
@@ -144,6 +152,28 @@ export class SqliteStore {
 
   countUnread() {
     return this.db.prepare("SELECT COUNT(*) AS count FROM letters WHERE status = 'replied' AND read_at IS NULL").get().count;
+  }
+
+  insertMemoryEpisode(episode) {
+    this.db.prepare(`INSERT OR IGNORE INTO memory_episodes
+      (id, recipient, source_letter_id, content, created_at) VALUES (?, ?, ?, ?, ?)`)
+      .run(episode.id, episode.recipient, episode.sourceLetterId, episode.content, episode.createdAt);
+    return this.getMemoryEpisodeByLetter(episode.sourceLetterId);
+  }
+
+  getMemoryEpisodeByLetter(sourceLetterId) {
+    return this.db.prepare('SELECT * FROM memory_episodes WHERE source_letter_id = ?').get(sourceLetterId) ?? null;
+  }
+
+  listMemoryEpisodes(recipient, limit = 8) {
+    return this.db.prepare('SELECT * FROM memory_episodes WHERE recipient = ? ORDER BY created_at DESC LIMIT ?').all(recipient, limit);
+  }
+
+  trimMemoryEpisodes(recipient, maxEpisodes = 8) {
+    return this.db.prepare(`DELETE FROM memory_episodes
+      WHERE recipient = ? AND id NOT IN (
+        SELECT id FROM memory_episodes WHERE recipient = ? ORDER BY created_at DESC LIMIT ?
+      )`).run(recipient, recipient, maxEpisodes).changes;
   }
 
   addPlaylistItem(item) {
