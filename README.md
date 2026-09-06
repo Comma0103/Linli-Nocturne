@@ -12,6 +12,8 @@
 
 下面按提交记录和功能边界拆分开发步骤。已完成项保留对应的代表性提交，未勾选项是后续计划。所有模块都遵守可插拔原则，具体实现通过统一接口、适配器或中间表示接入。
 
+文档采用“一级 Phase 总览 + 必要时的二级里程碑详细文档”结构。每个 Phase 都有总览入口；只有具备独立需求、设计和验收边界的里程碑才另设详细文档，路线项会明确给出对应链接。
+
 ### Phase 0 — 调研与设计
 
 #### [x] Phase 0-1：客户端基线、需求和架构（`9081266`）
@@ -68,21 +70,31 @@
 
 统一信件与 MIDI 的时区日界线，实现 `pending/processing/replied/failed`、原子领取、重试上限、fake provider 和文字回信网关测试。
 
+设计与验收： [Phase 3-1 信件可靠性](./docs/phase3-letter-reliability.md)。
+
 #### [x] Phase 3-2：真实 provider 与可插拔 Harness（`5f6e463`、`62c92e1`）
 
 接入 OpenAI 兼容外部 API、通用 Harness 插槽、OliviaSoul v18 适配器、本地模型接口和 fallback；OliviaSoul 只是一个可替换实现。
+
+设计与验收： [Phase 3-2 Provider 与 Harness](./docs/phase3-provider-integration.md)。
 
 #### [x] Phase 3-3：后台 worker 与崩溃恢复（`8ae5964`）
 
 自动领取待处理信件，防止进程内重复处理，恢复过期 `processing` 租约，并在达到最大尝试次数后失败。
 
+设计与验收： [Phase 3-3 后台 Worker](./docs/phase3-letter-worker.md)。
+
 #### [x] Phase 3-4：信件记忆和连续对话（`2c20767`）
 
 把必要的历史内容整理为受限记忆，让回信能够参考上下文，同时限制保存范围和长度；默认关闭，启用后可使用 SQLite 或其他 MemoryProvider。
 
+设计与验收： [Phase 3-4 信件记忆](./docs/phase3-letter-memory.md)。
+
 #### [x] Phase 3-M1：跨阶段模块化边界修复（`637b33c`）
 
 抽出 AudioRenderer、GamePlaybackAdapter、PersonaProvider、ModuleRegistry 和统一模块设置；保留原版游戏契约在适配器边界内，SQLite 继续作为固定事实源。
+
+设计与验收： [Phase 3-M1 模块化边界修复](./docs/modular-adapters-remediation.md)。
 
 #### [x] Phase 3-5：视频回信资产流程（`a3e5c95`）
 
@@ -93,6 +105,8 @@
 #### [ ] Phase 3-6：Phase 3 总体验收
 
 串联写信、排队、provider、重试、记忆和视频回信，补齐网关冒烟测试、错误恢复、文档和设置入口。
+
+总览与验收边界： [Phase 3 信件体验总览](./docs/phase3.md)。
 
 ### Phase 4 — 完整音乐体验
 
@@ -243,6 +257,7 @@ music.addToPlaylist(track);
 - [普通用户流程](./docs/ui-flow.md)
 - [RenderJob 状态机](./docs/render-job.md)
 - [Phase 0](./docs/phase0.md)、[Phase 1](./docs/phase1.md)、[Phase 2](./docs/phase2.md)
+- [Phase 3 信件体验总览](./docs/phase3.md)
 - [Phase 3 信件可靠性首个里程碑](./docs/phase3-letter-reliability.md)
 - [Phase 3 Provider 与 OliviaSoul Harness 适配](./docs/phase3-provider-integration.md)
 - [Phase 3 信件后台 Worker](./docs/phase3-letter-worker.md)
