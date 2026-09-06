@@ -8,6 +8,226 @@
 
 截至当前，Phase 0–3 已完成，已在 Steam 0.0.9.627 中验收离线回信和 DeepSeek + Persona + OliviaSoul Harness 真实回信。项目仍是开发版，不是发行版。Phase 4 尚未开始，上传曲目接管原生 WebPlayer 的问题 `LINLI-PLAY-001` 仍是 Phase 4 的跨层阻塞。
 
+## 当前功能
+
+- **信件**：默认遵循原游戏每日最多 3 封、每封延迟 5 分钟的规则，并提供高级 bypass 开关。
+- **信件身份**：`config/user-config.json` 的 `user.displayName` 是玩家本人（例如“嘉树”），会用于回信称呼和模型上下文；`林离`仍是游戏收信人和配额统计键。
+- **模型提供方**：外部 API、可插拔 Harness、本地模型和离线降级共用统一接口；OliviaSoul 只是其中一个可选 Harness。
+- **信件记忆**：默认关闭；启用后可使用有条数、单条字符数和上下文字符数限制的 MemoryProvider。
+- **模块选择**：当前已有可读配置文件、校验命令和配置向导，用户可以为信件、音乐播放、媒体渲染和未来 3D 同步选择实现与 fallback；最终 App 图形设置页会复用同一模型，第三方项目都通过适配器接入。
+- **MIDI 基础**：支持标准 MIDI 文件解析、音符/Tempo/延音踏板事件、时间轴清单、本地音频渲染和媒体任务；上传曲目完整接管原生 WebPlayer 的播放/演奏仍属于 Phase 4，受 `LINLI-PLAY-001` 影响。
+- **MIDI 网关**：已具备符合原版客户端响应契约的本地上传、任务创建、结果轮询、媒体读取、统一 RenderJob 字段、SQLite 任务元数据持久化，以及用户曲目游标分页；服务重启后会按当前网关地址恢复历史任务的媒体 URL。协议回归测试覆盖上传预检、下划线字段和数字任务状态。游戏播放使用可信的 `localhost` 回环媒体地址，避免把 `127.0.0.1` HTTP 资源当作混合内容拦截。
+- **本地歌单**：基于 SQLite 保存歌单条目，后续可暴露给游戏客户端。
+- **媒体任务**：音频、视频和未来 3D Renderer 共用 RenderJob 模型。
+- **可恢复性**：补丁前先建立游戏文件基线；用户数据和生成媒体放在 Steam 目录之外。
+- **原装接入**：安装器会区分原装、已被其他工具修改和未知状态；用户不需要预先安装 OliviaSoul。
+- **离线用户曲目**：针对已接入的客户端提供受控增量补丁，使本地生成曲目能够在离线曲库中显示；补丁会先备份当前前端包。
+
+## 安装
+
+### 当前开发版
+
+环境要求：Windows 10/11、Node.js 22 及以上（当前使用 Node.js 24）、pnpm 9 及以上。后续游戏接入阶段还需要安装《BSide: Olivia Lin》本体。
+
+```powershell
+git clone https://github.com/Comma0103/Linli-Nocturne.git
+cd Linli-Nocturne
+pnpm install
+pnpm test
+```
+
+当前版本可以运行领域核心和本地服务。服务默认使用离线 fallback，不需要 API Key；要在 Steam 游戏里体验文字回信，还需要先启动服务，再按受保护接入流程让已接入的客户端连接它。
+
+启动开发版本地服务：
+
+```powershell
+node scripts/start-local-service.mjs
+```
+
+默认地址是 `http://localhost:27149`。外部模型、完全本地模型、OliviaSoul Harness、人格和记忆的选择见 [模块设置与实现选择](./docs/module-settings.md)；API Key 只保存在本机的 `config/user-config.json`（或运行环境提供的凭据中），绝不能提交到仓库。
+
+仓库已内置可复用的 [OliviaSoul](https://github.com/yilangren/OliviaSoul) 和 [olivia-lin](https://github.com/1Dreamer666/olivia-lin) 的 Persona/Harness 资产，具体文件和来源记录见 [第三方资产说明](./third_party/README.md)。首次使用可复制配置模板：
+
+```powershell
+Copy-Item config/user-config.example.json config/user-config.json
+```
+
+`config/user-config.json` 是本机配置，已加入 `.gitignore`；模板只提供默认值和占位符，不包含任何密钥。
+
+可以先对游戏目录做只读接入检查（不会修改文件）：
+
+```powershell
+node scripts/plan-install.mjs "D:\Program Files (x86)\Steam\steamapps\common\BSide Olivia Lin Test" "D:\Aesthetic\Linli-Nocturne-Backups"
+```
+
+只有输出 `canApply: true` 时，后续安装器才会进入备份和补丁步骤。执行器还会在写入前再次校验原装基线，并在前端或 DLL 补丁失败时自动回滚；默认命令行仍以只读计划启动，避免误操作已有第三方修改的安装。
+
+开发版安装命令默认仍是只读计划：
+
+```powershell
+node scripts/apply-install.mjs "D:\Program Files (x86)\Steam\steamapps\common\BSide Olivia Lin Test" "D:\Aesthetic\Linli-Nocturne-Backups"
+```
+
+只有确认游戏已退出、目录是原装基线，并明确添加 `--apply --confirm=Linli-Nocturne` 时才会执行备份和补丁。当前 Steam 目录如果被其他工具修改，命令会直接拒绝执行。
+
+## 用户配置指南
+
+本节面向不参与开发的普通用户，按“复制配置 → 启动服务 → 进入游戏”的顺序维护。以后每增加一个需要用户选择或填写的功能，都必须同步更新本节。
+
+### 第一次使用：离线回信
+
+离线模式不需要 API Key，适合先确认服务和游戏接入是否正常。
+
+1. 在仓库根目录复制配置模板：
+
+   ```powershell
+   Copy-Item config/user-config.example.json config/user-config.json
+   notepad config/user-config.json
+   ```
+
+2. 在配置文件中至少填写自己的名字：
+
+   ```json
+   "user": {
+     "displayName": "嘉树",
+     "language": "zh-CN",
+     "timeZone": "Asia/Shanghai"
+   }
+   ```
+
+   `displayName` 是回信称呼和模型看到的玩家名字；游戏收信人“林离”由程序保留，不要把它改成玩家名字。
+
+3. 确认信件配置保持离线模式：
+
+   ```json
+   "letters": {
+     "baseModel": {
+       "provider": "offline-fallback"
+     },
+     "fallbackEnabled": true,
+     "dailyLimitBypass": false,
+     "harness": {
+       "enabled": false
+     }
+   }
+   ```
+
+   测试时如果不想等待原游戏的每日 3 封和 5 分钟延迟，可以临时把 `dailyLimitBypass` 改为 `true`；体验结束后建议改回 `false`。
+
+4. 启动本地服务并保持窗口运行：
+
+   ```powershell
+   node scripts/start-local-service.mjs
+   Invoke-RestMethod http://localhost:27149/health
+   ```
+
+   返回 `ok: true` 后，再启动已完成接入的 Steam 客户端即可写信和查看离线回信。
+
+### 使用 DeepSeek、Persona 和 OliviaSoul Harness
+
+这一步是可选的真实模型体验。先关闭游戏，再编辑 `config/user-config.json`，把对应字段改成实际值：
+
+```json
+"letters": {
+  "baseModel": {
+    "provider": "external.openai-compatible",
+    "external": {
+      "endpoint": "https://api.deepseek.com",
+      "model": "你的模型名称",
+      "apiKey": "你的 API Key"
+    }
+  },
+  "fallbackEnabled": true,
+  "persona": {
+    "providerId": "file",
+    "file": "../third_party/olivia-lin/BSide_Olivia_Lin/persona/olivia_lin.md"
+  },
+  "harness": {
+    "enabled": true,
+    "providerId": "olivia-soul-v18",
+    "root": "../third_party/OliviaSoul/v18-harness",
+    "person": "linli-local-user"
+  }
+}
+```
+
+API Key 只应写在本机的 `config/user-config.json`，该文件已被 Git 忽略，不能提交、截图公开或放进日志。仓库已经内置 OliviaSoul 和 olivia-lin 资产，不需要用户另外下载。Harness 会执行预检、记忆组装、生成、检查和必要重写；`fallbackEnabled` 仍可作为外部模型失败时的离线降级开关。启动服务后发送一封新信即可测试，旧的失败信件不会自动改写。
+
+### 在 Steam 游戏中使用
+
+普通用户只需要在游戏运行前启动本地服务。第一次接入或更换游戏安装目录时，必须先完全退出游戏并执行只读检查：
+
+```powershell
+node scripts/plan-install.mjs "你的 Steam 游戏目录" "游戏目录外的备份目录"
+```
+
+只有输出 `canApply: true`、版本为 `0.0.9.627` 且安装状态为 `pristine` 时，才可以按“安装”一节的受保护命令执行补丁。游戏目录如果已经被其他工具修改，先停止，不要覆盖。服务启动后，在游戏中打开信箱、写信，等待回信显示；真实模型质量、游戏内正文和播放/演奏结果必须以用户实际看到的界面为准。
+
+### 配置项速查
+
+| 配置项 | 作用 | 普通用户建议 |
+| --- | --- | --- |
+| `user.displayName` | 玩家名字，回信会用它称呼用户 | 填自己的名字 |
+| `letters.baseModel.provider` | 选择 `offline-fallback`、外部 API 或本地模型 | 先用离线，确认正常后再接模型 |
+| `letters.baseModel.external` | 外部 OpenAI 兼容服务地址、模型和 API Key | 只填自己有权限使用的服务 |
+| `letters.baseModel.local` | 本机 OpenAI 兼容模型地址、模型和 Key | 需要先启动本地模型服务 |
+| `letters.persona` | 选择人格实现和 Persona 文件 | 默认使用内置 olivia-lin 资料 |
+| `letters.harness.enabled` | 是否启用完整 Harness | 离线测试关闭，真实模型测试可开启 |
+| `letters.fallbackEnabled` | provider 失败后是否降级到离线回信 | 普通用户建议开启 |
+| `letters.memory.enabled` | 是否保存有限的历史对话记忆 | 默认关闭，按隐私需要开启 |
+| `letters.dailyLimitBypass` | 是否跳过每日数量和等待时间 | 仅测试时临时开启 |
+
+配置修改后必须重启本地服务才会生效。遇到回信一直处理中，先查看服务窗口和信件列表状态；遇到最终失败，先确认模型地址、模型名、API Key 和 Harness 开关，不要重复点击发送造成多封测试信。
+
+## 当前用法
+
+当前开发接口可以解析 MIDI、生成本地 WAV，并加入 SQLite 歌单：
+
+```js
+import { SqliteStore } from './src/storage/sqlite-store.js';
+import { MusicService } from './src/music/music-service.js';
+
+const store = new SqliteStore('./data/linli.sqlite');
+const music = new MusicService({ store });
+const track = music.importMidi({ buffer: midiBytes, sourceName: 'my-song.mid', title: '我的曲目' });
+music.addToPlaylist(track);
+```
+
+写信功能使用 `LetterService` 和 `ModelAdapter`；默认规则与原游戏保持一致。本地 HTTP 网关是后续游戏客户端的兼容层。
+
+## 架构
+
+```text
+游戏客户端
+    ↓ 兼容本地 HTTP 网关
+领域服务 ── SQLite 存储
+    ├─ LetterService + LetterWorker + MemoryProvider + ModelAdapter
+    ├─ MusicService + MIDI Parser
+    └─ RenderJob + Audio/Video/Future3D Renderer
+```
+
+设计文档位于 [`docs/`](./docs/)：
+
+- [需求说明](./docs/requirements.md)
+- [初始架构](./docs/architecture.md)
+- [普通用户流程](./docs/ui-flow.md)
+- [RenderJob 状态机](./docs/render-job.md)
+- [Phase 0](./docs/phase0.md)、[Phase 1](./docs/phase1.md)、[Phase 2](./docs/phase2.md)
+- [Phase 3 信件体验总览](./docs/phase3.md)
+- [Phase 3-7 Steam 实机验收](./docs/phase3-steam-integration.md)
+- [Phase 4 完整音乐体验总览](./docs/phase4.md)
+- [Phase 3 到 Phase 4 及后续开发交接](./docs/phase_3_to_4_handoff.md)
+- [Phase 3 信件可靠性首个里程碑](./docs/phase3-letter-reliability.md)
+- [Phase 3 Provider 与 OliviaSoul Harness 适配](./docs/phase3-provider-integration.md)
+- [Phase 3 信件后台 Worker](./docs/phase3-letter-worker.md)
+- [Phase 3 信件记忆和连续对话](./docs/phase3-letter-memory.md)
+- [第三方项目引用与复用说明](./docs/third-party-credits.md)
+- [模块设置与实现选择](./docs/module-settings.md)
+- [已内置的第三方 Persona/Harness 资产](./third_party/README.md)
+- [原装游戏基线与插件接入](./docs/original-installation.md)
+- [原版前端接口审计](./docs/frontend-audit.md)
+- [Phase 2 收尾与 Phase 3 交接（完整 Prompt）](./docs/phase_2_to_3_handoff.md)
+
 ## 开发路线
 
 下面按提交记录和功能边界拆分开发步骤。已完成项保留对应的代表性提交，未勾选项是后续计划。所有模块都遵守可插拔原则，具体实现通过统一接口、适配器或中间表示接入。
@@ -195,117 +415,6 @@
 整理许可证、第三方引用、安装说明、升级路径、已知问题和发行验证清单。
 
 详细的证据边界、历史记录和阶段交接仍以 [`docs/phase_2_to_3_handoff.md`](./docs/phase_2_to_3_handoff.md) 及各阶段文档为准。
-
-## 当前功能
-
-- **信件**：默认遵循原游戏每日最多 3 封、每封延迟 5 分钟的规则，并提供高级 bypass 开关。
-- **信件身份**：`config/user-config.json` 的 `user.displayName` 是玩家本人（例如“嘉树”），会用于回信称呼和模型上下文；`林离`仍是游戏收信人和配额统计键。
-- **模型提供方**：外部 API、可插拔 Harness、本地模型和离线降级共用统一接口；OliviaSoul 只是其中一个可选 Harness。
-- **信件记忆**：默认关闭；启用后可使用有条数、单条字符数和上下文字符数限制的 MemoryProvider。
-- **模块选择**：当前已有可读配置文件、校验命令和配置向导，用户可以为信件、音乐播放、媒体渲染和未来 3D 同步选择实现与 fallback；最终 App 图形设置页会复用同一模型，第三方项目都通过适配器接入。
-- **MIDI 基础**：支持标准 MIDI 文件解析、音符/Tempo/延音踏板事件、时间轴清单、本地音频渲染和媒体任务；上传曲目完整接管原生 WebPlayer 的播放/演奏仍属于 Phase 4，受 `LINLI-PLAY-001` 影响。
-- **MIDI 网关**：已具备符合原版客户端响应契约的本地上传、任务创建、结果轮询、媒体读取、统一 RenderJob 字段、SQLite 任务元数据持久化，以及用户曲目游标分页；服务重启后会按当前网关地址恢复历史任务的媒体 URL。协议回归测试覆盖上传预检、下划线字段和数字任务状态。游戏播放使用可信的 `localhost` 回环媒体地址，避免把 `127.0.0.1` HTTP 资源当作混合内容拦截。
-- **本地歌单**：基于 SQLite 保存歌单条目，后续可暴露给游戏客户端。
-- **媒体任务**：音频、视频和未来 3D Renderer 共用 RenderJob 模型。
-- **可恢复性**：补丁前先建立游戏文件基线；用户数据和生成媒体放在 Steam 目录之外。
-- **原装接入**：安装器会区分原装、已被其他工具修改和未知状态；用户不需要预先安装 OliviaSoul。
-- **离线用户曲目**：针对已接入的客户端提供受控增量补丁，使本地生成曲目能够在离线曲库中显示；补丁会先备份当前前端包。
-
-## 安装
-
-### 当前开发版
-
-环境要求：Windows 10/11、Node.js 22 及以上（当前使用 Node.js 24）、pnpm 9 及以上。后续游戏接入阶段还需要安装《BSide: Olivia Lin》本体。
-
-```powershell
-git clone https://github.com/Comma0103/Linli-Nocturne.git
-cd Linli-Nocturne
-pnpm install
-pnpm test
-```
-
-当前版本可以运行领域核心和本地服务。服务默认使用离线 fallback，不需要 API Key；要在 Steam 游戏里体验文字回信，还需要先启动服务，再按受保护接入流程让已接入的客户端连接它。
-
-启动开发版本地服务：
-
-```powershell
-node scripts/start-local-service.mjs
-```
-
-默认地址是 `http://localhost:27149`。外部模型、完全本地模型、OliviaSoul Harness、人格和记忆的选择见 [模块设置与实现选择](./docs/module-settings.md)；API Key 只通过环境变量或系统凭据配置，不要写入设置文件或提交到仓库。
-
-仓库已内置可复用的 [OliviaSoul](https://github.com/yilangren/OliviaSoul) 和 [olivia-lin](https://github.com/1Dreamer666/olivia-lin) 的 Persona/Harness 资产，具体文件和来源记录见 [第三方资产说明](./third_party/README.md)。首次使用可复制配置模板：
-
-```powershell
-Copy-Item config/user-config.example.json config/user-config.json
-```
-
-`config/user-config.json` 是本机配置，已加入 `.gitignore`；模板只提供默认值和占位符，不包含任何密钥。
-
-可以先对游戏目录做只读接入检查（不会修改文件）：
-
-```powershell
-node scripts/plan-install.mjs "D:\Program Files (x86)\Steam\steamapps\common\BSide Olivia Lin Test" "D:\Aesthetic\Linli-Nocturne-Backups"
-```
-
-只有输出 `canApply: true` 时，后续安装器才会进入备份和补丁步骤。执行器还会在写入前再次校验原装基线，并在前端或 DLL 补丁失败时自动回滚；默认命令行仍以只读计划启动，避免误操作已有第三方修改的安装。
-
-开发版安装命令默认仍是只读计划：
-
-```powershell
-node scripts/apply-install.mjs "D:\Program Files (x86)\Steam\steamapps\common\BSide Olivia Lin Test" "D:\Aesthetic\Linli-Nocturne-Backups"
-```
-
-只有确认游戏已退出、目录是原装基线，并明确添加 `--apply --confirm=Linli-Nocturne` 时才会执行备份和补丁。当前 Steam 目录如果被其他工具修改，命令会直接拒绝执行。
-
-## 当前用法
-
-当前开发接口可以解析 MIDI、生成本地 WAV，并加入 SQLite 歌单：
-
-```js
-import { SqliteStore } from './src/storage/sqlite-store.js';
-import { MusicService } from './src/music/music-service.js';
-
-const store = new SqliteStore('./data/linli.sqlite');
-const music = new MusicService({ store });
-const track = music.importMidi({ buffer: midiBytes, sourceName: 'my-song.mid', title: '我的曲目' });
-music.addToPlaylist(track);
-```
-
-写信功能使用 `LetterService` 和 `ModelAdapter`；默认规则与原游戏保持一致。本地 HTTP 网关是后续游戏客户端的兼容层。
-
-## 架构
-
-```text
-游戏客户端
-    ↓ 兼容本地 HTTP 网关
-领域服务 ── SQLite 存储
-    ├─ LetterService + LetterWorker + MemoryProvider + ModelAdapter
-    ├─ MusicService + MIDI Parser
-    └─ RenderJob + Audio/Video/Future3D Renderer
-```
-
-设计文档位于 [`docs/`](./docs/)：
-
-- [需求说明](./docs/requirements.md)
-- [初始架构](./docs/architecture.md)
-- [普通用户流程](./docs/ui-flow.md)
-- [RenderJob 状态机](./docs/render-job.md)
-- [Phase 0](./docs/phase0.md)、[Phase 1](./docs/phase1.md)、[Phase 2](./docs/phase2.md)
-- [Phase 3 信件体验总览](./docs/phase3.md)
-- [Phase 3-7 Steam 实机验收](./docs/phase3-steam-integration.md)
-- [Phase 4 完整音乐体验总览](./docs/phase4.md)
-- [Phase 3 到 Phase 4 及后续开发交接](./docs/phase_3_to_4_handoff.md)
-- [Phase 3 信件可靠性首个里程碑](./docs/phase3-letter-reliability.md)
-- [Phase 3 Provider 与 OliviaSoul Harness 适配](./docs/phase3-provider-integration.md)
-- [Phase 3 信件后台 Worker](./docs/phase3-letter-worker.md)
-- [Phase 3 信件记忆和连续对话](./docs/phase3-letter-memory.md)
-- [第三方项目引用与复用说明](./docs/third-party-credits.md)
-- [模块设置与实现选择](./docs/module-settings.md)
-- [已内置的第三方 Persona/Harness 资产](./third_party/README.md)
-- [原装游戏基线与插件接入](./docs/original-installation.md)
-- [原版前端接口审计](./docs/frontend-audit.md)
-- [Phase 2 收尾与 Phase 3 交接（完整 Prompt）](./docs/phase_2_to_3_handoff.md)
 
 ## 开发与测试
 
