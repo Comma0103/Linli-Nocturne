@@ -1,5 +1,7 @@
 # Phase 3 首个里程碑：信件可靠性
 
+> 本页只记录首个可靠性里程碑的范围。真实 provider 的适配见 [`phase3-provider-integration.md`](./phase3-provider-integration.md)，后台 worker 和租约恢复见 [`phase3-letter-worker.md`](./phase3-letter-worker.md)。
+
 ## 目标与范围
 
 本里程碑统一信件和 MIDI 的“当天”边界，并把信件处理从一次性手动生成扩展为可恢复的状态机。保留现有 `POST /letter/process` 作为开发和网关冒烟入口；后台 worker 只定义可调用的领取接口，不在本里程碑引入常驻进程。
@@ -20,7 +22,7 @@
 - `src/core/time-boundary.js` 提供基于 IANA 时区的本地日边界计算。SQLite 仍保存 UTC ISO 时间；查询使用该时区对应的 UTC `[start, end)` 区间。
 - `letters.status` 采用 `pending/processing/replied/failed`，并增加 `attempt_count`、`processing_started_at`、`last_error`、`next_attempt_at` 字段。旧数据库中的 `queued` 迁移为 `pending`。
 - SQLite 领取在事务中完成：选择最早可处理的 `pending` 信件并立即递增尝试次数、写入 `processing`；重复领取只能看到空结果。模型成功写入 `replied`，失败时根据 `maxAttempts` 写回 `pending` 或 `failed`。
-- `ModelProviderChain` 按外部、本地、fallback 顺序尝试 provider。每个 provider 都只暴露 `generate(input)`；`ModelAdapter` 负责校验并规范化 `{ text, provider, metadata }`。
+- `ModelProviderChain` 按外部、Harness、本地、fallback 顺序尝试 provider。每个 provider 都只暴露 `generate(input)`；`ModelAdapter` 负责校验并规范化 `{ text, provider, metadata }`。
 - 网关兼容字段继续保留；`letterStatus` 在兼容响应中反映 `replied/failed/llm_processing`，失败原因放在 `error`，不改变原版路由形状。
 
 ## 验收标准
@@ -33,4 +35,4 @@
 
 ## 配置边界
 
-时区、最大尝试次数和重试延迟均为服务构造参数。外部 API 的端点、模型名和凭据只由 provider 配置持有，不写入 Letter 内容、SQLite 信件正文或 Git；真实网络 provider 和后台 worker 留待后续小步实现。
+时区、最大尝试次数和重试延迟均为服务构造参数。外部 API 的端点、模型名和凭据只由 provider 配置持有，不写入 Letter 内容、SQLite 信件正文或 Git；真实网络 provider 和后台 worker 不属于本页首个里程碑范围，后续实现见上面的专项文档。
