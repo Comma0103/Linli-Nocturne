@@ -123,8 +123,11 @@ export function createLocalGateway({ letterService, musicService = null, midiJob
             mediaLogger?.({ method: request.method, pathname: url.pathname, range, status: 416, contentType, bytes: 0 });
             return response.end();
           }
-          let start = match[1] ? Number(match[1]) : Math.max(0, bytes.length - Number(match[2]));
-          let end = match[2] ? Number(match[2]) : bytes.length - 1;
+          const suffixLength = match[1] ? null : Number(match[2]);
+          let start = match[1] ? Number(match[1]) : Math.max(0, bytes.length - suffixLength);
+          // A suffix range bytes=-N means the final N bytes. The end is still
+          // the final byte of the resource, not N-1.
+          let end = match[2] ? (match[1] ? Number(match[2]) : bytes.length - 1) : bytes.length - 1;
           if (!Number.isSafeInteger(start) || !Number.isSafeInteger(end) || start < 0 || start >= bytes.length || end < start) {
             response.writeHead(416, { ...headers, 'content-range': `bytes */${bytes.length}` });
             mediaLogger?.({ method: request.method, pathname: url.pathname, range, status: 416, contentType, bytes: 0 });

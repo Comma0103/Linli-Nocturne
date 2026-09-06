@@ -37,6 +37,10 @@ test('executor backs up and applies a validated plan', () => {
   assert.equal(readFileSync(join(root, plan.targets[0]), 'utf8'), 'patched-frontend');
   assert.equal(readFileSync(join(root, plan.targets[1]), 'utf8'), 'patched-studio');
   assert.equal(readFileSync(join(root, plan.targets[2]), 'utf8'), 'patched-container');
+  assert.equal('buffer' in result.frontend.patches, false);
+  assert.equal('buffer' in result.native.patches.studio, false);
+  assert.equal(result.written.length, 3);
+  assert.equal(result.written.every(item => item.sha256), true);
 });
 
 test('executor rolls back if a later patch fails', () => {

@@ -6,7 +6,7 @@
 
 ## 项目状态
 
-项目正在进行 Phase 2 开发。基础领域服务已经可以运行并通过测试；原装前端、原生 DLL 和本地网关已经完成独立暂存验收与第一轮 Steam 接入验证。Steam 实机已确认官方预设曲目可以正常进入桌面演奏。
+Phase 2 已完成阶段性收尾并进入交接状态。基础领域服务、网关契约、分页、备份回滚、原版接入和官方预设曲目 Steam 实机验收已有证据；上传曲目仍受 `LINLI-PLAY-001` 阻塞，项目尚未达到最终 release 条件。完整状态、证据边界和下一阶段 Prompt 见 [`docs/phase2-handoff.md`](./docs/phase2-handoff.md)。
 
 当前有一个已登记的已知阻塞：上传曲目能够生成并显示，但暂时无法接管原生 WebPlayer 进入桌面演奏；详见 [`LINLI-PLAY-001`](./docs/known-issues.md)。
 
@@ -15,7 +15,7 @@
 - [x] **Phase 0 — 调研与设计**：调研 0.0.9.627 客户端基线、整理原有功能、冻结接口、设计用户流程。
 - [x] **Phase 1 — 本地领域核心**：SQLite 存储、本地网关、写信规则、离线回信、RenderJob 状态机、MIDI 解析、Tempo 和延音踏板提取。本阶段完成的是可独立运行的最小本地闭环。
 - [x] **Phase 1 音乐基础**：离线 WAV 音频渲染和本地歌单。
-- [ ] **Phase 2 — 游戏接入**：恢复写信入口、将本地网关接入游戏客户端、实现安全备份和回滚补丁。版本白名单、基线校验、备份回滚、原版前端补丁、原生 DLL 入口补丁、独立暂存验收和官方曲目 Steam 实机验收已完成；本地上传曲目完整链路仍受 `LINLI-PLAY-001` 阻塞。
+- [x] **Phase 2 — 游戏接入（阶段性收尾）**：版本白名单、基线校验、备份回滚、原版前端补丁、原生 DLL 入口补丁、网关契约、用户曲目分页、独立暂存验收和官方曲目 Steam 实机验收已完成；本地上传曲目完整演奏链路仍由 `LINLI-PLAY-001` 明确阻塞，因此这不是最终愿景完成标记。
 - [ ] **Phase 3 — 信件体验**：记忆、失败重试、文字回信、视频回信导入，以及外部/本地模型提供方。
 - [ ] **Phase 4 — 音乐体验**：用户上传 MIDI、预览、音频/视频任务和游戏内歌单界面。
 - [ ] **Phase 5 — 即兴创作**：支持外部 API 和完全本地运行的模型辅助作曲。
@@ -45,6 +45,7 @@
 ```powershell
 git clone https://github.com/Comma0103/Linli-Nocturne.git
 cd Linli-Nocturne
+pnpm install
 pnpm test
 ```
 
@@ -102,6 +103,7 @@ music.addToPlaylist(track);
 - [Phase 0](./docs/phase0.md)、[Phase 1](./docs/phase1.md)、[Phase 2](./docs/phase2.md)
 - [原装游戏基线与插件接入](./docs/original-installation.md)
 - [原版前端接口审计](./docs/frontend-audit.md)
+- [Phase 2 收尾与 Phase 3 交接（完整 Prompt）](./docs/phase2-handoff.md)
 
 ## 开发与测试
 

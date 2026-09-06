@@ -1,10 +1,10 @@
 import { readFileSync, renameSync, unlinkSync, writeFileSync } from 'node:fs';
-import { join } from 'node:path';
 import { applyFrontendPatch } from './frontend-archive.js';
 import { classifyInstallation } from './installation-provenance.js';
 import { applyNativeFeaturePatch } from './native-feature-patch.js';
 import { createBackup, restoreBackup } from './backup-manager.js';
 import { resolveUnderRoot } from './path-guard.js';
+import { sha256File } from './baseline-verifier.js';
 
 function assertPlan(plan) {
   if (!plan || plan.schema !== 'linli-nocturne.install-plan' || plan.schemaVersion !== 1) {
@@ -25,6 +25,15 @@ function atomicReplace(path, bytes) {
     try { unlinkSync(temporary); } catch {}
     throw error;
   }
+}
+
+function patchSummary(patch) {
+  if (!patch || typeof patch !== 'object') return patch;
+  const summary = { ...patch };
+  delete summary.buffer;
+  delete summary.studio;
+  delete summary.container;
+  return summary;
 }
 
 /** Apply a validated plan and automatically restore its backup on failure. */
@@ -55,12 +64,20 @@ export function executeInstallPlan(plan, {
     const native = nativePatchFn({ studio: readFileSync(studioPath), container: readFileSync(containerPath) });
     atomicReplace(studioPath, native.studio.buffer);
     atomicReplace(containerPath, native.container.buffer);
+    const written = [frontendPath, studioPath, containerPath].map(path => ({
+      path,
+      sha256: sha256File(path),
+    }));
     return {
       schema: 'linli-nocturne.install-result', schemaVersion: 1,
       gameRoot: plan.gameRoot, version: plan.version,
       backup: { destination: backup.destination, manifest: backup.manifest },
-      frontend: { path: plan.targets[0], patches: frontend },
-      native: { paths: plan.targets.slice(1), patches: native },
+      frontend: { path: plan.targets[0], patches: patchSummary(frontend) },
+      native: { paths: plan.targets.slice(1), patches: {
+        studio: patchSummary(native.studio),
+        container: patchSummary(native.container),
+      } },
+      written,
     };
   } catch (error) {
     try {
