@@ -27,3 +27,25 @@ node scripts/configure-modules.mjs config/module-settings.json
 - `threeD.renderer`：未来的 3D Renderer。
 
 领域服务通过 `ModuleRegistry` 和 `resolveModuleSelections()` 取得实现，服务本身不读取设置文件，也不依赖某个具体第三方项目。未来 GUI 设置页直接编辑同一份设置模型，不再另造配置协议。
+
+## 启动开发版本地服务
+
+普通玩家测试 Steam 游戏路径时，不需要手写 Node 组装代码：
+
+```powershell
+node scripts/configure-modules.mjs config/module-settings.json
+node scripts/start-local-service.mjs
+```
+
+默认使用离线 fallback，服务地址为 `http://localhost:27149`。如果选择外部 OpenAI 兼容 provider，可用环境变量配置地址、模型和密钥，例如：
+
+```powershell
+$env:LINLI_MODEL_ENDPOINT = 'https://api.deepseek.com'
+$env:LINLI_MODEL_NAME = '<选择当前可用的模型名>'
+$env:DEEPSEEK_API_KEY = '<只在本机安全环境中设置，不要写入仓库>'
+node scripts/start-local-service.mjs
+```
+
+也可以使用 `LINLI_MODEL_API_KEY` 代替 `DEEPSEEK_API_KEY`。密钥不要粘贴到聊天、设置 JSON、日志或提交记录中。外部 provider 不可用时，设置中的 `letters.fallback` 可以让流程回到离线实现；是否自动 fallback 仍取决于所选 provider 的能力和错误策略。
+
+启动脚本创建的 SQLite、媒体和日志都位于 `LINLI_DATA_ROOT` 指定的项目外运行目录（默认 `data/`），不会写入 Steam 游戏资源目录。

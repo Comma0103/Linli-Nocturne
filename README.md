@@ -6,7 +6,7 @@
 
 ## 项目状态
 
-截至当前，Phase 0–2 已完成，Phase 3 已完成并通过总体验收；项目仍是开发版，不是发行版。下一步进入 Phase 4，上传曲目接管原生 WebPlayer 的问题 `LINLI-PLAY-001` 仍保留为 Phase 4 跨层阻塞。
+截至当前，Phase 0–2 已完成，Phase 3 的代码链路和自动化总体验收已完成；当前正在补最后的 Steam 游戏界面实机验收。项目仍是开发版，不是发行版。Phase 4 尚未开始，上传曲目接管原生 WebPlayer 的问题 `LINLI-PLAY-001` 仍是 Phase 4 的跨层阻塞。
 
 ## 开发路线
 
@@ -108,6 +108,12 @@
 
 总览与验收边界： [Phase 3 信件体验总览](./docs/phase3.md)。
 
+#### [ ] Phase 3-7：Steam 游戏界面实机验收
+
+用开发版本地服务、受保护安装计划和原版 0.0.9.627 客户端，实际验证普通玩家能在 Steam 界面发送信件、看到排队状态并收到文字回信。自动化测试不能替代这一步，只有用户报告真实点击结果后才能勾选。
+
+设计和操作步骤见 [Phase 3-7 Steam 实机验收](./docs/phase3-steam-integration.md)。
+
 ### Phase 4 — 完整音乐体验
 
 #### [ ] Phase 4-1：用户 MIDI 预览和媒体任务
@@ -125,6 +131,14 @@
 #### [ ] Phase 4-4：上传曲目 Steam 播放/演奏验收
 
 在独立备份和正确版本基线下，验证上传曲目真正切换媒体、进入桌面演奏并完成进度推进。
+
+#### [ ] Phase 4-5：外部歌单与歌曲导入
+
+为网易云音乐、QQ 音乐等来源提供可替换的歌单/歌曲导入适配器；把可用的曲目信息、音频或 MIDI 统一转换成项目内部曲目表示，再接入播放和曲库。只处理用户有权使用的内容，不绕过 DRM 或地区限制。
+
+#### [ ] Phase 4-6：宽松演奏模式
+
+允许导入的歌曲以音频播放或近似 MIDI 事件进入演奏流程。这个阶段不要求手指、琴键和音乐逐帧完全匹配；严格的 3D 同步仍留给 Phase 6，并且播放器、渲染器和同步器都保持可插拔。
 
 ### Phase 5 — 即兴创作
 
@@ -205,7 +219,15 @@ pnpm install
 pnpm test
 ```
 
-当前版本可以运行领域核心和测试，暂时不会自动修改游戏文件。
+当前版本可以运行领域核心和本地服务。服务默认使用离线 fallback，不需要 API Key；要在 Steam 游戏里体验文字回信，还需要先启动服务，再按受保护接入流程让已接入的客户端连接它。
+
+启动开发版本地服务：
+
+```powershell
+node scripts/start-local-service.mjs
+```
+
+默认地址是 `http://localhost:27149`。外部模型、完全本地模型、OliviaSoul Harness、人格和记忆的选择见 [模块设置与实现选择](./docs/module-settings.md)；API Key 只通过环境变量或系统凭据配置，不要写入设置文件或提交到仓库。
 
 可以先对游戏目录做只读接入检查（不会修改文件）：
 
@@ -258,6 +280,8 @@ music.addToPlaylist(track);
 - [RenderJob 状态机](./docs/render-job.md)
 - [Phase 0](./docs/phase0.md)、[Phase 1](./docs/phase1.md)、[Phase 2](./docs/phase2.md)
 - [Phase 3 信件体验总览](./docs/phase3.md)
+- [Phase 3-7 Steam 实机验收](./docs/phase3-steam-integration.md)
+- [Phase 4 完整音乐体验总览](./docs/phase4.md)
 - [Phase 3 信件可靠性首个里程碑](./docs/phase3-letter-reliability.md)
 - [Phase 3 Provider 与 OliviaSoul Harness 适配](./docs/phase3-provider-integration.md)
 - [Phase 3 信件后台 Worker](./docs/phase3-letter-worker.md)

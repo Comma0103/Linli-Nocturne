@@ -15,6 +15,7 @@ Game Client -> Local Gateway -> Domain Services -> Stores and Renderers
 - DesktopApp：安装、配置、启动、诊断和恢复。
 - ModuleRegistry/ModuleSettings：登记可用实现，保存用户对 provider、renderer、播放适配器、人格和记忆的选择；敏感凭据不进入设置文件。
 - VideoReplyService：将外部 MP4 作为信件附属资产导入、检查、发布和替换；视频检查器通过 `media.videoImporter` 选择。
+- LocalApp 启动入口：把模块设置、SQLite、LetterWorker、兼容网关和媒体服务装配成一个开发版本地服务；默认离线 fallback，不把凭据写入设置文件。
 
 关键实体：
 Letter、MemoryEpisode、MidiAsset、RenderJob、PlaylistItem、ClientBaseline、ModelProfile。
@@ -36,5 +37,6 @@ Linli Nocturne 的核心层只处理统一接口和中间表示，不把任何�
 - **音乐与演奏**：`MusicPlayer`/播放适配器统一 MIDI、音频、原生 WebPlayer 和其他播放器；`LINLI-PLAY-001` 只描述其中一个接入缺陷。
 - **媒体与 3D**：`RenderJob` 是统一中间表示，Audio、Video、Future3D 和动作同步器都是可替换实现。
 - **用户设置**：App 保存每个模块当前选择、配置和 fallback 策略；切换实现不应要求修改领域服务代码。
+- **外部音乐来源**：网易云音乐、QQ 音乐等来源只能通过独立导入适配器转换到统一曲目中间表示；来源服务不是 MusicService 的固定依赖。
 
 第三方适配器可以复用成熟项目的源码、脚本或协议，但必须保留来源和版本记录，并把第三方依赖隔离在适配器边界内。领域服务不能直接读取第三方项目的私有数据库、Prompt 文件或目录结构。
