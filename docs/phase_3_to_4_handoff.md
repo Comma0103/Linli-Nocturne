@@ -1,133 +1,203 @@
-# Linli Nocturne（林离·余音）Phase 4 及后续开发交接
+# Linli Nocturne（林离·余音）：Phase 3 到 Phase 4 及后续开发交接
 
-> 这是给全新 Task/Thread 使用的单一交接文档。新任务没有当前聊天上下文时，先完整阅读本文，再按“启动指令”读取仓库和开始工作。本文以仓库当前 `main` 和提交 `243c3e4` 为准，不依赖旧聊天记录中的口头结论。
+> 将本文完整交给新任务即可开始开发，无需旧聊天记录。本文是当前唯一交接入口，在原文件上持续更新，不另建重复的长期状态文档。
+>
+> 更新日期：2026-09-07。更新前核对的 `main` 提交：`615ff80`；本轮重新运行 `pnpm test`，84/84 通过。接手时仍须检查最新提交、工作区和测试，本文的快照不能代替现状检查。
 
-## 1. 项目身份和总目标
+## 1. 接手目标与第一步
 
-你正在接手 GitHub 仓库 `https://github.com/Comma0103/Linli-Nocturne`。项目名称是 **Linli Nocturne（林离·余音）**，默认分支是 `main`。代码和展示文案使用简体中文，不添加地域限制。
+你正在接手 [Comma0103/Linli-Nocturne](https://github.com/Comma0103/Linli-Nocturne)。项目名称为 **Linli Nocturne（林离·余音）**，默认分支 `main`。代码和展示文案使用简体中文，不添加地域限制。
 
-项目建立在原版《BSide: Olivia Lin》Steam 本体之上，目标是恢复原服务停止后的信件、文字回信、视频回信、MIDI 上传、本地曲库和演奏入口，并为即兴创作以及未来的 3D 手指、琴键、镜头、动作同步保留扩展点。当前仍是开发版，不是发行版，也没有完成最终普通用户安装器。
+用户要的是：普通玩家安装我们交付的软件或插件后，直接在原装《BSide: Olivia Lin》Steam 游戏界面使用恢复和扩展的功能。HTTP 接口通过、脚本成功、数据库有结果，都不能单独代表游戏体验已经完成。
 
-原游戏默认规则必须保留：每天最多 3 封信、每封信默认延迟 5 分钟；`bypass` 默认关闭但保留开关。信件回信必须支持外部模型 API、完全本地模型和离线 fallback。所有外部实现都应通过统一接口、适配器、注册表或中间表示接入，不能把某个第三方项目写成唯一实现。
+现在从 **Phase 4-1** 开始，以已有音乐代码为基础补齐完整用户路径。先做现状核对和本轮需求、设计、验收标准，再实施最小增量修改；不要重做 Phase 0–3，也不要一次性重写整个 Phase 4。
 
-## 2. 当前真实状态
+接手顺序：
 
-### 2.1 Phase 3 已完成
+1. 确认当前目录是这个代码仓库，并检查 `git remote -v`。新任务的工作目录可能是 Steam 游戏目录，不能在那里创建代码、运行产物或执行补丁试错；以用户选择的仓库位置为准，不硬编码上一台电脑的路径。
+2. 在仓库根目录执行 `git status`、`git log -12 --oneline`、`pnpm test`。保留用户已有修改；不能清理、覆盖或一起提交不属于本轮的文件。
+3. 阅读本文，再阅读 [README](../README.md)、[需求](./requirements.md)、[架构](./architecture.md)、[已知问题](./known-issues.md)、[Phase 4](./phase4.md)、[RenderJob](./render-job.md)、[模块设置](./module-settings.md)、[游戏接入](./original-installation.md) 和相关源码、测试。
+4. 对照第 4 节列出的源码差异，区分“已有能力”“尚未完整接通”“未来扩展点”，确定 Phase 4-1 的第一个可验证增量并开始开发。
 
-Phase 3 的信件代码链路和 Steam 用户路径已经完成，证据包括：
+本机开发基线为 Windows、Node.js 24、pnpm；项目 README 要求 Node.js 22 及以上、pnpm 9 及以上。MP4 编码使用 FFmpeg，视频检查使用 FFprobe，OliviaSoul 适配器使用 PowerShell。依赖不可用时先定位实际运行环境，不把某个开发工具自带的运行时绝对路径写进项目。
 
-- 信件状态、时区日界线、原子领取、重试上限和后台 Worker 已有自动化测试。
-- 外部 OpenAI 兼容 provider、本地模型接口、通用 Harness、PersonaProvider 和离线 fallback 使用统一调用契约。
-- 仓库内置可复用的 OliviaSoul v18 Harness 资产和 olivia-lin Persona 资产；两者通过适配器接入，均不是核心唯一实现。
-- 信件记忆默认关闭，SQLite MemoryProvider 可替换且有长度限制。
-- 视频回信资产已有导入、检查、保存、替换、删除和状态流程；视频自动生成尚未完成。
-- `user.displayName` 表示玩家本人，例如“嘉树”；`林离`仍是游戏收信人、数据库 recipient、每日配额和原生协议字段；Harness 的 `person` 是内部归档键，三者不能混用。
-- 失败信件可以通过原版重寄接口创建新信件，旧失败记录保留。
-- Steam 客户端 `0.0.9.627` 已由用户实际验证：离线 fallback 可以显示正文；DeepSeek + Persona + OliviaSoul Harness 也已实际生成并显示完整回信，且正文以“嘉树”称呼玩家。
-- 最新自动化基线为 `pnpm test`：84 项通过。开始新工作时必须重新运行测试，不要只相信这个数字。
+## 2. 阶段边界和已完成事项
 
-Phase 3 的关键提交包括：`16eaaed`、`5f6e463`、`62c92e1`、`8ae5964`、`2c20767`、`637b33c`、`a3e5c95`、`b5e7e8a`、`c715b5b`、`ed4eccc`、`b7cd5ef`、`243c3e4`。不要重复实现这些已完成的功能，先查看当前源码和测试确认现状。
+| 阶段 | 职责 | 当前状态 |
+| --- | --- | --- |
+| Phase 0–1 | 调研、协议和本地领域核心 | 已完成，保留现有实现与测试 |
+| Phase 2 | 游戏接入基础 | 已完成；包括官方预设曲目 Steam 演奏验收 |
+| Phase 3 | 信件体验 | 代码及离线、真实模型 Steam 文字回信路径已验收 |
+| Phase 4 | 完整音乐体验 | 尚未开始新里程碑；上传 MIDI 原生播放仍有跨层缺陷 |
+| Phase 5 | 即兴创作 | 待开发：作曲中间表示、可替换 provider、MIDI 编辑与导出 |
+| Phase 6 | 3D 演奏同步 | 待开发：统一时间轴、手指/琴键、镜头/动作和可替换渲染器 |
+| Phase 7 | App 与发行 | 待完成：最终 GUI、普通用户安装器、诊断恢复和发行流程 |
 
-### 2.2 Phase 4 尚未完成
+### 已完成的信件基础
 
-Phase 4 负责“完整音乐体验”，从用户 MIDI 已经能够上传、生成、显示和加入音乐桌面，推进到普通玩家可预览、播放、尝试演奏，并为外部音乐来源保留可插拔导入适配器。`docs/phase4.md` 是阶段总览，但本文是新 Task 的优先交接入口。
+- 默认每日 3 封、每封延迟 5 分钟；`letters.dailyLimitBypass` 默认关闭，开启后跳过次数和等待限制，并向游戏报告仍可写信。
+- 领域状态为 `pending/processing/replied/failed`；有 SQLite 原子领取、有限重试、最大尝试次数、Worker 和过期 processing 租约恢复。
+- 外部、本地 OpenAI 兼容模型和无模型 fallback 已接入；Persona、Harness、Memory 可组合。有限 SQLite 记忆默认关闭。
+- 视频回信已有 MP4 资产导入、检查、保存、播放、替换、删除及状态处理；这不是视频自动生成，也不是 3D 回信。
+- Steam 信件兼容层的数字状态、写信额度、玩家称呼、失败重寄和 Harness 路径问题已修复，有对应回归测试，不要重新制造这些问题。
 
-Phase 4 的建议顺序：
+2026-09-07 用户在客户端 `0.0.9.627` 中实际确认了两类结果：
 
-1. **Phase 4-1：用户 MIDI 预览和媒体任务**：确认上传、解析、渲染、音频/视频媒体、任务状态、轮询、取消、失败恢复和本地预览形成完整用户路径。
-2. **Phase 4-2：曲库、歌单和模块选择入口**：把用户曲目稳定接入曲库和歌单，确保 Renderer、播放器、编码器和 fallback 都通过模块设置选择。
-3. **Phase 4-3：`LINLI-PLAY-001` 原生证据调查**：只在拥有原生 WebPlayer 只读反汇编、CEF 媒体事件或完整媒体请求证据后，分析上传曲目为何不能成为当前媒体源。
-4. **Phase 4-4：上传曲目 Steam 播放/演奏验收**：在安全的独立备份和正确版本基线下，由用户实际确认上传曲目切换媒体、进入演奏桌面并推进进度。
-5. **Phase 4-5：外部歌单/歌曲导入**：为网易云音乐、QQ 音乐等来源设计可替换导入适配器，转换为项目内部曲目表示；只处理用户有权使用的内容，不绕过 DRM、登录保护或地区限制。
-6. **Phase 4-6：宽松演奏模式**：允许音频播放或近似 MIDI 事件进入演奏流程，不要求手指、琴键、镜头和动作逐帧匹配；严格 3D 同步属于 Phase 6。
+- 重新打开离线测试信件后，看到了回信正文。
+- DeepSeek + 仓库内 Persona + OliviaSoul v18 Harness 完成真实请求和多步处理，游戏中显示完整回信，称呼使用配置里的玩家名字。
 
-每个二级里程碑开始前，先新增或更新该里程碑的需求、设计和验收标准；然后小步修改代码、补有意义的单元测试和网关冒烟测试，再同步文档。不要把整个 Phase 4 一次性重写。
+证据入口：[Steam 验收](./phase3-steam-integration.md)、[真实 provider 验收](./phase3-provider-integration.md)、[Phase 3 总览](./phase3.md)。代表性提交为 `b7cd5ef`（Harness 路径修复）、`243c3e4`（验收记录）；更早里程碑及提交见 README 开发路线。
 
-## 3. 必须保留的跨层问题：LINLI-PLAY-001
+这些证据不等于所有模型、全部第三方能力、视频自动生成或完整发行版均已验收。离线 fallback 是无模型回复路径，不用于评价真实模型质量，也不能执行 OliviaSoul 的多步模型调用。
 
-当前已知事实：
+### 已有的音乐和接入基础
 
-- 本地 MIDI 可以上传、解析、生成媒体、在“我的上传”显示并加入音乐桌面。
-- 点击本地曲目的“演奏”后，原生 WebPlayer 没有切换到本地媒体；旧预设曲目继续发送时间事件，桌面不进入本地曲目演奏，也没有本地曲目声音。
-- 同一客户端、同一网关和同一版本下，官方预设曲目可以正常演奏。
-- 过去已经尝试过短/长 MIDI、重启、`localhost`、`.mp4`、`HEAD`、`Range`、`TOD1200/TOD1730/TOD2000`、恢复原生 `song` 对象等外围方案；不要要求用户重复这些无效测试。
-- 目前没有足够的原生 WebPlayer 内部证据。继续猜测性修改 video/audio、TOD 或前端字段会制造噪声，不能作为 Phase 4-3 的替代。
+- MIDI 上传、音符/Tempo/踏板解析、时间轴清单、内置 WAV 渲染和音频 MP4 封装。
+- 任务结果、失败状态、媒体读取、SQLite 元数据和已生成媒体恢复；曲目分页、歌单保存与原版字段兼容。
+- 本地曲目已能在离线曲库显示并加入音乐桌面；官方预设曲目演奏正常。
+- AudioRenderer、Renderer 注册表、GamePlaybackAdapter、Encoder 和统一 RenderJob 已存在，不要从零重建。
+- 版本白名单、SHA-256 基线、外置备份、受保护补丁、回滚和修改检测已实现。只验证过客户端 `0.0.9.627`；最终安装器仍缺进程锁、事务日志、安装后完整验证和卸载命令。
 
-因此，除非拿到只读反汇编、CEF 媒体事件或完整媒体请求证据，否则只做 Phase 4-1/4-2 的本地可验证工作，或创建单独的只读诊断任务。不要让此问题倒退影响已完成的 Phase 3。
+## 3. 当前配置、第三方复用和模块原则
 
-## 4. 模块化和可插拔原则
+### 配置与运行入口
 
-项目核心只处理统一接口和中间表示。用户应能在设置中选择具体实现，而不必修改领域服务代码。
+普通用户配置是 `config/user-config.json`，由 `config/user-config.example.json` 复制，已被 Git 忽略。不要再迁回 `secrets/`，不要覆盖用户已填写的配置，也不要把模型名或 API Key 固定成开发者自己的值。
 
-- 信件：`ModelAdapter`、provider registry、`PersonaProvider`、`MemoryProvider` 和 Harness 插槽共同工作。OliviaSoul 只是可选 Harness；其他 Harness、外部 API、本地模型和 fallback 都必须可替换。
-- 音乐：`MidiJobService` 负责 MIDI 任务和曲目数据；Renderer 负责媒体生成；`GamePlaybackAdapter` 负责转换为原生游戏或其他播放器需要的曲目格式。不要让渲染、曲库和原生 WebPlayer 字段继续混在一个不可替换实现里。
-- 媒体：音频、视频和未来 3D 统一使用 RenderJob 方向；Renderer、Encoder、Importer 和同步器都应报告实现 ID、版本、能力和失败状态。
-- 外部音乐来源：网易云、QQ 音乐等只能通过来源适配器进入统一曲目中间表示，不能写死进 `MusicService`。
-- 用户设置：当前已有人类可读 JSON、模块注册表和配置入口；最终 App GUI 应复用同一设置模型，让普通玩家能选择 provider、Harness、Persona、Renderer、播放器和 fallback。不要把某个实现写成默认之外的唯一实现。
-- SQLite 是当前明确的本地事实源，不需要为了形式上的可插拔而替换；数据库保存内容对用户没有本质差异时，保持 SQLite。
+信件配置的组合关系必须保持：
 
-第三方资产：
-
-- 上游 [OliviaSoul](https://github.com/yilangren/OliviaSoul)，仓库内资产位于 `third_party/OliviaSoul/v18-harness`。
-- 上游 [olivia-lin](https://github.com/1Dreamer666/olivia-lin)，仓库内 Persona 资产位于 `third_party/olivia-lin`。
-
-可以复用仓库内已记录的第三方源码、脚本、人格资料和协议，但要保持来源说明、适配器边界和许可证记录。不要提交 API Key、运行时数据库、真实信件、媒体、`work/`、`data/`、`_probe/` 产物、游戏资源或专有 DLL。
-
-## 5. 新 Task 必须先检查的内容
-
-从仓库根目录开始，不假定旧聊天结论：
-
-```powershell
-git status
-pnpm test
+```text
+letters.baseModel.provider：offline / external / local
+                + letters.persona
+                + letters.harness
+                + letters.memory
+                → 统一回信结果
 ```
 
-然后按顺序读取：
+Persona/Harness 位于基础模型之上，不是与外部 API、本地模型互斥的模型选项。完整 OliviaSoul Harness 自己调用所选模型，不能退回把它当成备用模型的错误设计。不同实现的 fallback 行为须按代码和测试核对，不能承诺任何组合都会自动降级。
 
-1. `docs/phase_3_to_4_handoff.md`（本文）；
-2. `README.md` 的项目状态、开发路线、当前功能和架构；
-3. `docs/requirements.md`、`docs/architecture.md`、`docs/known-issues.md`；
-4. `docs/phase4.md`、`docs/render-job.md`、`docs/module-settings.md`、`docs/original-installation.md`；
-5. 与当前里程碑直接相关的源码、测试和最近提交记录。
+- `config/module-settings.json` 是实现 ID 和普通选项的开发者配置；`ModuleSettingsStore` 明确拒绝密钥。现有校验命令和终端向导分别是 `scripts/validate-module-settings.mjs`、`scripts/configure-modules.mjs`，最终 App 图形设置页尚未完成。
+- 私有 `config/user-config.json` 可以保存用户的模型地址、模型名和 API Key；这与“不在 module-settings 中保存密钥”是两个不同约束。密钥不得进入日志、信件、媒体元数据、聊天输出或提交。
+- 当前启动器检测到用户配置时优先使用其解析结果；不能假设修改 module-settings 或环境变量一定会覆盖用户配置。实际合并行为见 `src/config/user-config.js` 和 `src/app/local-app.js`。
+- 启动命令为 `node scripts/start-local-service.mjs`，默认显示 `http://localhost:27149`；健康检查应在另一个终端执行。配置修改后需重启服务。
+- 默认运行目录是仓库根目录下被忽略的 `data/`，可通过 `LINLI_DATA_ROOT` 指定其他位置。SQLite、媒体和 Harness 运行副本都必须在 Steam 游戏目录之外；并非必须在代码仓库之外。
+- Persona/Harness 的相对路径以用户配置文件所在目录解析；模板的 `../third_party/...` 因此可跨机器使用。运行时动态解析出绝对路径是正确做法，不能硬编码开发者电脑路径。
+- `user.displayName` 是玩家名字；领域和游戏协议的 recipient 是林离；Harness 的 person 是归档键。此约定只用于维护代码契约，不要把这个已修复的 Bug 再写成 README 功能或用户警告。
 
-先用 `git log --oneline`、`git status` 和 `rg` 建立事实，不要因为旧文档中的历史段落重复实现 Phase 0–3。
+### 复用和可插拔要求
 
-关键源码位置：
+适用于所有 Phase：核心处理统一接口和中间表示；能复用成熟实现就通过适配器接入，确实不适用的部分再自行实现。
 
-- `src/music/midi-job-service.js`：MIDI 上传、解析、渲染任务、媒体和曲目分页。
-- `src/music/audio-renderer.js`、`src/music/renderer-registry.js`：可替换音频 Renderer 和注册表。
-- `src/music/playback-adapter.js`：通用曲目格式和 Olivia Lin 原生播放器适配边界。
-- `src/core/render-job.js`：统一媒体任务状态机。
-- `src/gateway/local-gateway.js`、`src/gateway/midi-compat.js`：本地网关和原版兼容响应。
-- `src/letters/`、`src/config/`：已完成的信件、provider、Persona、Harness 和模块选择实现，除非当前工作确实需要，不要改动。
-- `scripts/plan-install.mjs`、`scripts/apply-install.mjs` 及 `src/patcher/`：受保护的游戏接入流程。
+- OliviaSoul：`third_party/OliviaSoul/v18-harness`，复用多步信件 Harness、规则和脚本。
+- olivia-lin：`third_party/olivia-lin`，内置人格、书信技艺、公开记忆、评测材料及相关源文件。文件已收录不代表每种能力都已连入运行流程。
+- 默认所需资产已经随仓库提供，不能只留下接口再要求用户分别下载两个上游仓库。来源、固定提交和已有许可记录见 [第三方目录说明](../third_party/README.md) 与 [引用说明](./third-party-credits.md)；复用时保留这些记录和 README 末尾致谢。
 
-## 6. 真实游戏目录和用户操作规则
+应可替换：模型、人格、Harness、MemoryProvider、音频/视频渲染、播放适配器、编码器、来源导入器及未来 3D 同步器。新增实现须有可测试接口、配置校验、错误反馈和用户选择入口。最终 App 必须让只会用 Steam 的玩家也能选择模块和 fallback，不能把“开发者能注入对象”当作用户设置已经完成。
 
-任何涉及 Steam 游戏目录的操作都必须遵守：
+无需形式化抽象：SQLite 已被确定为本地事实源；原版游戏独有的 TOD、song 和 WebPlayer 契约放在游戏适配层即可。只有一种合理接入方式、替换对用户没有实质收益的内部组件，不要求凭空制造第二种实现。
 
-1. 先让用户完全退出游戏；
-2. 只读检查版本和基线；
-3. 使用游戏目录外的备份；
-4. 写入前明确说明计划并确认 `canApply: true`、客户端版本和 pristine 基线；
-5. 写入后做完整校验和回滚准备；
-6. 不要在用户安装目录里反复试错，也不要直接修改 DLL、前端包或游戏资源。
+## 4. 本轮核查发现的边界：作为 Phase 4 的起点
 
-安装计划默认是只读的。未知版本或已被其他工具修改的目录必须停止。用户没有实际点击、重启、看到界面、听到声音或报告结果之前，不能把 Steam 实机验收写成完成。
+以下来自 `615ff80` 源码的只读核查，本轮未改代码。新任务先补测试确认，再按相关里程碑修复，不因 README 的概括勾选而忽略运行入口的实际行为。
 
-本地开发服务、SQLite、媒体和日志应放在项目或游戏目录之外的运行目录；不要把任何本机绝对路径写入源码、文档示例或提交。代码中的绝对路径必须由用户配置或运行时 `resolve` 动态计算，不能写死开发者电脑路径。
+| 核对项 | 当前代码事实与开发含义 |
+| --- | --- |
+| 音乐配置是否生效 | `loadUserConfig()` 从默认模块设置出发，只重建信件选择；没有把模板的 music/media/threeD 选择合入运行设置。存在 user-config 时，local-app 又不走 module-settings 的读取分支。Phase 4 必须验证用户选择能到达实际 Renderer/Encoder/PlaybackAdapter。 |
+| 时区是否完整传入 | local-app 把用户时区传给 LetterService，却未传给 MidiJobService。两项领域服务共用日界线工具的测试已通过，但非默认时区在服务启动入口仍需补集成验证。 |
+| 媒体格式是否一致 | local-app 传入 MP4 编码器，却未同时传入 MidiJobService 的 mediaExtension/mediaContentType，后两者默认仍为 wav/audio-wav。要用独立媒体和网关测试核对实际字节、文件后缀、响应类型及重启读取，不能把它直接认定为原生播放 Bug 的原因。 |
+| 取消与恢复的深度 | MidiJobService.generate 当前同步渲染，结束后保存成功或失败结果；上传缓存位于内存。已有 cancel 接口、终态恢复和 RenderJob 状态定义，不代表已经能中断正在渲染的任务、恢复未完成上传或自动重试渲染。 |
+| 能力声明与实际实现 | ModuleRegistry 当前提供 ID、版本、标签、描述和工厂；RenderJob 是数据/状态模型，不是用户可选择的插件。threeD 仍是预留设置，尚无默认 3D 注册实现。模板中的 game/privacy 字段也不能仅因存在就视为已完整执行。 |
+| 信件 fallback 边界 | module-runtime 对 standalone Harness 显式关闭外层 fallback；不能把普通 provider 的降级测试推广成所有 Harness 组合的保证。保留已验收信件链路，涉及公共设置时补对应回归。 |
 
-## 7. 每轮工作的固定报告格式
+上述差异不推翻已记录的 Phase 3 实机成功，也不构成 `LINLI-PLAY-001` 的根因证据。它们说明“已有底层能力”和“全部用户路径完成”必须分别验收。
 
-每次修改后都要报告：
+旧文档还存在局部历史表述，例如 module-settings 中的“人格资产不会复制进仓库”“所有设置 JSON 都不能保存密钥”“默认 data 在项目外”，以及 known-issues 尾部“可以先完成 Phase 3”。应按本交接、当前模板和源码理解；进入相关修改时同步纠正，不按这些旧句子撤回已内置资产或重复 Phase 3。本次仅更新这一份交接文档。
 
-- 实际改动了哪些文件，以及每个文件的目的；
-- 运行了哪些测试命令和结果；
-- 未完成项、已知风险和没有证据的假设；
-- 是否需要用户进行真实 Steam 操作；
-- 若用户完成了实机操作，记录用户实际报告的观察结果和客户端版本。
+## 5. Phase 4 及后续执行路线
 
-提交前必须运行：
+| 里程碑 | 本轮要交付的用户能力和验收边界 |
+| --- | --- |
+| Phase 4-1：MIDI 预览与媒体任务 | 复用上传/解析/渲染代码，补齐普通用户可操作的预览与任务状态；验证媒体格式、轮询、取消、失败恢复和重启行为。先核对第 4 节，不重新造 MIDI 解析器。 |
+| Phase 4-2：曲库、歌单和模块选择 | 补齐曲目管理、歌单与播放器/Renderer/Encoder 选择，让设置真正影响运行结果。必要的简单界面或易懂入口随功能交付，不能全部推到最终发行再做。 |
+| Phase 4-3：原生证据调查 | 按第 6 节证据门槛，定位原生 WebPlayer 拒绝或未选中本地媒体的实际分支；与一般预览开发分开记录。 |
+| Phase 4-4：Steam 播放/演奏验收 | 在正确版本、可恢复的受保护接入下，由用户确认媒体切换、进入演奏桌面、听到本地声音及进度推进。 |
+| Phase 4-5：外部音乐导入 | 为网易云、QQ 音乐等提供可替换来源适配器，把可用曲目信息、音频或 MIDI 转成内部曲目表示，再进入曲库和播放。 |
+| Phase 4-6：宽松演奏 | 支持音频播放或近似 MIDI 驱动的演奏，不要求手指与音乐逐帧匹配；不能把普通播放标成精确 3D 演奏。 |
+
+外部音乐只处理用户有权使用、可合法取得的内容，不绕过 DRM 或访问控制；框架本身不添加地域限制。来源服务不得写死进 MusicService。
+
+Phase 5 再做即兴创作；Phase 6 再做手指、琴键、镜头、动作的严格时间轴同步；Phase 7 完成普通用户安装器、最终 GUI、诊断恢复与发行。视频自动生成仍是待实现能力，未来安排时先明确所属里程碑和验收范围，不能因 Phase 3 收尾而自动算完成。
+
+每轮先写需求、设计和验收标准，再小步实现、测试、网关冒烟和文档同步。优先修复能独立复现的具体缺口；不扩大成整套新框架，不因原生播放阻塞停止所有可独立完成的音乐工作。
+
+## 6. LINLI-PLAY-001：保留事实和调查门槛
+
+当前事实：
+
+- 本地 MIDI 能上传、解析、生成、在“我的上传”显示并加入音乐桌面。
+- 点击“演奏”后，原生 WebPlayer 未切换到本地媒体；旧预设曲目继续发送时间事件，桌面没有进入本地曲目演奏，也没有本地声音。
+- 同版本、同网关下官方预设曲目正常。
+- 已尝试短/长 MIDI、重启、localhost、.mp4、HEAD/Range、TOD1200/TOD1730/TOD2000 和恢复原生 song 对象。这些外围尝试未解决问题，不再要求用户重复盲测。
+
+详细证据见 [known-issues.md](./known-issues.md)。其中日志文件名和时间是历史证据索引，不保证新机器存在这些本地文件。缺少日志时不得编造其内容。
+
+**只有拿到原生 WebPlayer 的只读反汇编、CEF 媒体事件或完整媒体请求证据后，才建立单独的诊断工作项并继续定位。** 在此之前可以整理已有证据、规划只读采集和完成独立预览工作，不能凭猜测改 video/audio、TOD、Range 或 song 字段。用户没有明确要求另起任务时，诊断工作项留在当前任务内。
+
+即使独立网关测试发现格式或配置缺口，也应分别证明和修复；不能因此宣称原生 Bug 已定位或要求用户再重复同一套测试。该缺陷属于 Phase 4，不是 Phase 2 或 Phase 3 的前置阻塞。
+
+## 7. 源码与测试导航
+
+| 入口 | 作用 |
+| --- | --- |
+| `scripts/start-local-service.mjs`、`src/app/local-app.js` | 配置、SQLite、Worker、音乐服务和网关的实际启动装配 |
+| `src/config/user-config.js`、`module-settings.js`、`module-runtime.js` | 私有配置、无密钥模块设置、选择解析与运行实现 |
+| `src/config/module-registry.js`、`default-module-registries.js` | 通用注册表和当前可用实现 |
+| `src/music/music-service.js`、`midi-job-service.js` | 领域导入/歌单、上传任务/媒体/曲目分页；修改前先分清调用入口 |
+| `src/music/midi-manifest.js`、`audio-renderer.js`、`renderer-registry.js` | MIDI 解析、时间信息及音频渲染扩展点 |
+| `src/music/media-encoder.js`、`playback-adapter.js` | MP4 编码、通用及原生游戏曲目转换 |
+| `src/core/render-job.js`、`time-boundary.js`、`src/storage/sqlite-store.js` | 统一任务状态、自然日日界线及事实存储 |
+| `src/gateway/local-gateway.js`、`midi-compat.js`、`letter-compat.js` | HTTP 路由、媒体响应和游戏契约转换 |
+| `src/letters/` | 已验收信件、Persona/Harness/Memory 和视频资产服务 |
+| `scripts/plan-install.mjs`、`apply-install.mjs`、`src/patcher/` | 只读计划、受保护执行及回滚 |
+| `tests/midi-job-service.test.mjs`、`music-service.test.mjs`、`gateway.test.mjs`、`gateway-compat.test.mjs` | 音乐、恢复、协议及网关测试 |
+| `tests/modular-adapters.test.mjs`、`local-app.test.mjs`、`time-boundary.test.mjs`、`phase3-acceptance.test.mjs` | 可替换实现、启动配置、日界线及信件回归 |
+
+同一单元格内省略目录的文件沿用前一个文件的目录。接口存在只是起点，配置文件、运行实例、网关结果和用户操作必须连起来验证。
+
+## 8. README 与 docs 的最新维护要求
+
+自上次交接后，`85bdb94` 统一了交接命名；`88a33bb` 至 `615ff80` 调整了 README 的用户流程和功能表达。期间没有新增 Phase 4 实现。这些文档要求是用户已明确确认的要求：
+
+- **README 同时服务普通玩家与开发者，两部分分开。** 保留开发者用法、架构、开发路线和开发与测试，不能为了简短删掉开发信息。
+- **项目状态**只说明当前进度和主要边界；**当前功能**按“信件与回信 / MIDI、曲库与媒体任务 / 可插拔模块与游戏资产 / 尚未完成”分组，使用 checkbox 和简短功能说明，兼顾完整性与可读性。
+- 当前功能保留必要的能力细节，不能缩成几个模糊大词，也不铺满协议字段、日志、旧 Bug、配置身份或操作命令。实现与未完成边界按证据更新，不把勾选当成覆盖所有场景的保证。
+- 用户流程保持“下载安装 → 改用户配置 → 起服务 → 接入并打开游戏体验”。用户配置指南保留在安装之后；不再新增重复罗列功能的“当前用法”章节。
+- 用户需要选择或填写的新功能必须同步补入配置模板、实际读取逻辑和用户指南；“以后必须更新本节”这种维护指令放在开发文档中，不写给普通玩家。
+- 删除显而易见的过渡句和重复警告，例如“安装完成后继续阅读下面”“本节是完整流程”，也不要把已修复的名字混淆 Bug 长期写成用户注意事项。
+- 开发者说明应给出可运行的调用方式、调试入口、相关源码/测试和扩展路径，不能只丢几个类名或无法运行的片段。
+- **开发路线位于架构与开发与测试之间**；采用 Phase 一级、Phase x-y 二级里程碑及 checkbox。已完成项给出实际代表性 commit，设计链接在同级项目之间保持一致。
+- docs 采用“每个 Phase 一个总览 + 必要的独立里程碑设计文档”，不为形式对齐拆碎已完成的 Phase 0–2。新设计应有独立需求和验收范围，并链接回总览及 README。
+- 交接名称为 `phase_2_to_3_handoff.md`、`phase_3_to_4_handoff.md`。前者仅供历史追溯，不能覆盖本文的当前边界；不恢复旧的 `phase2-handoff.md` 名称。
+- README 最后保留 OliviaSoul 和 olivia-lin 致谢及实际复用范围；不要承诺已吸收两个上游的全部能力。
+- 新功能或语义变更后，用 `rg` 检查 README、docs、模板和相关源码的引用与表述，同步修正文档冲突。保留历史验收，但标明当时范围。
+
+## 9. 游戏操作、验证和交付纪律
+
+涉及真实游戏目录时：
+
+1. 先确认游戏完全退出，再只读检查版本和基线。
+2. 使用游戏目录之外的备份，写入前给出具体目标、改动计划、校验和回滚方式，确认计划确实可应用。
+3. 首次安装使用 pristine 基线及 `canApply: true`。若 `installation-state:modified`，不能强行覆盖或把现有补丁当作原装；只读查明已有接入和备份，需要更新时使用能识别该状态的受保护增量流程。
+4. 未知版本、未识别修改或计划被拒绝时停止写入，不能修改校验来放行。
+5. 写入后验证目标文件，并保留回滚路径；不直接手改专有 DLL、资源包或用户安装来试错。
+
+已有接入的游戏不需要每次测试都重装。先确认运行服务、配置和已有接入状态；可在仓库、临时测试目录修复的问题，不写游戏目录。不会要求用户为普通文档或本地单元测试退出游戏。
+
+用户明确报告实际点击、界面显示、听到声音或其他观察后，才能记录相应 Steam 验收；网关冒烟、媒体可读、数据库成功或日志中的 read_at 不能替代实机结果。新测试也不能借用旧信件验收来勾选音乐验收。
+
+每轮报告实际改动文件、测试命令与结果、未完成项，以及是否需要用户进行 Steam 操作。解释开发了什么功能，用直白中文，少堆术语。
+
+提交前执行：
 
 ```powershell
 pnpm test
@@ -135,21 +205,7 @@ git diff --check
 git status
 ```
 
-只提交源代码、测试和文档。提交后推送 `main`，并验证本地 `HEAD` 与 `origin/main` 一致。不要创建与本文重复的长期状态文档；如果某个 Phase 4 里程碑需要设计文档，应把它限制在该里程碑的需求和验收范围内。
+只提交本轮源代码、测试和文档（含必要的无密钥配置模板）；不提交用户配置、API Key、真实信件、数据库、日志、媒体、work/data/_probe 产物、游戏资源或专有 DLL。复用第三方源文件时保留来源与已有许可记录。
 
-## 8. 可直接作为新 Task 首条消息的启动指令
-
-```text
-你正在接手 GitHub 仓库 https://github.com/Comma0103/Linli-Nocturne 的后续开发。请把 docs/phase_3_to_4_handoff.md 作为当前唯一交接入口，先完整阅读它，再读取 README.md、docs/requirements.md、docs/architecture.md、docs/known-issues.md、docs/phase4.md、docs/module-settings.md、docs/render-job.md 和当前相关源码；不要依赖旧聊天记录中的未经证实结论。
-
-先运行 git status 和 pnpm test，确认当前基线。Phase 3 已完成并有真实 Steam 证据：DeepSeek + Persona + OliviaSoul Harness 已在客户端 0.0.9.627 中生成和显示以“嘉树”称呼玩家的完整回信。不要重复开发 Phase 3，也不要把 Phase 3 的旧待办当成当前阻塞。
-
-现在从 Phase 4-1 开始：先检查用户 MIDI 的预览、RenderJob、音频/视频媒体、任务轮询、取消、失败恢复和网关契约，写出本轮需求、设计和验收标准，再做最小代码修改、单元测试、网关冒烟测试和文档同步。随后按 Phase 4-2 到 Phase 4-6 逐轮推进：曲库和模块选择、LINLI-PLAY-001 的原生只读证据调查、上传曲目 Steam 播放/演奏验收、外部歌单导入适配器、宽松演奏模式。
-
-必须保留模块化边界：Renderer、PlaybackAdapter、Provider、Harness、Persona、Memory、Encoder、Importer 和未来 3D Renderer 都是可替换实现；核心只依赖统一接口和中间表示。OliviaSoul 和 olivia-lin 是已内置的可复用资产，但不是唯一实现。用户设置最终必须能让普通玩家选择实现和 fallback。SQLite 作为固定本地事实源不需要为了抽象而替换。
-
-必须保留 LINLI-PLAY-001 的证据边界：上传 MIDI 能显示和加入音乐桌面，但原生 WebPlayer 尚未切换到本地媒体。过去的外围猜测已失败；没有原生 WebPlayer 只读反汇编、CEF 媒体事件或完整媒体请求证据前，不要再次盲改 video/audio、TOD、Range、song 字段，也不要让用户重复无效测试。任何真实游戏目录操作都要先退出游戏、只读检查版本和 pristine 基线、使用目录外备份，并在写入前确认计划可应用。
-
-每轮报告实际改动文件、测试命令和结果、未完成项、是否需要用户 Steam 操作。提交前运行 pnpm test、git diff --check、git status；只提交源代码、测试和文档，推送 main 后确认 HEAD 与 origin/main 一致。不要宣称 Phase 4、3D、最终安装器或发行版已经完成，除非有对应的代码、自动化测试和用户实机证据。
-```
+检查差异后小步提交，推送 `main`，验证本地 HEAD 与 origin/main 一致，并确认工作区没有遗漏。遇到远程新提交先查明并整合，不强推。修改 README 时不再另造长期状态文档；后续按本交接进入 Phase 4-1 开发。
 
