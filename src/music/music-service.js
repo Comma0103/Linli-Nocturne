@@ -1,13 +1,13 @@
 import { randomUUID } from 'node:crypto';
 import { inspectMidi } from './midi-manifest.js';
-import { renderMidiToWav } from './audio-renderer.js';
+import { BuiltinAudioRenderer } from './audio-renderer.js';
 
 export class MusicService {
-  constructor({ store, clock = () => new Date() }) { this.store = store; this.clock = clock; }
+  constructor({ store, clock = () => new Date(), audioRenderer = new BuiltinAudioRenderer() }) { this.store = store; this.clock = clock; this.audioRenderer = audioRenderer; }
 
   renderMidi(buffer) {
     inspectMidi(buffer);
-    return renderMidiToWav(buffer);
+    return this.audioRenderer.render(buffer);
   }
 
   importMidi({ buffer, sourceName = 'untitled.mid', title = sourceName.replace(/\.mid(i)?$/i, '') }) {

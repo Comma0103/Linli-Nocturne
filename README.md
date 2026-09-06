@@ -80,6 +80,10 @@
 
 把必要的历史内容整理为受限记忆，让回信能够参考上下文，同时限制保存范围和长度；默认关闭，启用后可使用 SQLite 或其他 MemoryProvider。
 
+#### [x] Phase 3-M1：跨阶段模块化边界修复
+
+抽出 AudioRenderer、GamePlaybackAdapter、PersonaProvider、ModuleRegistry 和统一模块设置；保留原版游戏契约在适配器边界内，SQLite 继续作为固定事实源。
+
 #### [ ] Phase 3-5：视频回信资产流程
 
 实现视频回信的导入、格式检查、保存、播放、替换、删除和清晰的处理中/成功/失败状态。
@@ -163,7 +167,7 @@
 - **信件**：默认遵循原游戏每日最多 3 封、每封延迟 5 分钟的规则，并提供高级 bypass 开关。
 - **模型提供方**：外部 API、可插拔 Harness、本地模型和离线降级共用统一接口；OliviaSoul 只是其中一个可选 Harness。
 - **信件记忆**：默认关闭；启用后可使用有条数、单条字符数和上下文字符数限制的 MemoryProvider。
-- **模块选择**：App 会为信件、音乐播放、媒体渲染和未来 3D 同步保留实现选择与 fallback 设置；第三方项目都通过适配器接入。
+- **模块选择**：当前已有可读配置文件、校验命令和配置向导，用户可以为信件、音乐播放、媒体渲染和未来 3D 同步选择实现与 fallback；最终 App 图形设置页会复用同一模型，第三方项目都通过适配器接入。
 - **MIDI 基础**：支持标准 MIDI 文件解析、音符/Tempo/延音踏板事件、时间轴清单、本地音频渲染和媒体任务；上传曲目完整接管原生 WebPlayer 的播放/演奏仍属于 Phase 4，受 `LINLI-PLAY-001` 影响。
 - **MIDI 网关**：已具备符合原版客户端响应契约的本地上传、任务创建、结果轮询、媒体读取、统一 RenderJob 字段、SQLite 任务元数据持久化，以及用户曲目游标分页；服务重启后会按当前网关地址恢复历史任务的媒体 URL。协议回归测试覆盖上传预检、下划线字段和数字任务状态。游戏播放使用可信的 `localhost` 回环媒体地址，避免把 `127.0.0.1` HTTP 资源当作混合内容拦截。
 - **本地歌单**：基于 SQLite 保存歌单条目，后续可暴露给游戏客户端。
@@ -242,6 +246,7 @@ music.addToPlaylist(track);
 - [Phase 3 信件后台 Worker](./docs/phase3-letter-worker.md)
 - [Phase 3 信件记忆和连续对话](./docs/phase3-letter-memory.md)
 - [第三方项目引用与复用说明](./docs/third-party-credits.md)
+- [模块设置与实现选择](./docs/module-settings.md)
 - [原装游戏基线与插件接入](./docs/original-installation.md)
 - [原版前端接口审计](./docs/frontend-audit.md)
 - [Phase 2 收尾与 Phase 3 交接（完整 Prompt）](./docs/phase2-handoff.md)

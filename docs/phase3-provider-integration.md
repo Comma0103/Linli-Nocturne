@@ -26,7 +26,7 @@ Linli Nocturne 不重写 OliviaSoul 已经成熟的 Harness。通过配置 `harn
 | 需要适配 | PowerShell 参数、临时信件文件、回信文件和 `HARNESS LIVE DONE` 完成标记 | 由适配器转换为统一的 `generate(input) -> { text, provider, metadata }` |
 | 需要适配 | `olivia-lin` 的人格资料、书信技艺、离线引擎和验收用例 | 作为外部参考或未来可选实现，接入时放在 Harness/Provider 边界内 |
 | 必须自己实现 | Provider 链、超时、失败分类、fallback、隐私保护和 API 配置 | 由 Linli Nocturne 核心负责，保证 LetterService 不依赖某个第三方项目 |
-| 必须自己实现 | App 的模块选择、配置保存、能力检查和切换入口 | 后续设置功能负责让用户在 OliviaSoul、其他 Harness、本地模型和 fallback 之间选择 |
+| 必须自己实现 | 项目的模块选择、配置保存、能力检查和切换入口 | 当前由 `ModuleSettings`、校验器和可读配置向导提供基础入口；最终 App 图形设置页仍沿用同一模型，在设置/发行阶段补齐 |
 | 不带入项目 | 第三方运行时数据库、真实信件、API Key、私有语料、`_probe/` 和游戏资源 | 不复制、不提交、不写入 Linli Nocturne 的源代码仓库 |
 
 ## 需求

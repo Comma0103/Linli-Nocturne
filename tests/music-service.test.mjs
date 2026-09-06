@@ -21,3 +21,17 @@ test('music service renders MIDI and persists a local playlist item', () => {
   assert.equal(service.playlist().length, 0);
   store.close();
 });
+
+test('music service accepts a replaceable AudioRenderer', () => {
+  const store = new SqliteStore();
+  let calls = 0;
+  const service = new MusicService({
+    store,
+    audioRenderer: { id: 'fake.audio', version: '9.0.0', render: () => { calls += 1; return { wav: Buffer.from('fake-audio'), duration: 1, timingManifest: { renderer: 'fake' } }; } },
+  });
+  const track = service.importMidi({ buffer: midi, sourceName: 'fake.mid' });
+  assert.equal(calls, 1);
+  assert.equal(track.audio.toString(), 'fake-audio');
+  assert.equal(track.manifest.renderer, 'fake');
+  store.close();
+});

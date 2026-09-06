@@ -4,21 +4,19 @@ import { join } from 'node:path';
 import { createRenderJob, RenderJobStatus, transitionJob } from '../core/render-job.js';
 import { createDayBoundary, DEFAULT_TIME_ZONE } from '../core/time-boundary.js';
 import { inspectMidi } from './midi-manifest.js';
-import { renderMidiToWav } from './audio-renderer.js';
+import { BuiltinAudioRenderer } from './audio-renderer.js';
+import { OliviaLinPlaybackAdapter } from './playback-adapter.js';
 
 const TERMINAL = new Set(['finished', 'failed', 'canceled']);
-const RENDERER_ID = 'builtin.audio';
-const RENDERER_VERSION = '0.1.0';
-
-function makeRenderJob(jobId, filename) {
-  let renderJob = { ...createRenderJob({ kind: 'audio', inputAssetIds: [filename], rendererId: RENDERER_ID, rendererVersion: RENDERER_VERSION }), id: jobId };
+function makeRenderJob(jobId, filename, renderer) {
+  let renderJob = { ...createRenderJob({ kind: 'audio', inputAssetIds: [filename], rendererId: renderer.id, rendererVersion: renderer.version }), id: jobId };
   renderJob = transitionJob(renderJob, RenderJobStatus.VALIDATING);
   renderJob = transitionJob(renderJob, RenderJobStatus.RENDERING, { attempt: 1 });
   return renderJob;
 }
 
 export class MidiJobService {
-  constructor({ clock = () => new Date(), timeZone = DEFAULT_TIME_ZONE, store = null, mediaRoot = null, playbackBaseUrl = '', mediaEncoder = null, mediaExtension = 'wav', mediaContentType = 'audio/wav' } = {}) {
+  constructor({ clock = () => new Date(), timeZone = DEFAULT_TIME_ZONE, store = null, mediaRoot = null, playbackBaseUrl = '', mediaEncoder = null, mediaExtension = 'wav', mediaContentType = 'audio/wav', renderer = new BuiltinAudioRenderer(), playbackAdapter = new OliviaLinPlaybackAdapter() } = {}) {
     this.clock = clock;
     this.dayBoundary = createDayBoundary(timeZone);
     this.store = store;
@@ -28,6 +26,10 @@ export class MidiJobService {
     // mixed content.
     this.playbackBaseUrl = playbackBaseUrl;
     this.mediaEncoder = mediaEncoder;
+    if (!renderer || typeof renderer.render !== 'function' || !renderer.id || !renderer.version) throw new TypeError('renderer.id, version and render are required');
+    if (!playbackAdapter || typeof playbackAdapter.toUserSong !== 'function') throw new TypeError('playbackAdapter.toUserSong is required');
+    this.renderer = renderer;
+    this.playbackAdapter = playbackAdapter;
     this.mediaExtension = mediaExtension;
     this.mediaContentType = mediaContentType;
     if (mediaRoot) mkdirSync(mediaRoot, { recursive: true });
@@ -57,14 +59,14 @@ export class MidiJobService {
     const createdAt = this.clock().toISOString();
     try {
       const midi = inspectMidi(upload.buffer);
-      const rendered = renderMidiToWav(upload.buffer);
+      const rendered = this.renderer.render(upload.buffer);
       const mediaBytes = this.mediaEncoder ? this.mediaEncoder(rendered.wav) : rendered.wav;
       this.media.set(jobId, mediaBytes);
       const playbackBaseUrl = this.playbackBaseUrl || mediaBaseUrl;
       const mediaUrl = `${playbackBaseUrl.replace(/\/$/u, '')}/toy/midi/media/${jobId}.mp4`;
       const mediaPath = this.mediaRoot ? join(this.mediaRoot, `${jobId}.${this.mediaExtension}`) : null;
       if (mediaPath) writeFileSync(mediaPath, mediaBytes);
-      const renderJob = transitionJob(makeRenderJob(jobId, upload.filename ?? filename), RenderJobStatus.PRODUCED, { progress: 1 });
+      const renderJob = transitionJob(makeRenderJob(jobId, upload.filename ?? filename, this.renderer), RenderJobStatus.PRODUCED, { progress: 1 });
       const job = { jobId, state: 'finished', filename: upload.filename ?? filename, createdAt, mediaPath,
         status: renderJob.status, progress: renderJob.progress, attempt: renderJob.attempt, errorCode: null,
         info: { videoUrls: [mediaUrl], audioUrl: mediaUrl, duration: rendered.duration, timingManifest: rendered.timingManifest, midi, renderJob } };
@@ -72,7 +74,7 @@ export class MidiJobService {
       this.store?.insertMidiJob(job);
       return job;
     } catch (error) {
-      const renderJob = transitionJob(makeRenderJob(jobId, upload.filename ?? filename), RenderJobStatus.FAILED, { errorCode: error.code ?? 'render_failed', error: error.message });
+      const renderJob = transitionJob(makeRenderJob(jobId, upload.filename ?? filename, this.renderer), RenderJobStatus.FAILED, { errorCode: error.code ?? 'render_failed', error: error.message });
       const job = { jobId, state: 'failed', filename: upload.filename ?? filename, createdAt, status: renderJob.status, progress: renderJob.progress, attempt: renderJob.attempt, errorCode: renderJob.errorCode, error: error.message, info: { renderJob } };
       this.jobs.set(jobId, job);
       this.store?.insertMidiJob(job);
@@ -136,39 +138,11 @@ export class MidiJobService {
 
   listUserSongs({ pageSize = 20, cursor = 0 } = {}) {
     const page = this.listFinished({ pageSize, cursor });
-    const list = page.list.map(job => ({
-      userSongId: job.jobId,
-      id: job.jobId,
-      name: job.filename,
-      filename: job.filename,
-      audioUrl: this.playbackUrl(job.jobId) || (job.info?.audioUrl ?? ''),
-      videoUrl: this.playbackUrl(job.jobId) || (job.info?.videoUrls?.[0] ?? job.info?.audioUrl ?? ''),
-      // Lite's native player does not play a song from videoUrl alone. It
-      // selects a TOD/view entry from this array before forwarding the URL to
-      // NutWebPlayer. Local MIDI renders are audio-only, so all three TOD
-      // slots intentionally point to the same rendered media while keeping
-      // the native song contract intact. The 0.0.9.627 client uses the
-      // literal clock buckets TOD1200 / TOD1730 / TOD2000.
-      videoByTodView: (() => {
-        const storedMediaUrl = job.info?.videoUrls?.[0] ?? job.info?.audioUrl ?? '';
-        const mediaUrl = this.playbackUrl(job.jobId) || storedMediaUrl;
-        // The native VideoTodViewItem contract stores duration as an integer
-        // number of seconds. Keep the richer fractional duration in RenderJob
-        // metadata, but send an integer at the native bridge boundary.
-        const duration = Math.max(0, Math.round(Number(job.info?.duration ?? 0)));
-        return mediaUrl ? [
-          { url: mediaUrl, tod: 'TOD1200', view: 'NI', coverUrl: '', duration },
-          // The official catalogue uses the literal TOD1730 key. The native
-          // player selects this entry by key rather than by a numeric guess.
-          { url: mediaUrl, tod: 'TOD1730', view: 'NI', coverUrl: '', duration },
-          { url: mediaUrl, tod: 'TOD2000', view: 'NI', coverUrl: '', duration },
-        ] : [];
-      })(),
-      nameKey: job.jobId,
-      performanceType: 'Solo',
-      duration: job.info?.duration ?? 0,
-      source: 'linli-nocturne',
-    }));
+    const list = page.list.map(job => {
+      const storedMediaUrl = job.info?.videoUrls?.[0] ?? job.info?.audioUrl ?? '';
+      const mediaUrl = this.playbackUrl(job.jobId) || storedMediaUrl;
+      return this.playbackAdapter.toUserSong({ job, mediaUrl });
+    });
     return { list, hasMore: page.hasMore, nextCursor: page.nextCursor, total: page.total };
   }
 

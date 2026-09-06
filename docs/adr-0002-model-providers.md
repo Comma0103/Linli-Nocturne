@@ -6,4 +6,4 @@
 
 ## 结果
 
-用户首次配置时可以选择模式；高级设置允许按任务切换。API Key、端点和模型名不写入信件内容，也不进入 Git。外部/本地 provider 的具体网络或进程调用由调用方注入，便于用 fake provider 验证协议而不依赖真实服务。
+用户首次配置时可以通过 ModuleSettings 选择 provider、Harness、人格和记忆实现；高级设置允许按任务切换。API Key、端点和模型名不写入信件内容，也不进入 Git。外部/本地 provider 的具体网络或进程调用由调用方注入，便于用 fake provider 验证协议而不依赖真实服务。

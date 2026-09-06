@@ -26,7 +26,7 @@ Phase 2 已达到“接入基础完成并可交接”的状态，不是“所有
 - [x] 用户上传 MIDI 可上传、生成、在“我的上传”显示，并可加入音乐桌面；“加播单”与“演奏”是不同操作。
 - [x] 官方预设曲目 Steam 实机验收通过：用户报告选择预设曲目后桌面人物进入钢琴演奏、进度正常推进且功能正常。
 - [x] 本次收尾修正：媒体单段 Range 的后缀区间 `bytes=-N` 已修正；安装器结果去除巨大二进制字段并记录写后 SHA-256，避免 JSON 序列化异常和验收结果失真。
-- [x] 当前自动化测试基线：本次边界修正前后 `pnpm test` 均通过；当前仓库实际为 62 项通过，后续新增测试时以命令实际输出为准。
+- [x] 当前自动化测试基线：本次边界修正前后 `pnpm test` 均通过；当前仓库实际为 70 项通过，后续新增测试时以命令实际输出为准。
 
 ### 2.2 明确未完成或不能宣称完成
 
@@ -53,7 +53,9 @@ Phase 2 已达到“接入基础完成并可交接”的状态，不是“所有
 
 - `src/gateway/local-gateway.js`：本地 HTTP/CORS、MIDI 媒体 HEAD/Range、信件和曲库兼容路由。
 - `src/music/midi-job-service.js`：MIDI 任务、WAV/MP4 媒体、SQLite 元数据、用户曲目分页。
+- `src/music/audio-renderer.js`、`renderer-registry.js`、`playback-adapter.js`：可替换 Renderer、实现注册和原生播放器适配边界。
 - `src/letters/letter-service.js`、`src/letters/model-adapter.js`：信件规则和可替换模型接口。
+- `src/letters/persona-provider.js`、`memory-provider.js`、`src/config/`：人格、记忆和模块设置选择。
 - `src/patcher/install-plan.js`、`install-executor.js`、`backup-manager.js`、`installation-provenance.js`：版本、基线、备份、回滚和受保护安装。
 - `scripts/patch-current-user-songs.mjs`：当前已修改前端样本上的离线用户曲目增量补丁；不要误认为它等于 pristine 安装器的完整发布流程。
 
@@ -82,7 +84,10 @@ Phase 3 与 Phase 4 没有“必须先完成 Phase 3 才能修复 MIDI”的技�
 2. 已完成：Letter 使用 `pending / processing / replied / failed`、幂等领取、失败重试和最大尝试次数；保留 `POST /letter/process` 作为开发调试入口。
 3. 已完成：`ModelAdapter` 提供外部 API Provider、可插拔 Harness、本地 Provider、离线 fallback 的统一接口，并用 fake provider 覆盖选择和 fallback；OliviaSoul 只是一个可选 Harness。
 4. 已完成：在不依赖真实模型的情况下完成文字回信网关端到端测试；下一步再设计视频回信导入的资产校验和 UI 状态。
-5. 进入 Phase 4 时，先完成本地预览、媒体任务、曲库体验和验收标准，再单独恢复 `LINLI-PLAY-001` 的只读原生调查；只有拥有日志/反汇编证据后才修改原生接入。
+5. 已完成：音乐 Renderer、游戏播放适配器、PersonaProvider、ModuleRegistry 和人类可读模块设置已补齐；SQLite 保持固定事实源，原生游戏契约保持在适配器边界内。
+6. 进入 Phase 4 时，先完成本地预览、媒体任务、曲库体验和验收标准，再单独恢复 `LINLI-PLAY-001` 的只读原生调查；只有拥有日志/反汇编证据后才修改原生接入。
+
+本轮模块化倒查的六项结论和边界记录在 [`modular-adapters-remediation.md`](./modular-adapters-remediation.md)。后续任务不得把内置 Renderer、OliviaSoul、Olivia Lin 原生播放适配器或某个人格文件重新写成唯一实现；SQLite 固定事实源属于已确认的合理边界。
 
 ### 5.1 各阶段验收边界
 

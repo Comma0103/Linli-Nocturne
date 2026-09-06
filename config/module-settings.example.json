@@ -1,0 +1,21 @@
+{
+  "version": 1,
+  "letters": {
+    "provider": "offline-fallback",
+    "harness": null,
+    "persona": "default",
+    "memory": "disabled",
+    "fallback": true
+  },
+  "music": {
+    "renderer": "builtin.audio",
+    "playbackAdapter": "olivia-lin.native",
+    "encoder": "builtin.audio-only-mp4"
+  },
+  "media": {
+    "renderer": "builtin.audio"
+  },
+  "threeD": {
+    "renderer": null
+  }
+}

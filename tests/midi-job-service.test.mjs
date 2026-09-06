@@ -45,6 +45,23 @@ test('MIDI jobs survive service recreation through SQLite metadata and media fil
   store.close();
 });
 
+test('MIDI job service accepts replaceable renderer and playback adapter', () => {
+  const store = new SqliteStore();
+  let renderCalls = 0;
+  const service = new MidiJobService({
+    store,
+    renderer: { id: 'fake.renderer', version: '2.0.0', render: () => { renderCalls += 1; return { wav: Buffer.from('fake'), duration: 2, timingManifest: { renderer: 'fake' } }; } },
+    playbackAdapter: { toUserSong: ({ job, mediaUrl }) => ({ id: job.jobId, customMedia: mediaUrl, renderer: job.info.renderJob.rendererId }) },
+  });
+  const upload = service.createUpload({ filename: 'custom.mid', uploadUrl: 'http://localhost:27149' });
+  service.receiveUpload(upload.key, midi);
+  const job = service.generate({ midiUrl: upload.url, filename: 'custom.mid', mediaBaseUrl: 'http://localhost:27149' });
+  assert.equal(renderCalls, 1);
+  assert.equal(job.info.renderJob.rendererId, 'fake.renderer');
+  assert.equal(service.listUserSongs().list[0].renderer, 'fake.renderer');
+  store.close();
+});
+
 test('MIDI user songs can expose an HTTPS playback origin independently of the API origin', () => {
   const store = new SqliteStore();
   const mediaRoot = mkdtempSync(join(tmpdir(), 'Linli MIDI HTTPS Media-'));

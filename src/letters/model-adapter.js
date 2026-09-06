@@ -41,6 +41,10 @@ function promptWithMemory(prompt, memory) {
   return context ? `${base}\n\n此前对话记忆（仅供参考）：\n${context}` : base;
 }
 
+function systemWithPersona(systemPrompt, persona) {
+  return [String(systemPrompt ?? '').trim(), String(persona ?? '').trim()].filter(Boolean).join('\n\n');
+}
+
 function runProcess(command, args, { cwd, timeoutMs, spawnImpl = spawn }) {
   return new Promise((resolve, reject) => {
     const child = spawnImpl(command, args, { cwd, shell: false, windowsHide: true });
@@ -114,12 +118,12 @@ export class OpenAICompatibleProvider extends FunctionProvider {
     const url = endpoint.replace(/\/$/u, '').endsWith('/chat/completions')
       ? endpoint.replace(/\/$/u, '')
       : `${endpoint.replace(/\/$/u, '')}${endpoint.replace(/\/$/u, '').endsWith('/v1') ? '/chat/completions' : '/v1/chat/completions'}`;
-    super({ provider, timeoutMs, generate: async ({ prompt = '', recipient = '林离', memory = '' }) => {
+    super({ provider, timeoutMs, generate: async ({ prompt = '', recipient = '林离', memory = '', persona = '' }) => {
       const payload = await requestJson(fetchImpl, url, {
         method: 'POST',
         headers: { 'content-type': 'application/json', authorization: `Bearer ${apiKey}` },
         body: JSON.stringify({ model, messages: [
-          ...(systemPrompt ? [{ role: 'system', content: systemPrompt }] : []),
+          ...(systemWithPersona(systemPrompt, persona) ? [{ role: 'system', content: systemWithPersona(systemPrompt, persona) }] : []),
           { role: 'user', content: `给${recipient}的来信：${promptWithMemory(prompt, memory)}` },
         ] }),
       }, timeoutMs, provider);
@@ -133,12 +137,12 @@ export class OpenAICompatibleProvider extends FunctionProvider {
 export class OliviaSoulHarnessProvider extends HarnessProvider {
   constructor({ root, person = 'linli-local-user', powershell = 'powershell.exe', timeoutMs = 60 * 60 * 1000, runner = runProcess }) {
     if (!root) throw new TypeError('OliviaSoul Harness root is required');
-    super({ provider: 'olivia-soul-harness', timeoutMs, generate: async ({ prompt = '', memory = '' }) => {
+    super({ provider: 'olivia-soul-harness', timeoutMs, generate: async ({ prompt = '', memory = '', persona = '' }) => {
       const tempDir = await mkdtemp(join(tmpdir(), 'linli-olivia-soul-'));
       const letterFile = join(tempDir, 'incoming.txt');
       const replyFile = join(tempDir, 'reply.txt');
       const script = join(root, 'run-live.ps1');
-      await writeFile(letterFile, promptWithMemory(prompt, memory), 'utf8');
+      await writeFile(letterFile, promptWithMemory(promptWithMemory(prompt, memory), persona), 'utf8');
       try {
         const result = await runner(powershell, [
           '-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', script,
@@ -159,8 +163,8 @@ export class OliviaSoulHarnessProvider extends HarnessProvider {
 }
 
 export class ModelProviderChain {
-  constructor({ external = null, harness = null, local = null, fallback = new FallbackLetterProvider() } = {}) {
-    this.providers = [external, harness, local, fallback].filter(Boolean);
+  constructor({ providers = null, external = null, harness = null, local = null, fallback = new FallbackLetterProvider() } = {}) {
+    this.providers = providers ? providers.filter(Boolean) : [external, harness, local, fallback].filter(Boolean);
   }
 
   async generate(input) {
@@ -192,6 +196,7 @@ export function createConfiguredModelAdapter(config = {}) {
   let local = config.local?.generate ? config.local : null;
   if (!local && config.local?.endpoint) local = new OpenAICompatibleProvider({ ...config.local, provider: 'local-model' });
   const fallback = config.fallback === false ? null : new FallbackLetterProvider();
+  if (config.provider?.generate) return new ModelAdapter(new ModelProviderChain({ providers: [config.provider, harness, fallback] }));
   return new ModelAdapter(new ModelProviderChain({ external, harness, local, fallback }));
 }
 

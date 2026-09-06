@@ -78,3 +78,13 @@ export function renderMidiToWav(buffer, { sampleRate = SAMPLE_RATE } = {}) {
   for (let index = 0; index < samples.length; index += 1) samples[index] = clamp(samples[index], -0.95, 0.95);
   return { wav: encodeWav(samples, sampleRate), duration, timingManifest: { ...parsed, events: parsed.events } };
 }
+
+export class AudioRenderer {
+  constructor({ id = 'audio.renderer', version = '1.0.0' } = {}) { this.id = id; this.version = version; }
+  render() { throw new Error('AudioRenderer.render must be implemented'); }
+}
+
+export class BuiltinAudioRenderer extends AudioRenderer {
+  constructor(options = {}) { super({ id: 'builtin.audio', version: '0.1.0', ...options }); }
+  render(buffer, options = {}) { return renderMidiToWav(buffer, options); }
+}
