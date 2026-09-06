@@ -1,6 +1,7 @@
 import { createServer } from 'node:http';
 import { readFile } from 'node:fs/promises';
 import { clientMidiJob, clientMidiPage, midiJobIds, midiPageParams } from './midi-compat.js';
+import { clientLetter } from './letter-compat.js';
 
 function sendJson(response, status, payload) {
   response.writeHead(status, {
@@ -21,20 +22,6 @@ async function readJson(request) {
 }
 
 function compatResponse(data) { return { code: 0, message: 'success', data }; }
-
-function toSeconds(value) {
-  const parsed = Date.parse(value ?? '');
-  return Number.isFinite(parsed) ? Math.floor(parsed / 1000) : 0;
-}
-
-function visibleLetter(letter, videoReplyService = null, mediaOrigin = '') {
-  const replied = letter.status === 'replied';
-  const failed = letter.status === 'failed';
-  return { letterId: letter.id, content: letter.body, summary: letter.body.length > 20 ? `${letter.body.slice(0, 20)}...` : letter.body,
-    material: null, letterStatus: replied ? 'replied' : failed ? 'failed' : 'llm_processing', auditStatus: 0, replyType: replied ? 1 : 0,
-    replyText: replied ? letter.reply : null, replyVideoUrl: replied && videoReplyService?.getActive(letter.id) ? `${mediaOrigin}/letter/video/media/${videoReplyService.getActive(letter.id).assetId}.mp4` : null, isRead: replied ? (letter.read_at ? 1 : 0) : 1,
-    createdAt: toSeconds(letter.created_at), repliedAt: replied ? toSeconds(letter.replied_at) : null, error: failed ? letter.last_error : null };
-}
 
 function htmlEscape(value) { return String(value).replace(/[&<>"']/gu, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[char])); }
 function publicVideoJob(job) { if (!job) return null; const { mediaPath, ...visible } = job; return visible; }
@@ -62,7 +49,7 @@ export function createLocalGateway({ letterService, musicService = null, midiJob
         return sendJson(response, 200, compatResponse({ letterId: letter.id, remainingToday: letterService.remainingToday(letter.recipient) }));
       }
       if (request.method === 'GET' && url.pathname === '/toy/letter/list') {
-        const letters = letterService.list().map(letter => visibleLetter(letter, videoReplyService, origin));
+        const letters = letterService.list().map(letter => clientLetter(letter, videoReplyService, origin));
         return sendJson(response, 200, compatResponse({ list: letters, hasMore: false, nextCursor: 0, total: letters.length, remainingToday: letterService.remainingToday() }));
       }
       if (request.method === 'GET' && url.pathname === '/toy/letter/detail') {
@@ -70,7 +57,7 @@ export function createLocalGateway({ letterService, musicService = null, midiJob
         const letter = letterService.detail(id);
         if (!letter) return sendJson(response, 404, { code: 404, message: 'letter_not_found' });
         if (letter.status === 'replied' && !letter.read_at) letterService.markRead(id);
-        return sendJson(response, 200, compatResponse(visibleLetter(letterService.detail(id), videoReplyService, origin)));
+        return sendJson(response, 200, compatResponse(clientLetter(letterService.detail(id), videoReplyService, origin)));
       }
       if (request.method === 'GET' && url.pathname === '/toy/letter/unread_count') return sendJson(response, 200, compatResponse({ unreadCount: letterService.unreadCount() }));
       if (request.method === 'POST' && url.pathname === '/toy/letter/share') return sendJson(response, 200, compatResponse({ shareId: (await readJson(request)).letterId }));

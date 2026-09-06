@@ -51,7 +51,8 @@ test('文字回信端到端链路返回统一 provider 的回复和状态', asyn
     assert.equal((await processed.json()).status, 'replied');
     const detail = await fetch(`${base}/toy/letter/detail?letterId=${sentData.letterId}`);
     const detailData = (await detail.json()).data;
-    assert.equal(detailData.letterStatus, 'replied');
+    assert.equal(detailData.letterStatus, 4); // 0.0.9.627 的 REPLIED 是数字枚举。
+    assert.equal(detailData.auditStatus, 2);
     assert.equal(detailData.replyText, '收到：端到端测试');
     assert.equal(detailData.replyType, 1);
     assert.equal((await (await fetch(`${base}/toy/letter/unread_count`)).json()).data.unreadCount, 0);

@@ -23,7 +23,7 @@
 - `letters.status` 采用 `pending/processing/replied/failed`，并增加 `attempt_count`、`processing_started_at`、`last_error`、`next_attempt_at` 字段。旧数据库中的 `queued` 迁移为 `pending`。
 - SQLite 领取在事务中完成：选择最早可处理的 `pending` 信件并立即递增尝试次数、写入 `processing`；重复领取只能看到空结果。模型成功写入 `replied`，失败时根据 `maxAttempts` 写回 `pending` 或 `failed`。
 - `ModelProviderChain` 按外部、Harness、本地、fallback 顺序尝试 provider。每个 provider 都只暴露 `generate(input)`；`ModelAdapter` 负责校验并规范化 `{ text, provider, metadata }`。
-- 网关兼容字段继续保留；`letterStatus` 在兼容响应中反映 `replied/failed/llm_processing`，失败原因放在 `error`，不改变原版路由形状。
+- 网关兼容字段继续保留；领域状态仍是字符串，但游戏兼容响应按 0.0.9.627 的数字枚举返回 `pending=1`、`processing=3`、`replied=4`、`failed=5`，文字回信为 `replyType=1`。失败原因放在 `error`，不改变原版路由形状。
 
 ## 验收标准
 
