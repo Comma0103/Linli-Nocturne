@@ -69,4 +69,3 @@ test('Phase 3 总体验收：设置、Worker、provider、记忆和视频回信�
   assert.equal((await (await fetch(`${base}/letter/video/delete/${first.id}`, { method: 'POST' })).json()).deleted, true);
   assert.equal((await (await fetch(`${base}/toy/letter/detail?letterId=${first.id}`)).json()).data.replyVideoUrl, null);
 });
-

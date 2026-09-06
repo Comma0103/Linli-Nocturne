@@ -6,7 +6,7 @@
 
 ## 项目状态
 
-截至当前，Phase 0–2 已完成，Phase 3 已完成信件可靠性、真实 provider/Harness、后台 worker 和有限对话记忆四个小里程碑。当前继续开发 Phase 3 的视频回信体验；项目仍是开发版，不是发行版。Phase 4 尚未开始，上传曲目接管原生 WebPlayer 的问题 `LINLI-PLAY-001` 仍保留在已知问题中。
+截至当前，Phase 0–2 已完成，Phase 3 已完成并通过总体验收；项目仍是开发版，不是发行版。下一步进入 Phase 4，上传曲目接管原生 WebPlayer 的问题 `LINLI-PLAY-001` 仍保留为 Phase 4 跨层阻塞。
 
 ## 开发路线
 
@@ -102,7 +102,7 @@
 
 设计和验收标准见 [Phase 3-5 视频回信资产流程](./docs/phase3-letter-video.md)。
 
-#### [ ] Phase 3-6：Phase 3 总体验收
+#### [x] Phase 3-6：Phase 3 总体验收（`b5e7e8a`）
 
 串联写信、排队、provider、重试、记忆和视频回信，补齐网关冒烟测试、错误恢复、文档和设置入口。
 
