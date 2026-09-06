@@ -16,3 +16,6 @@ secrets/
 *.mid
 *.midi
 .env
+
+# Local reverse-engineering scratch files, runtime databases/media and test artifacts.
+work/
