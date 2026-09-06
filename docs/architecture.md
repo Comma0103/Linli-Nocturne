@@ -23,3 +23,14 @@ Phase 3 信件可靠性约定：Letter 状态为 `pending`、`processing`、`rep
 3. 所有音频、视频和未来 3D 任务统一使用 RenderJob。
 4. 渲染器可插拔，第一版音频实现不能锁死未来 3D 方案。
 5. 普通用户流程优先，开发者模式作为高级入口。
+
+## 全局模块化约定
+
+Linli Nocturne 的核心层只处理统一接口和中间表示，不把任何一个第三方项目当作唯一实现。每类能力都通过 provider、adapter 或 renderer 接入，并由能力注册表报告名称、版本、配置项、支持的输入输出和健康状态。
+
+- **信件**：`LetterProvider` 统一外部 API、本地模型、第三方 Harness 和 fallback；OliviaSoul 是一个可选适配器。
+- **音乐与演奏**：`MusicPlayer`/播放适配器统一 MIDI、音频、原生 WebPlayer 和其他播放器；`LINLI-PLAY-001` 只描述其中一个接入缺陷。
+- **媒体与 3D**：`RenderJob` 是统一中间表示，Audio、Video、Future3D 和动作同步器都是可替换实现。
+- **用户设置**：App 保存每个模块当前选择、配置和 fallback 策略；切换实现不应要求修改领域服务代码。
+
+第三方适配器可以复用成熟项目的源码、脚本或协议，但必须保留来源和版本记录，并把第三方依赖隔离在适配器边界内。领域服务不能直接读取第三方项目的私有数据库、Prompt 文件或目录结构。
