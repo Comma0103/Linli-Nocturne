@@ -1,6 +1,6 @@
 import { cp, readFile, rm, writeFile, mkdtemp } from 'node:fs/promises';
 import { spawn } from 'node:child_process';
-import { join } from 'node:path';
+import { join, resolve } from 'node:path';
 import { tmpdir } from 'node:os';
 
 function withTimeout(task, timeoutMs, label) {
@@ -138,9 +138,9 @@ export class OliviaSoulHarnessProvider extends HarnessProvider {
   constructor({ root, runtimeRoot = '', person = 'linli-local-user', powershell = 'powershell.exe', timeoutMs = 60 * 60 * 1000, runner = runProcess, environment = {} }) {
     if (!root) throw new TypeError('OliviaSoul Harness root is required');
     super({ provider: 'olivia-soul-harness', timeoutMs, generate: async ({ prompt = '', recipient = '林离', userDisplayName = '', memory = '', persona = '' }) => {
-      const executionRoot = runtimeRoot || root;
+      const executionRoot = resolve(runtimeRoot || root);
       if (runtimeRoot) {
-        await cp(root, runtimeRoot, { recursive: true, force: true, filter: source => !/[\\/](_probe|信件往来|\.cursor)(?:[\\/]|$)/u.test(source) });
+        await cp(resolve(root), executionRoot, { recursive: true, force: true, filter: source => !/[\\/](_probe|信件往来|\.cursor)(?:[\\/]|$)/u.test(source) });
       }
       const tempDir = await mkdtemp(join(tmpdir(), 'linli-olivia-soul-'));
       const letterFile = join(tempDir, 'incoming.txt');

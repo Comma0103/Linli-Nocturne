@@ -4,6 +4,7 @@ import { existsSync } from 'node:fs';
 import { writeFile } from 'node:fs/promises';
 import { EventEmitter } from 'node:events';
 import { createServer } from 'node:http';
+import { resolve } from 'node:path';
 import {
   createConfiguredModelAdapter,
   HarnessProvider,
@@ -131,6 +132,23 @@ test('OliviaSoul Harness 输入包含玩家显示名和游戏收信人', async (
   assert.match(letterContent, /来信人：嘉树/u);
   assert.match(letterContent, /收信人：林离/u);
   assert.match(letterContent, /最近好吗/u);
+});
+
+test('OliviaSoul Harness 使用绝对脚本路径避免工作目录重复拼接', async () => {
+  let observed;
+  const provider = new OliviaSoulHarnessProvider({
+    root: 'third_party/OliviaSoul/v18-harness',
+    runtimeRoot: 'data/test-harness-runtime',
+    runner: async (_command, args, options) => {
+      observed = { args, options };
+      await writeFile(args[args.indexOf('-OutFile') + 1], '路径测试回信', 'utf8');
+      return { code: 0, stdout: 'HARNESS LIVE DONE', stderr: '' };
+    },
+  });
+  await provider.generate({ prompt: '路径测试' });
+  const script = observed.args[observed.args.indexOf('-File') + 1];
+  assert.equal(script, resolve('data/test-harness-runtime/run-live.ps1'));
+  assert.equal(observed.options.cwd, resolve('data/test-harness-runtime'));
 });
 
 test('外部 provider 失败时切换到 OliviaSoul Harness，禁用 fallback 时不泄漏密钥', async () => {
