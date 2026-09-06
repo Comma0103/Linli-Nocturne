@@ -104,17 +104,41 @@ export function createLocalGateway({ letterService, musicService = null, midiJob
       }
       if (midiJobService && request.method === 'POST' && url.pathname === '/toy/midi/importShareCode') return sendJson(response, 409, { code: 409, message: 'midi_share_code_not_supported' });
       if (midiJobService && request.method === 'GET' && url.pathname === '/toy/searchUserSongs') return sendJson(response, 200, compatResponse(midiJobService.listUserSongs(midiPageParams(url.searchParams))));
-      const media = url.pathname.match(/^\/toy\/midi\/media\/([^/]+)$/u);
-      if (midiJobService && request.method === 'GET' && media) {
+      const media = url.pathname.match(/^\/toy\/midi\/media\/([^/]+?)(?:\.mp4)?$/u);
+      if (midiJobService && media && (request.method === 'GET' || request.method === 'HEAD')) {
         const bytes = midiJobService.mediaBytes(media[1]);
         if (!bytes) {
           mediaLogger?.({ method: request.method, pathname: url.pathname, range: request.headers.range ?? null, status: 404, contentType: null, bytes: 0 });
           return sendJson(response, 404, { error: 'media_not_found' });
         }
         const contentType = midiJobService.mediaContentType ?? 'audio/wav';
-        mediaLogger?.({ method: request.method, pathname: url.pathname, range: request.headers.range ?? null, status: 200, contentType, bytes: bytes.length });
-        response.writeHead(200, { 'content-type': contentType, 'access-control-allow-origin': '*', 'content-length': bytes.length });
-        return response.end(bytes);
+        const range = request.headers.range;
+        let status = 200;
+        let body = bytes;
+        const headers = { 'content-type': contentType, 'access-control-allow-origin': '*', 'accept-ranges': 'bytes' };
+        if (range) {
+          const match = /^bytes=(\d*)-(\d*)$/u.exec(range);
+          if (!match || (!match[1] && !match[2])) {
+            response.writeHead(416, { ...headers, 'content-range': `bytes */${bytes.length}` });
+            mediaLogger?.({ method: request.method, pathname: url.pathname, range, status: 416, contentType, bytes: 0 });
+            return response.end();
+          }
+          let start = match[1] ? Number(match[1]) : Math.max(0, bytes.length - Number(match[2]));
+          let end = match[2] ? Number(match[2]) : bytes.length - 1;
+          if (!Number.isSafeInteger(start) || !Number.isSafeInteger(end) || start < 0 || start >= bytes.length || end < start) {
+            response.writeHead(416, { ...headers, 'content-range': `bytes */${bytes.length}` });
+            mediaLogger?.({ method: request.method, pathname: url.pathname, range, status: 416, contentType, bytes: 0 });
+            return response.end();
+          }
+          end = Math.min(end, bytes.length - 1);
+          body = bytes.subarray(start, end + 1);
+          status = 206;
+          headers['content-range'] = `bytes ${start}-${end}/${bytes.length}`;
+        }
+        headers['content-length'] = body.length;
+        mediaLogger?.({ method: request.method, pathname: url.pathname, range: range ?? null, status, contentType, bytes: body.length });
+        response.writeHead(status, headers);
+        return request.method === 'HEAD' ? response.end() : response.end(body);
       }
       if (request.method === 'POST' && url.pathname === '/toy/addToPlaylist') {
         if (!musicService) return sendJson(response, 503, { code: 503, message: 'music_service_unavailable' });

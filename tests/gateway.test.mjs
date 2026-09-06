@@ -84,7 +84,15 @@ for (const naming of ['snake_case', 'camelCase']) test(`MIDI client contract: up
   assert.equal(userSongs.hasMore, false);
   const media = await fetch(result.info.audioUrl);
   assert.equal(media.headers.get('content-type'), 'audio/wav');
+  assert.equal(media.headers.get('accept-ranges'), 'bytes');
   assert.equal((await media.arrayBuffer()).byteLength > 44, true);
+  const head = await fetch(result.info.audioUrl, { method: 'HEAD' });
+  assert.equal(head.status, 200);
+  assert.equal(Number(head.headers.get('content-length')), Number(media.headers.get('content-length')));
+  const range = await fetch(result.info.audioUrl, { headers: { range: 'bytes=0-15' } });
+  assert.equal(range.status, 206);
+  assert.equal(range.headers.get('content-range'), `bytes 0-15/${media.headers.get('content-length')}`);
+  assert.equal((await range.arrayBuffer()).byteLength, 16);
 
   const invalidUpload = await clientRequest('/toy/genObjectUploadUrl', { filename: 'broken.mid' });
   await fetch(invalidUpload.url, { method: 'PUT', body: 'invalid MIDI' });

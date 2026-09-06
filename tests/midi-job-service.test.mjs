@@ -27,12 +27,12 @@ test('MIDI jobs survive service recreation through SQLite metadata and media fil
   assert.equal(second.list().total, 1);
   assert.deepEqual(second.listUserSongs({ pageSize: 1 }).list[0], {
     userSongId: job.jobId, id: job.jobId, name: 'persist.mid', filename: 'persist.mid',
-    audioUrl: 'http://127.0.0.1:27149/toy/midi/media/' + job.jobId,
-    videoUrl: 'http://127.0.0.1:27149/toy/midi/media/' + job.jobId,
+    audioUrl: 'http://127.0.0.1:27149/toy/midi/media/' + job.jobId + '.mp4',
+    videoUrl: 'http://127.0.0.1:27149/toy/midi/media/' + job.jobId + '.mp4',
     videoByTodView: [
-      { url: 'http://127.0.0.1:27149/toy/midi/media/' + job.jobId, tod: 'TOD12', view: 'NI', coverUrl: '', duration: Math.round(second.get(job.jobId).info.duration) },
-      { url: 'http://127.0.0.1:27149/toy/midi/media/' + job.jobId, tod: 'TOD1730', view: 'NI', coverUrl: '', duration: Math.round(second.get(job.jobId).info.duration) },
-      { url: 'http://127.0.0.1:27149/toy/midi/media/' + job.jobId, tod: 'TOD20', view: 'NI', coverUrl: '', duration: Math.round(second.get(job.jobId).info.duration) },
+      { url: 'http://127.0.0.1:27149/toy/midi/media/' + job.jobId + '.mp4', tod: 'TOD12', view: 'NI', coverUrl: '', duration: Math.round(second.get(job.jobId).info.duration) },
+      { url: 'http://127.0.0.1:27149/toy/midi/media/' + job.jobId + '.mp4', tod: 'TOD1730', view: 'NI', coverUrl: '', duration: Math.round(second.get(job.jobId).info.duration) },
+      { url: 'http://127.0.0.1:27149/toy/midi/media/' + job.jobId + '.mp4', tod: 'TOD20', view: 'NI', coverUrl: '', duration: Math.round(second.get(job.jobId).info.duration) },
     ],
     nameKey: job.jobId, performanceType: 'Solo', duration: second.get(job.jobId).info.duration, source: 'linli-nocturne',
   });
@@ -50,7 +50,7 @@ test('MIDI user songs can expose an HTTPS playback origin independently of the A
   service.receiveUpload(upload.key, midi);
   const job = service.generate({ midiUrl: upload.url, filename: 'https.mid', mediaBaseUrl: 'http://127.0.0.1:27149' });
   const song = service.listUserSongs().list[0];
-  assert.match(song.videoUrl, new RegExp(`^https://localhost:27150/toy/midi/media/${job.jobId}$`));
+  assert.match(song.videoUrl, new RegExp(`^https://localhost:27150/toy/midi/media/${job.jobId}\\.mp4$`));
   assert.equal(song.audioUrl, song.videoUrl);
   assert.equal(song.videoByTodView[0].duration, Math.round(job.info.duration));
   assert.ok(song.videoByTodView.every((view) => view.url === song.videoUrl));

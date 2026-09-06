@@ -59,7 +59,7 @@ export class MidiJobService {
       const mediaBytes = this.mediaEncoder ? this.mediaEncoder(rendered.wav) : rendered.wav;
       this.media.set(jobId, mediaBytes);
       const playbackBaseUrl = this.playbackBaseUrl || mediaBaseUrl;
-      const mediaUrl = `${playbackBaseUrl.replace(/\/$/u, '')}/toy/midi/media/${jobId}`;
+      const mediaUrl = `${playbackBaseUrl.replace(/\/$/u, '')}/toy/midi/media/${jobId}.mp4`;
       const mediaPath = this.mediaRoot ? join(this.mediaRoot, `${jobId}.${this.mediaExtension}`) : null;
       if (mediaPath) writeFileSync(mediaPath, mediaBytes);
       const renderJob = transitionJob(makeRenderJob(jobId, upload.filename ?? filename), RenderJobStatus.PRODUCED, { progress: 1 });
@@ -103,8 +103,8 @@ export class MidiJobService {
       id: job.jobId,
       name: job.filename,
       filename: job.filename,
-      audioUrl: this.playbackBaseUrl ? `${this.playbackBaseUrl.replace(/\/$/u, '')}/toy/midi/media/${job.jobId}` : (job.info?.audioUrl ?? ''),
-      videoUrl: this.playbackBaseUrl ? `${this.playbackBaseUrl.replace(/\/$/u, '')}/toy/midi/media/${job.jobId}` : (job.info?.videoUrls?.[0] ?? job.info?.audioUrl ?? ''),
+      audioUrl: this.playbackBaseUrl ? `${this.playbackBaseUrl.replace(/\/$/u, '')}/toy/midi/media/${job.jobId}.mp4` : (job.info?.audioUrl ?? ''),
+      videoUrl: this.playbackBaseUrl ? `${this.playbackBaseUrl.replace(/\/$/u, '')}/toy/midi/media/${job.jobId}.mp4` : (job.info?.videoUrls?.[0] ?? job.info?.audioUrl ?? ''),
       // Lite's native player does not play a song from videoUrl alone. It
       // selects a TOD/view entry from this array before forwarding the URL to
       // NutWebPlayer. Local MIDI renders are audio-only, so all three TOD
@@ -113,7 +113,7 @@ export class MidiJobService {
       videoByTodView: (() => {
         const storedMediaUrl = job.info?.videoUrls?.[0] ?? job.info?.audioUrl ?? '';
         const mediaUrl = this.playbackBaseUrl
-          ? `${this.playbackBaseUrl.replace(/\/$/u, '')}/toy/midi/media/${job.jobId}`
+          ? `${this.playbackBaseUrl.replace(/\/$/u, '')}/toy/midi/media/${job.jobId}.mp4`
           : storedMediaUrl;
         // The native VideoTodViewItem contract stores duration as an integer
         // number of seconds. Keep the richer fractional duration in RenderJob
