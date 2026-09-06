@@ -131,4 +131,4 @@ Phase 3 的信件可靠性、真实 provider、后台 worker、有限记忆、�
 
 ## 8. 当前 Phase 3 状态校正
 
-Phase 3-7 已通过离线 fallback 的 Steam 界面验收，但这不代表 Phase 3 整体完成。DeepSeek + Persona + OliviaSoul Harness 的真实模型 Steam 测试属于 Phase 3-8，完成前不得进入 Phase 4 或宣布 Phase 3 收尾。
+Phase 3-7 已通过离线 fallback 的 Steam 界面验收，Phase 3-8 也已由用户在 Steam 0.0.9.627 中完成 DeepSeek + Persona + OliviaSoul Harness 真实模型测试；模型请求、Persona、Harness 和完整回信正文均已确认。Phase 3 的信件代码链路和 Steam 用户路径现已收尾，可以进入 Phase 4；这不代表上传 MIDI 播放、最终 GUI 设置页、普通用户安装器或发行版已经完成。

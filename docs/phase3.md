@@ -16,10 +16,10 @@ Phase 0、Phase 1 和 Phase 2 目前各有一份阶段总览文档。Phase 3 也
 | Phase 3-5 | [视频回信资产流程](./phase3-letter-video.md) | 已完成 |
 | Phase 3-6 | 本页的总体验收边界和交接文档 | 已完成 |
 | Phase 3-7 | [Steam 游戏界面实机验收（离线 fallback）](./phase3-steam-integration.md) | 已完成 |
-| Phase 3-8 | [真实模型 Steam 实机验收](./phase3-provider-integration.md) | 待用户验收 |
+| Phase 3-8 | [真实模型 Steam 实机验收](./phase3-provider-integration.md) | 已完成（`b7cd5ef`） |
 
 ## 总体验收边界
 
-Phase 3-6 已把上述信件文字链路、Worker、Provider、记忆和视频资产流程串起来，完成设置解析、错误恢复、网关端到端测试和文档同步；代表性验收提交为 `b5e7e8a`。Phase 3-7 已由用户完成离线 fallback 的 Steam 界面验收。Phase 3-8 仍需使用 DeepSeek + Persona + OliviaSoul Harness 完成真实模型验收，在此之前不能宣布 Phase 3 整体收尾。
+Phase 3-6 已把上述信件文字链路、Worker、Provider、记忆和视频资产流程串起来，完成设置解析、错误恢复、网关端到端测试和文档同步；代表性验收提交为 `b5e7e8a`。Phase 3-7 已由用户完成离线 fallback 的 Steam 界面验收，Phase 3-8 又由用户在 Steam 中完成 DeepSeek + Persona + OliviaSoul Harness 真实模型验收。Phase 3 的代码链路和 Steam 用户路径现已完成；最终 App 设置页、视频自动生成、安装器和发行流程仍属于后续工作。
 
 Phase 3-7 完成后，下一阶段进入 Phase 4 的用户 MIDI 预览、曲库和播放/演奏调查。任何新增第三方 Provider、Harness、Persona、Renderer 或视频检查器都必须接入统一注册表和适配器，不得把现有实现写成唯一实现。

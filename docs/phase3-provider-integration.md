@@ -76,6 +76,21 @@ const adapter = createConfiguredModelAdapter({
 - 禁用 fallback 且所有 provider 失败时，返回 `provider_chain_exhausted`，错误中不出现 API Key、原始响应正文或私信内容。
 - 所有临时文件在成功和失败后都被清理；现有 `pnpm test` 全部通过，并新增本轮 provider 测试。
 
+## Steam 真实模型验收记录
+
+2026-09-07（Asia/Shanghai），用户在 Steam 客户端 `0.0.9.627` 中点击失败信件的“重新寄信”，完成了一次真实 DeepSeek + Persona + OliviaSoul Harness 回信。过程中先修复了重寄接口的无条件 409，以及 Harness 相对路径在 Windows PowerShell 下重复拼接的问题。
+
+验收结果：
+
+- 新信件被后台 Worker 领取并进入 `processing`，随后变为 `replied`；
+- OliviaSoul Harness 多步流程成功完成，真实模型请求得到完整回信；
+- 回信正文在 Steam 信件详情中完整显示；
+- 回信以配置中的玩家显示名“嘉树”称呼用户，证明 `user.displayName` 已传入模型上下文；
+- 旧的失败信件记录保留，重寄创建新的信件记录；
+- 本次没有修改游戏目录。
+
+因此，Phase 3-8 已通过，Phase 3 的信件代码链路和 Steam 用户路径完成。该验收不代表视频自动生成、最终 GUI 设置页、普通用户安装器或发行版已经完成。
+
 ## 本轮完成边界
 
-本轮完成“连接和复用 provider”的能力，不代表真实 API 已在用户机器上配置，也不代表后台自动回信已经完成。人格质量沿用 OliviaSoul 的 Harness 规则，后续再用其回归用例接入 Linli 的验收流程。
+本轮完成“连接和复用 provider”以及一次真实 Steam 模型验收。人格质量沿用 OliviaSoul 的 Harness 规则；其他模型、Persona 和 Harness 仍可通过统一接口和模块设置替换。
