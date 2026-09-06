@@ -114,6 +114,19 @@ export class SqliteStore {
     return row ?? null;
   }
 
+  recoverStaleLetters(nowIso, leaseMs, maxAttempts = 3, retryDelayMs = 0) {
+    const cutoffIso = new Date(Date.parse(nowIso) - Math.max(0, leaseMs)).toISOString();
+    const retryAt = new Date(Date.parse(nowIso) + Math.max(0, retryDelayMs)).toISOString();
+    const result = this.db.prepare(`UPDATE letters
+      SET status = CASE WHEN attempt_count < ? THEN 'pending' ELSE 'failed' END,
+          last_error = 'processing_lease_expired',
+          next_attempt_at = CASE WHEN attempt_count < ? THEN ? ELSE NULL END,
+          processing_started_at = NULL
+      WHERE status = 'processing' AND processing_started_at IS NOT NULL AND processing_started_at <= ?`)
+      .run(maxAttempts, maxAttempts, retryAt, cutoffIso);
+    return result.changes;
+  }
+
   markFailed(id, errorCode, failedAt, { maxAttempts = 3, retryDelayMs = 60_000 } = {}) {
     const existing = this.getLetter(id);
     if (!existing || existing.status === 'replied' || existing.status === 'failed') return existing;

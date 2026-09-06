@@ -8,7 +8,7 @@
 
 Phase 2 已完成接入基础并进入交接状态。基础领域服务、网关契约、分页、备份回滚、原版接入和官方预设曲目 Steam 实机验收已有证据；上传曲目的完整播放体验属于 Phase 4，当前仍受 `LINLI-PLAY-001` 阻塞。完整状态、阶段边界和下一阶段 Prompt 见 [`docs/phase2-handoff.md`](./docs/phase2-handoff.md)。
 
-Phase 3 的首个信件可靠性里程碑已完成：信件与 MIDI 共用显式时区日界线，信件具备 `pending/processing/replied/failed` 状态、原子领取、重试上限和可替换的外部/本地/fallback provider 接口；后台 worker、真实模型连接和视频回信仍未完成。设计与验收标准见 [`docs/phase3-letter-reliability.md`](./docs/phase3-letter-reliability.md)。
+Phase 3 的信件可靠性、真实 provider 接入和后台 worker 轮次已完成：信件与 MIDI 共用显式时区日界线，信件具备 `pending/processing/replied/failed` 状态、原子领取、重试上限、可插拔 provider 和进程重启后的 processing 租约恢复；视频回信仍未完成。设计与验收标准见 [`docs/phase3-letter-reliability.md`](./docs/phase3-letter-reliability.md)、[`docs/phase3-provider-integration.md`](./docs/phase3-provider-integration.md) 和 [`docs/phase3-letter-worker.md`](./docs/phase3-letter-worker.md)。
 
 当前有一个已登记的已知阻塞：上传曲目能够生成并显示，但暂时无法接管原生 WebPlayer 进入桌面演奏；详见 [`LINLI-PLAY-001`](./docs/known-issues.md)。
 
@@ -18,7 +18,7 @@ Phase 3 的首个信件可靠性里程碑已完成：信件与 MIDI 共用显式
 - [x] **Phase 1 — 本地领域核心**：SQLite 存储、本地网关、写信规则、离线回信、RenderJob 状态机、MIDI 解析、Tempo 和延音踏板提取。本阶段完成的是可独立运行的最小本地闭环。
 - [x] **Phase 1 音乐基础**：离线 WAV 音频渲染和本地歌单。
 - [x] **Phase 2 — 游戏接入基础**：版本白名单、基线校验、备份回滚、原版前端补丁、原生 DLL 入口补丁、网关契约、用户曲目分页、独立暂存验收和官方曲目 Steam 实机验收已完成。它不承诺上传曲目已经完成原生 WebPlayer 播放。
-- [x] **Phase 3 首个里程碑 — 信件可靠性**：统一时区日界线、信件状态机、原子领取、重试上限和可替换 provider 接口已完成；后台 worker、真实模型连接和视频回信仍待后续小步实现。
+- [x] **Phase 3 信件可靠性与后台处理**：统一时区日界线、信件状态机、原子领取、重试上限、真实 provider、可插拔 Harness、后台 worker 和过期租约恢复已完成；视频回信仍待后续小步实现。
 - [ ] **Phase 4 — 音乐体验**：在 Phase 2 的接入基础上完成用户上传 MIDI 的完整体验，包括预览、音频/视频任务、游戏内歌单以及上传曲目真正接管播放器并进入演奏。`LINLI-PLAY-001` 归属于这一阶段的跨层缺陷。
 - [ ] **Phase 5 — 即兴创作**：支持外部 API 和完全本地运行的模型辅助作曲。
 - [ ] **Phase 6 — 3D 演奏**：时间轴、手指轨道、镜头轨道、动作轨道和可替换的 3D Renderer。
@@ -106,6 +106,7 @@ music.addToPlaylist(track);
 - [Phase 0](./docs/phase0.md)、[Phase 1](./docs/phase1.md)、[Phase 2](./docs/phase2.md)
 - [Phase 3 信件可靠性首个里程碑](./docs/phase3-letter-reliability.md)
 - [Phase 3 Provider 与 OliviaSoul Harness 适配](./docs/phase3-provider-integration.md)
+- [Phase 3 信件后台 Worker](./docs/phase3-letter-worker.md)
 - [第三方项目引用与复用说明](./docs/third-party-credits.md)
 - [原装游戏基线与插件接入](./docs/original-installation.md)
 - [原版前端接口审计](./docs/frontend-audit.md)

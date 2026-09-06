@@ -6,6 +6,7 @@ Game Client -> Local Gateway -> Domain Services -> Stores and Renderers
 - PatchManager：版本识别、备份、补丁、校验、回滚。
 - LocalGateway：兼容游戏前端的登录、信件、音乐、歌单和媒体接口。
 - LetterService：额度、延迟、状态领取、生成、检查、重试和记忆。
+- LetterWorker：后台调度、processing 租约恢复和进程内 tick 互斥；保留手动处理接口用于诊断。
 - ModelAdapter：外部 API、可插拔 Harness、本地模型、离线人格引擎；OliviaSoul v18 通过适配器接入，其他 Harness 也可替换。
 - MusicService：MIDI 上传、解析、任务编排、曲库和歌单。
 - RenderPipeline：AudioRenderer、VideoRenderer、Future3DRenderer。

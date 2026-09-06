@@ -43,6 +43,10 @@ export class LetterService {
     }
   }
 
+  recoverStaleProcessing({ leaseMs = 5 * 60 * 1000 } = {}) {
+    return this.store.recoverStaleLetters(this.clock().toISOString(), leaseMs, this.limits.maxAttempts, this.limits.retryDelayMs);
+  }
+
   list() { return this.store.listLetters(); }
   remainingToday(recipient = '林离') {
     const now = this.clock();
