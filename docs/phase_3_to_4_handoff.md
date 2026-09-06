@@ -46,7 +46,7 @@
 - 重新打开离线测试信件后，看到了回信正文。
 - DeepSeek + 仓库内 Persona + OliviaSoul v18 Harness 完成真实请求和多步处理，游戏中显示完整回信，称呼使用配置里的玩家名字。
 
-证据入口：[Steam 验收](./phase3-steam-integration.md)、[真实 provider 验收](./phase3-provider-integration.md)、[Phase 3 总览](./phase3.md)。代表性提交为 `b7cd5ef`（Harness 路径修复）、`243c3e4`（验收记录）；更早里程碑及提交见 README 开发路线。
+证据入口：[Steam 验收](./phase3-7-steam-acceptance.md)、[真实 provider 验收](./phase3-2-provider-and-harness.md)、[Phase 3 总览](./phase3.md)。代表性提交为 `b7cd5ef`（Harness 路径修复）、`243c3e4`（验收记录）；更早里程碑及提交见 README 开发路线。
 
 这些证据不等于所有模型、全部第三方能力、视频自动生成或完整发行版均已验收。离线 fallback 是无模型回复路径，不用于评价真实模型质量，也不能执行 OliviaSoul 的多步模型调用。
 
@@ -208,4 +208,3 @@ git status
 只提交本轮源代码、测试和文档（含必要的无密钥配置模板）；不提交用户配置、API Key、真实信件、数据库、日志、媒体、work/data/_probe 产物、游戏资源或专有 DLL。复用第三方源文件时保留来源与已有许可记录。
 
 检查差异后小步提交，推送 `main`，验证本地 HEAD 与 origin/main 一致，并确认工作区没有遗漏。遇到远程新提交先查明并整合，不强推。修改 README 时不再另造长期状态文档；后续按本交接进入 Phase 4-1 开发。
-

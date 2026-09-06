@@ -57,6 +57,7 @@ Invoke-RestMethod http://localhost:27149/health
 
 验收日期：2026-09-07（Asia/Shanghai）。验收结果：通过。
 
-注意：这里记录的是 Phase 3-7 的离线 fallback Steam 界面路径。Phase 3-8 的真实模型验收另见 [Phase 3 Provider 与 OliviaSoul Harness](./phase3-provider-integration.md)，现已完成。
+注意：这里记录的是 Phase 3-7 的离线 fallback Steam 界面路径。Phase 3-8 的真实模型验收另见 [Phase 3 Provider 与 OliviaSoul Harness](./phase3-2-provider-and-harness.md)，现已完成。
 
 本项是 Phase 3-7 的离线 fallback 用户路径验收；Phase 3-8 的真实模型验收完成后，Phase 3 的信件代码链路和 Steam 用户路径才整体收尾。之后进入 Phase 4。`LINLI-PLAY-001` 仍是 Phase 4 的原生 WebPlayer 跨层问题，不应在本项中猜测式修改。
+

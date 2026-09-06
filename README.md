@@ -203,20 +203,21 @@ music.addToPlaylist(track);
 - [RenderJob 状态机](./docs/render-job.md)
 - [Phase 0](./docs/phase0.md)、[Phase 1](./docs/phase1.md)、[Phase 2](./docs/phase2.md)
 - [Phase 3 信件体验总览](./docs/phase3.md)
-- [Phase 3-7 Steam 实机验收](./docs/phase3-steam-integration.md)
+- [Phase 3 信件可靠性首个里程碑](./docs/phase3-1-letter-reliability.md)
+- [Phase 3 Provider 与 OliviaSoul Harness 适配](./docs/phase3-2-provider-and-harness.md)
+- [Phase 3 信件后台 Worker](./docs/phase3-3-letter-worker.md)
+- [Phase 3 信件记忆和连续对话](./docs/phase3-4-letter-memory.md)
+- [Phase 3 视频回信资产流程](./docs/phase3-5-letter-video-assets.md)
+- [Phase 3-7 Steam 实机验收](./docs/phase3-7-steam-acceptance.md)
 - [Phase 4 完整音乐体验总览](./docs/phase4.md)
-- [Phase 4-1 MIDI 预览与媒体任务设计和验收](./docs/phase4-1.md)
+- [Phase 4-1 音乐设置与媒体契约设计和验收](./docs/phase4-1-music-settings-and-media.md)
 - [Phase 3 到 Phase 4 及后续开发交接](./docs/phase_3_to_4_handoff.md)
-- [Phase 3 信件可靠性首个里程碑](./docs/phase3-letter-reliability.md)
-- [Phase 3 Provider 与 OliviaSoul Harness 适配](./docs/phase3-provider-integration.md)
-- [Phase 3 信件后台 Worker](./docs/phase3-letter-worker.md)
-- [Phase 3 信件记忆和连续对话](./docs/phase3-letter-memory.md)
+- [Phase 2 收尾与 Phase 3 交接（完整 Prompt）](./docs/phase_2_to_3_handoff.md)
 - [第三方项目引用与复用说明](./docs/third-party-credits.md)
 - [模块设置与实现选择](./docs/module-settings.md)
 - [已内置的第三方 Persona/Harness 资产](./third_party/README.md)
 - [原装游戏基线与插件接入](./docs/original-installation.md)
 - [原版前端接口审计](./docs/frontend-audit.md)
-- [Phase 2 收尾与 Phase 3 交接（完整 Prompt）](./docs/phase_2_to_3_handoff.md)
 
 ## 开发路线
 
@@ -280,37 +281,37 @@ music.addToPlaylist(track);
 
 统一信件与 MIDI 的时区日界线，实现 `pending/processing/replied/failed`、原子领取、重试上限、fake provider 和文字回信网关测试。
 
-设计与验收： [Phase 3-1 信件可靠性](./docs/phase3-letter-reliability.md)。
+设计与验收： [Phase 3-1 信件可靠性](./docs/phase3-1-letter-reliability.md)。
 
 #### [x] Phase 3-2：真实 provider 与可插拔 Harness（`5f6e463`、`62c92e1`）
 
 接入 OpenAI 兼容外部 API、通用 Harness 插槽、OliviaSoul v18 适配器、本地模型接口和 fallback；OliviaSoul 只是一个可替换实现。
 
-设计与验收： [Phase 3-2 Provider 与 Harness](./docs/phase3-provider-integration.md)。
+设计与验收： [Phase 3-2 Provider 与 Harness](./docs/phase3-2-provider-and-harness.md)。
 
 #### [x] Phase 3-3：后台 worker 与崩溃恢复（`8ae5964`）
 
 自动领取待处理信件，防止进程内重复处理，恢复过期 `processing` 租约，并在达到最大尝试次数后失败。
 
-设计与验收： [Phase 3-3 后台 Worker](./docs/phase3-letter-worker.md)。
+设计与验收： [Phase 3-3 后台 Worker](./docs/phase3-3-letter-worker.md)。
 
 #### [x] Phase 3-4：信件记忆和连续对话（`2c20767`）
 
 把必要的历史内容整理为受限记忆，让回信能够参考上下文，同时限制保存范围和长度；默认关闭，启用后可使用 SQLite 或其他 MemoryProvider。
 
-设计与验收： [Phase 3-4 信件记忆](./docs/phase3-letter-memory.md)。
+设计与验收： [Phase 3-4 信件记忆](./docs/phase3-4-letter-memory.md)。
 
 #### [x] Phase 3-M1：跨阶段模块化边界修复（`637b33c`）
 
 抽出 AudioRenderer、GamePlaybackAdapter、PersonaProvider、ModuleRegistry 和统一模块设置；保留原版游戏契约在适配器边界内，SQLite 继续作为固定事实源。
 
-设计与验收： [Phase 3-M1 模块化边界修复](./docs/modular-adapters-remediation.md)。
+设计与验收： [Phase 3-M1 模块化边界修复](./docs/phase3-m1-modular-adapters.md)。
 
 #### [x] Phase 3-5：视频回信资产流程（`a3e5c95`）
 
 实现视频回信的导入、格式检查、保存、播放、替换、删除和清晰的处理中/成功/失败状态。
 
-设计和验收标准见 [Phase 3-5 视频回信资产流程](./docs/phase3-letter-video.md)。
+设计和验收标准见 [Phase 3-5 视频回信资产流程](./docs/phase3-5-letter-video-assets.md)。
 
 #### [x] Phase 3-6：Phase 3 总体验收（`b5e7e8a`）
 
@@ -320,13 +321,13 @@ music.addToPlaylist(track);
 
 #### [x] Phase 3-7：Steam 游戏界面实机验收（离线 fallback，已通过）
 
-用开发版本地服务和原版 0.0.9.627 客户端，已由用户实际验证发送信件、看到回信处理中状态，并在重新打开信件后看到文字回信正文。验收记录见 [Phase 3-7 Steam 实机验收](./docs/phase3-steam-integration.md)。
+用开发版本地服务和原版 0.0.9.627 客户端，已由用户实际验证发送信件、看到回信处理中状态，并在重新打开信件后看到文字回信正文。验收记录见 [Phase 3-7 Steam 实机验收](./docs/phase3-7-steam-acceptance.md)。
 
-设计和操作步骤见 [Phase 3-7 Steam 实机验收](./docs/phase3-steam-integration.md)。
+设计和操作步骤见 [Phase 3-7 Steam 实机验收](./docs/phase3-7-steam-acceptance.md)。
 
 #### [x] Phase 3-8：真实模型 Steam 实机验收（DeepSeek + Persona + OliviaSoul Harness）（`b7cd5ef`）
 
-使用 DeepSeek 外部模型、已内置 Persona 和 OliviaSoul Harness，在 Steam 界面完成真实回信测试；已确认模型请求成功、Harness 实际运行、Persona 生效，以及游戏内显示以玩家名字“嘉树”开头的完整回信正文。设计与验收记录见 [Phase 3 Provider 与 OliviaSoul Harness](./docs/phase3-provider-integration.md)。
+使用 DeepSeek 外部模型、已内置 Persona 和 OliviaSoul Harness，在 Steam 界面完成真实回信测试；已确认模型请求成功、Harness 实际运行、Persona 生效，以及游戏内显示以玩家名字“嘉树”开头的完整回信正文。设计与验收记录见 [Phase 3 Provider 与 OliviaSoul Harness](./docs/phase3-2-provider-and-harness.md)。
 
 ### Phase 4 — 完整音乐体验
 

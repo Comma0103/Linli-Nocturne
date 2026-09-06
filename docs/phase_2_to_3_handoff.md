@@ -90,7 +90,7 @@ Phase 3 与 Phase 4 没有“必须先完成 Phase 3 才能修复 MIDI”的技�
 5. 已完成：音乐 Renderer、游戏播放适配器、PersonaProvider、ModuleRegistry 和人类可读模块设置已补齐；SQLite 保持固定事实源，原生游戏契约保持在适配器边界内。
 6. 进入 Phase 4 时，先完成本地预览、媒体任务、曲库体验和验收标准，再单独恢复 `LINLI-PLAY-001` 的只读原生调查；只有拥有日志/反汇编证据后才修改原生接入。
 
-本轮模块化倒查的六项结论和边界记录在 [`modular-adapters-remediation.md`](./modular-adapters-remediation.md)。后续任务不得把内置 Renderer、OliviaSoul、Olivia Lin 原生播放适配器或某个人格文件重新写成唯一实现；SQLite 固定事实源属于已确认的合理边界。
+本轮模块化倒查的六项结论和边界记录在 [`phase3-m1-modular-adapters.md`](./phase3-m1-modular-adapters.md)。后续任务不得把内置 Renderer、OliviaSoul、Olivia Lin 原生播放适配器或某个人格文件重新写成唯一实现；SQLite 固定事实源属于已确认的合理边界。
 
 ### 5.1 各阶段验收边界
 

@@ -1,6 +1,6 @@
 # Phase 3 首个里程碑：信件可靠性
 
-> 本页只记录首个可靠性里程碑的范围。真实 provider 的适配见 [`phase3-provider-integration.md`](./phase3-provider-integration.md)，后台 worker 和租约恢复见 [`phase3-letter-worker.md`](./phase3-letter-worker.md)。
+> 本页只记录首个可靠性里程碑的范围。真实 provider 的适配见 [`phase3-2-provider-and-harness.md`](./phase3-2-provider-and-harness.md)，后台 worker 和租约恢复见 [`phase3-3-letter-worker.md`](./phase3-3-letter-worker.md)。
 
 ## 目标与范围
 
@@ -36,3 +36,4 @@
 ## 配置边界
 
 时区、最大尝试次数和重试延迟均为服务构造参数。外部 API 的端点、模型名和凭据只由 provider 配置持有，不写入 Letter 内容、SQLite 信件正文或 Git；真实网络 provider 和后台 worker 不属于本页首个里程碑范围，后续实现见上面的专项文档。
+

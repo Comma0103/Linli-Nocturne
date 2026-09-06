@@ -8,15 +8,15 @@ Phase 0、Phase 1 和 Phase 2 目前各有一份阶段总览文档。Phase 3 也
 
 | 路线项 | 详细设计与验收 | 状态 |
 | --- | --- | --- |
-| Phase 3-1 | [信件可靠性首个里程碑](./phase3-letter-reliability.md) | 已完成 |
-| Phase 3-2 | [真实 Provider 与 OliviaSoul Harness](./phase3-provider-integration.md) | 已完成 |
-| Phase 3-3 | [信件后台 Worker](./phase3-letter-worker.md) | 已完成 |
-| Phase 3-4 | [信件记忆和连续对话](./phase3-letter-memory.md) | 已完成 |
-| Phase 3-M1 | [模块化适配层最小增量修复](./modular-adapters-remediation.md) | 已完成 |
-| Phase 3-5 | [视频回信资产流程](./phase3-letter-video.md) | 已完成 |
+| Phase 3-1 | [信件可靠性首个里程碑](./phase3-1-letter-reliability.md) | 已完成 |
+| Phase 3-2 | [真实 Provider 与 OliviaSoul Harness](./phase3-2-provider-and-harness.md) | 已完成 |
+| Phase 3-3 | [信件后台 Worker](./phase3-3-letter-worker.md) | 已完成 |
+| Phase 3-4 | [信件记忆和连续对话](./phase3-4-letter-memory.md) | 已完成 |
+| Phase 3-M1 | [模块化适配层最小增量修复](./phase3-m1-modular-adapters.md) | 已完成 |
+| Phase 3-5 | [视频回信资产流程](./phase3-5-letter-video-assets.md) | 已完成 |
 | Phase 3-6 | 本页的总体验收边界和交接文档 | 已完成 |
-| Phase 3-7 | [Steam 游戏界面实机验收（离线 fallback）](./phase3-steam-integration.md) | 已完成 |
-| Phase 3-8 | [真实模型 Steam 实机验收](./phase3-provider-integration.md) | 已完成（`b7cd5ef`） |
+| Phase 3-7 | [Steam 游戏界面实机验收（离线 fallback）](./phase3-7-steam-acceptance.md) | 已完成 |
+| Phase 3-8 | [真实模型 Steam 实机验收](./phase3-2-provider-and-harness.md) | 已完成（`b7cd5ef`） |
 
 ## 总体验收边界
 
