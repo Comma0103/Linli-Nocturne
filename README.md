@@ -56,7 +56,15 @@ pnpm test
 node scripts/plan-install.mjs "D:\Program Files (x86)\Steam\steamapps\common\BSide Olivia Lin Test" "D:\Aesthetic\Linli-Nocturne-Backups"
 ```
 
-只有输出 `canApply: true` 时，后续安装器才会进入备份和补丁步骤。执行器还会在写入前再次校验原装基线，并在前端或 DLL 补丁失败时自动回滚；默认命令行暂未开放，避免误操作已有第三方修改的安装。
+只有输出 `canApply: true` 时，后续安装器才会进入备份和补丁步骤。执行器还会在写入前再次校验原装基线，并在前端或 DLL 补丁失败时自动回滚；默认命令行仍以只读计划启动，避免误操作已有第三方修改的安装。
+
+开发版安装命令默认仍是只读计划：
+
+```powershell
+node scripts/apply-install.mjs "D:\Program Files (x86)\Steam\steamapps\common\BSide Olivia Lin Test" "D:\Aesthetic\Linli-Nocturne-Backups"
+```
+
+只有确认游戏已退出、目录是原装基线，并明确添加 `--apply --confirm=Linli-Nocturne` 时才会执行备份和补丁。当前 Steam 目录如果被其他工具修改，命令会直接拒绝执行。
 
 ## 当前用法
 
