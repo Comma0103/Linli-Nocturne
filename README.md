@@ -84,7 +84,7 @@
 
 抽出 AudioRenderer、GamePlaybackAdapter、PersonaProvider、ModuleRegistry 和统一模块设置；保留原版游戏契约在适配器边界内，SQLite 继续作为固定事实源。
 
-#### [x] Phase 3-5：视频回信资产流程（`bf6f88f`）
+#### [x] Phase 3-5：视频回信资产流程（`a3e5c95`）
 
 实现视频回信的导入、格式检查、保存、播放、替换、删除和清晰的处理中/成功/失败状态。
 
