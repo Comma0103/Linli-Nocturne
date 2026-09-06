@@ -167,6 +167,13 @@ export class SqliteStore {
 
   countMidiJobs() { return this.db.prepare('SELECT COUNT(*) AS count FROM midi_jobs').get().count; }
 
+  listFinishedMidiJobs(limit = 20, offset = 0) {
+    return this.db.prepare("SELECT * FROM midi_jobs WHERE state = 'finished' ORDER BY created_at DESC LIMIT ? OFFSET ?").all(limit, offset)
+      .map(job => this.getMidiJob(job.job_id));
+  }
+
+  countFinishedMidiJobs() { return this.db.prepare("SELECT COUNT(*) AS count FROM midi_jobs WHERE state = 'finished'").get().count; }
+
   countFinishedMidiJobsBetween(startIso, endIso) {
     return this.db.prepare("SELECT COUNT(*) AS count FROM midi_jobs WHERE state = 'finished' AND created_at >= ? AND created_at < ?")
       .get(startIso, endIso).count;

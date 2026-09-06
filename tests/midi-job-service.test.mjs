@@ -56,3 +56,37 @@ test('MIDI user songs can expose an HTTPS playback origin independently of the A
   assert.ok(song.videoByTodView.every((view) => view.url === song.videoUrl));
   store.close();
 });
+
+test('MIDI user-song pagination filters failed jobs before applying the cursor', () => {
+  const store = new SqliteStore();
+  const service = new MidiJobService({ store });
+  const valid = Uint8Array.from([
+    0x4d,0x54,0x68,0x64, 0,0,0,6, 0,0, 0,1, 0x01,0x00,
+    0x4d,0x54,0x72,0x6b, 0,0,0,12,
+    0x00,0x90,0x3c,0x64, 0x40,0x80,0x3c,0x40, 0x00,0xff,0x2f,0x00
+  ]);
+  const create = (filename, bytes = valid) => {
+    const upload = service.createUpload({ filename, uploadUrl: 'http://localhost:27149' });
+    service.receiveUpload(upload.key, bytes);
+    return service.generate({ midiUrl: upload.url, filename, mediaBaseUrl: 'http://localhost:27149' });
+  };
+  create('one.mid');
+  create('broken.mid', Uint8Array.from([1, 2, 3]));
+  create('two.mid');
+  create('three.mid');
+
+  const first = service.listUserSongs({ pageSize: 2, cursor: 0 });
+  assert.equal(first.list.length, 2);
+  assert.equal(first.total, 3);
+  assert.equal(first.hasMore, true);
+  assert.equal(first.nextCursor, 2);
+  assert.ok(first.list.every(item => item.name !== 'broken.mid'));
+
+  const second = service.listUserSongs({ pageSize: 2, cursor: first.nextCursor });
+  assert.equal(second.list.length, 1);
+  assert.equal(second.total, 3);
+  assert.equal(second.hasMore, false);
+  assert.equal(second.nextCursor, 3);
+  assert.ok(second.list.every(item => item.name !== 'broken.mid'));
+  store.close();
+});

@@ -96,9 +96,19 @@ export class MidiJobService {
     return { list: all, hasMore: offset + all.length < total, nextCursor: offset + all.length, total };
   }
 
+  listFinished({ pageSize = 20, cursor = 0 } = {}) {
+    const offset = Number.isFinite(Number(cursor)) ? Math.max(0, Number(cursor)) : 0;
+    const limit = Math.min(100, Math.max(1, Number(pageSize) || 20));
+    const all = this.store
+      ? this.store.listFinishedMidiJobs(limit, offset)
+      : [...this.jobs.values()].filter(job => job.state === 'finished').sort((a, b) => b.createdAt.localeCompare(a.createdAt)).slice(offset, offset + limit);
+    const total = this.store ? this.store.countFinishedMidiJobs() : [...this.jobs.values()].filter(job => job.state === 'finished').length;
+    return { list: all, hasMore: offset + all.length < total, nextCursor: offset + all.length, total };
+  }
+
   listUserSongs({ pageSize = 20, cursor = 0 } = {}) {
-    const page = this.list({ pageSize, cursor });
-    const list = page.list.filter(job => job.state === 'finished').map(job => ({
+    const page = this.listFinished({ pageSize, cursor });
+    const list = page.list.map(job => ({
       userSongId: job.jobId,
       id: job.jobId,
       name: job.filename,
