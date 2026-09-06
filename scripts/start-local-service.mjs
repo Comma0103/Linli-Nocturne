@@ -3,7 +3,7 @@ import { createLocalApp } from '../src/app/local-app.js';
 const app = createLocalApp({
   dataRoot: process.env.LINLI_DATA_ROOT ?? 'data',
   settingsPath: process.env.LINLI_MODULE_SETTINGS ?? 'config/module-settings.json',
-  userConfigPath: process.env.LINLI_USER_CONFIG ?? 'secrets/user-config.json',
+  userConfigPath: process.env.LINLI_USER_CONFIG ?? 'config/user-config.json',
   host: process.env.LINLI_HOST ?? '127.0.0.1',
   port: Number(process.env.LINLI_PORT) || 27149,
 });

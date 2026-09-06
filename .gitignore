@@ -6,6 +6,7 @@ coverage/
 data/
 logs/
 secrets/
+config/user-config.json
 *.db
 *.sqlite
 *.soul

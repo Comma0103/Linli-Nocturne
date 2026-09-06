@@ -11,7 +11,7 @@
 - `https://github.com/1Dreamer666/olivia-lin`：参考人格资料、书信技艺、离线人格引擎和人格验收用例。
 - `https://github.com/yilangren/OliviaSoul`：直接复用其 v18 Harness 的预检、记忆组装、生成、检查和必要重写流程。
 
-Linli Nocturne 不重写 OliviaSoul 已经成熟的 Harness。通过配置 `harness.root` 指向外部项目的 `v18-harness` 目录，运行时调用它的 `run-live.ps1`；因此 Harness 的 Prompt、脚本、记忆档案和模型配置仍由 OliviaSoul 管理。仓库内新增的只是 Node provider 适配器、调用契约和测试。
+Linli Nocturne 不重写 OliviaSoul 已经成熟的 Harness。仓库内置经过记录的 `third_party/OliviaSoul/v18-harness` 资产，运行时调用其中的 `run-live.ps1`；因此 Harness 的 Prompt、脚本、记忆档案和模型配置仍由 OliviaSoul 管理。仓库内新增的是 Node provider 适配器、调用契约和测试。
 
 项目文档会保留上述仓库链接、使用的版本/目录和调用方式。不会把 API Key、运行时数据库、真实信件、`_probe/` 产物或游戏资源提交进 Linli Nocturne。
 
@@ -22,12 +22,12 @@ Linli Nocturne 不重写 OliviaSoul 已经成熟的 Harness。通过配置 `harn
 | 分类 | 内容 | 在 Linli Nocturne 中的处理 |
 | --- | --- | --- |
 | 直接复用 | OliviaSoul v18 的预检、记忆组装、生成、检查和必要重写流程 | 由 `OliviaSoulHarnessProvider` 调用外部 `run-live.ps1`，不重写这套成熟流程 |
-| 直接复用 | OliviaSoul 的 Harness 脚本、人物档案和 Prompt 组织方式 | 保留在外部 Harness 目录，由用户配置路径；项目只传入信件并读取统一结果 |
+| 直接复用 | OliviaSoul 的 Harness 脚本、人物档案和 Prompt 组织方式 | 内置在 `third_party/OliviaSoul/v18-harness`，项目只传入信件并读取统一结果 |
 | 需要适配 | PowerShell 参数、临时信件文件、回信文件和 `HARNESS LIVE DONE` 完成标记 | 由适配器转换为统一的 `generate(input) -> { text, provider, metadata }` |
-| 需要适配 | `olivia-lin` 的人格资料、书信技艺、离线引擎和验收用例 | 作为外部参考或未来可选实现，接入时放在 Harness/Provider 边界内 |
+| 直接复用 | `olivia-lin` 的人格资料、书信技艺、离线引擎和验收用例 | 内置在 `third_party/olivia-lin`，通过 Persona/Provider 边界接入 |
 | 必须自己实现 | Provider 链、超时、失败分类、fallback、隐私保护和 API 配置 | 由 Linli Nocturne 核心负责，保证 LetterService 不依赖某个第三方项目 |
 | 必须自己实现 | 项目的模块选择、配置保存、能力检查和切换入口 | 当前由 `ModuleSettings`、校验器和可读配置向导提供基础入口；最终 App 图形设置页仍沿用同一模型，在设置/发行阶段补齐 |
-| 不带入项目 | 第三方运行时数据库、真实信件、API Key、私有语料、`_probe/` 和游戏资源 | 不复制、不提交、不写入 Linli Nocturne 的源代码仓库 |
+| 不带入项目 | 第三方运行时数据库、真实信件、API Key、私有语料、运行时 `_probe/` 和游戏资源 | 不复制、不提交；运行时数据写入 `data/harness-runtime` |
 
 ## 需求
 
@@ -58,7 +58,7 @@ const adapter = createConfiguredModelAdapter({
   },
   harness: {
     kind: 'olivia-soul-v18',
-    root: 'D:/Aesthetic/work/OliviaSoul-reference/v18-harness',
+    root: 'third_party/OliviaSoul/v18-harness',
     person: 'linli-local-user',
     timeoutMs: 60000,
   },

@@ -229,13 +229,13 @@ node scripts/start-local-service.mjs
 
 默认地址是 `http://localhost:27149`。外部模型、完全本地模型、OliviaSoul Harness、人格和记忆的选择见 [模块设置与实现选择](./docs/module-settings.md)；API Key 只通过环境变量或系统凭据配置，不要写入设置文件或提交到仓库。
 
-仓库已内置可复用的 [第三方 Persona/Harness 资产](./third_party/README.md)。首次使用可先复制配置模板：
+仓库已内置可复用的 [OliviaSoul](https://github.com/yilangren/OliviaSoul) 和 [olivia-lin](https://github.com/1Dreamer666/olivia-lin) 的 Persona/Harness 资产，具体文件和来源记录见 [第三方资产说明](./third_party/README.md)。首次使用可复制配置模板：
 
 ```powershell
-Copy-Item config/user-config.example.json secrets/user-config.json
+Copy-Item config/user-config.example.json config/user-config.json
 ```
 
-模板默认使用 olivia-lin Persona 和离线 fallback，OliviaSoul Harness 默认关闭；第二轮 DeepSeek 测试时再切换 `letters.baseModel.provider`、填写 `letters.baseModel.external.model/apiKey` 并把 `letters.harness.enabled` 改为 `true`。
+`config/user-config.json` 是本机配置，已加入 `.gitignore`；模板只提供默认值和占位符，不包含任何密钥。
 
 可以先对游戏目录做只读接入检查（不会修改文件）：
 
@@ -316,3 +316,9 @@ pnpm test
 ## 许可证
 
 代码采用 [MIT License](./LICENSE)。游戏资源和第三方材料仍受其原权利人的许可条款约束。
+
+## 第三方项目致谢
+
+感谢 [yilangren/OliviaSoul](https://github.com/yilangren/OliviaSoul) 提供成熟的 v18 信件 Harness。林离·余音复用了其预检、记忆组装、生成、检查、必要重写流程，以及对应的公开规则和脚本，并通过 `OliviaSoulHarnessProvider` 接入。
+
+感谢 [1Dreamer666/olivia-lin](https://github.com/1Dreamer666/olivia-lin) 提供公开的人格资料、书信技艺、记忆材料、评测用例和离线人格引擎。相关文件保留在 `third_party/olivia-lin`，许可证和来源提交见该目录说明。
