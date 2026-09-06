@@ -26,6 +26,7 @@ function envOptions(env) {
     harness: { root: env.LINLI_HARNESS_ROOT, person: env.LINLI_HARNESS_PERSON ?? 'linli-local-user' },
     persona: { path: env.LINLI_PERSONA_FILE, text: env.LINLI_PERSONA_TEXT ?? '' },
     videoImporter: { ffprobePath: env.LINLI_FFPROBE_PATH ?? 'ffprobe' },
+    encoder: { ffmpegPath: env.LINLI_FFMPEG_PATH ?? 'ffmpeg' },
   };
 }
 
@@ -43,6 +44,7 @@ export function createLocalApp({ dataRoot = 'data', settingsPath = 'config/modul
     harness: { ...envOptions(env).harness, ...userConfig.options.harness },
     persona: { ...envOptions(env).persona, ...userConfig.options.persona },
     memory: { ...envOptions(env).memory, ...userConfig.options.memory },
+    encoder: { ...envOptions(env).encoder, ...userConfig.options.encoder },
   } : envOptions(env);
   const runtime = resolveModuleSelections(settings, { registries, options: runtimeOptions });
   const letterService = new LetterService({
@@ -56,6 +58,9 @@ export function createLocalApp({ dataRoot = 'data', settingsPath = 'config/modul
   const midiJobService = new MidiJobService({
     store, mediaRoot: join(dataRoot, 'midi-media'), renderer: runtime.music.renderer,
     playbackAdapter: runtime.music.playbackAdapter, mediaEncoder: runtime.music.mediaEncoder,
+    timeZone: userConfig?.timeZone ?? env.LINLI_TIME_ZONE ?? 'Asia/Shanghai',
+    mediaExtension: runtime.music.mediaEncoder?.extension,
+    mediaContentType: runtime.music.mediaEncoder?.contentType,
   });
   const musicService = { compatPlaylist: () => store.compatPlaylist(), addCompatPlaylistItem: item => store.addCompatPlaylistItem(item), removeCompatPlaylistItem: (itemType, itemId) => store.deleteCompatPlaylistItem(itemType, itemId) };
   const server = createLocalGateway({ letterService, musicService, midiJobService, videoReplyService });

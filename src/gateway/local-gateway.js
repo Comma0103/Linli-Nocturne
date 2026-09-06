@@ -145,7 +145,7 @@ export function createLocalGateway({ letterService, musicService = null, midiJob
       }
       if (midiJobService && request.method === 'POST' && url.pathname === '/toy/midi/importShareCode') return sendJson(response, 409, { code: 409, message: 'midi_share_code_not_supported' });
       if (midiJobService && request.method === 'GET' && url.pathname === '/toy/searchUserSongs') return sendJson(response, 200, compatResponse(midiJobService.listUserSongs(midiPageParams(url.searchParams))));
-      const media = url.pathname.match(/^\/toy\/midi\/media\/([^/]+?)(?:\.mp4)?$/u);
+      const media = url.pathname.match(/^\/toy\/midi\/media\/([^/]+?)(?:\.(?:mp4|wav))?$/u);
       if (midiJobService && media && (request.method === 'GET' || request.method === 'HEAD')) {
         const bytes = midiJobService.mediaBytes(media[1]);
         if (!bytes) {

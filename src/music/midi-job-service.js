@@ -16,7 +16,7 @@ function makeRenderJob(jobId, filename, renderer) {
 }
 
 export class MidiJobService {
-  constructor({ clock = () => new Date(), timeZone = DEFAULT_TIME_ZONE, store = null, mediaRoot = null, playbackBaseUrl = '', mediaEncoder = null, mediaExtension = 'wav', mediaContentType = 'audio/wav', renderer = new BuiltinAudioRenderer(), playbackAdapter = new OliviaLinPlaybackAdapter() } = {}) {
+  constructor({ clock = () => new Date(), timeZone = DEFAULT_TIME_ZONE, store = null, mediaRoot = null, playbackBaseUrl = '', mediaEncoder = null, mediaExtension = null, mediaContentType = null, renderer = new BuiltinAudioRenderer(), playbackAdapter = new OliviaLinPlaybackAdapter() } = {}) {
     this.clock = clock;
     this.dayBoundary = createDayBoundary(timeZone);
     this.store = store;
@@ -30,8 +30,8 @@ export class MidiJobService {
     if (!playbackAdapter || typeof playbackAdapter.toUserSong !== 'function') throw new TypeError('playbackAdapter.toUserSong is required');
     this.renderer = renderer;
     this.playbackAdapter = playbackAdapter;
-    this.mediaExtension = mediaExtension;
-    this.mediaContentType = mediaContentType;
+    this.mediaExtension = String(mediaExtension ?? mediaEncoder?.extension ?? 'wav').replace(/^\./u, '') || 'wav';
+    this.mediaContentType = mediaContentType ?? mediaEncoder?.contentType ?? 'audio/wav';
     if (mediaRoot) mkdirSync(mediaRoot, { recursive: true });
     this.uploads = new Map();
     this.jobs = new Map();
@@ -63,7 +63,7 @@ export class MidiJobService {
       const mediaBytes = this.mediaEncoder ? this.mediaEncoder(rendered.wav) : rendered.wav;
       this.media.set(jobId, mediaBytes);
       const playbackBaseUrl = this.playbackBaseUrl || mediaBaseUrl;
-      const mediaUrl = `${playbackBaseUrl.replace(/\/$/u, '')}/toy/midi/media/${jobId}.mp4`;
+      const mediaUrl = `${playbackBaseUrl.replace(/\/$/u, '')}/toy/midi/media/${jobId}.${this.mediaExtension}`;
       const mediaPath = this.mediaRoot ? join(this.mediaRoot, `${jobId}.${this.mediaExtension}`) : null;
       if (mediaPath) writeFileSync(mediaPath, mediaBytes);
       const renderJob = transitionJob(makeRenderJob(jobId, upload.filename ?? filename, this.renderer), RenderJobStatus.PRODUCED, { progress: 1 });
@@ -89,7 +89,7 @@ export class MidiJobService {
 
   playbackUrl(jobId) {
     return this.playbackBaseUrl
-      ? `${this.playbackBaseUrl.replace(/\/$/u, '')}/toy/midi/media/${jobId}.mp4`
+      ? `${this.playbackBaseUrl.replace(/\/$/u, '')}/toy/midi/media/${jobId}.${this.mediaExtension}`
       : '';
   }
 

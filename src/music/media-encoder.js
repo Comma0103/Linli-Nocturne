@@ -6,11 +6,16 @@ import { execFileSync } from 'node:child_process';
  * playback source even when the browser can decode the audio itself.
  */
 export function createAudioOnlyMp4Encoder({ ffmpegPath = 'ffmpeg' } = {}) {
-  return (wav) => execFileSync(ffmpegPath, [
+  const encode = (wav) => execFileSync(ffmpegPath, [
     '-hide_banner', '-loglevel', 'error',
     '-i', 'pipe:0',
     '-vn', '-c:a', 'aac', '-b:a', '192k',
     '-movflags', 'frag_keyframe+empty_moov',
     '-f', 'mp4', 'pipe:1',
   ], { input: wav, maxBuffer: 32 * 1024 * 1024 });
+  encode.id = 'builtin.audio-only-mp4';
+  encode.version = '1.0.0';
+  encode.extension = 'mp4';
+  encode.contentType = 'video/mp4';
+  return encode;
 }

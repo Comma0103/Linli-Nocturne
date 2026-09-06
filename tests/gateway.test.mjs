@@ -158,3 +158,21 @@ for (const naming of ['snake_case', 'camelCase']) test(`MIDI client contract: up
   assert.equal(missing.state, 5);
   assert.equal(missing.error, 'job_not_found');
 });
+
+test('MIDI gateway serves encoded media with the encoder MIME type and extension', async t => {
+  const store = new SqliteStore();
+  const letters = new LetterService({ store, modelAdapter: new ModelAdapter(new FallbackLetterProvider()), limits: { bypass: true } });
+  const encoder = Object.assign(() => Buffer.from('encoded-media'), { extension: 'mp4', contentType: 'video/mp4' });
+  const midiService = new MidiJobService({ store, mediaEncoder: encoder });
+  const server = createLocalGateway({ letterService: letters, midiJobService: midiService });
+  await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
+  t.after(async () => { await new Promise(resolve => server.close(resolve)); store.close(); });
+  const base = `http://127.0.0.1:${server.address().port}`;
+  const upload = await (await fetch(`${base}/toy/genObjectUploadUrl`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ filename: 'encoded.mid' }) })).json();
+  await fetch(upload.data.url, { method: 'PUT', body: midi });
+  const generated = await (await fetch(`${base}/toy/midi/generate`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ midiUrl: upload.data.key }) })).json();
+  assert.match(generated.data.info.audioUrl, /\.mp4$/u);
+  const media = await fetch(generated.data.info.audioUrl);
+  assert.equal(media.headers.get('content-type'), 'video/mp4');
+  assert.equal(Buffer.from(await media.arrayBuffer()).toString(), 'encoded-media');
+});

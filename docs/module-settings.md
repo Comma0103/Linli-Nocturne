@@ -1,6 +1,6 @@
 # 模块设置
 
-当前开发版使用一个人类可读的 JSON 设置文件保存“选择哪种实现”。示例见 [`config/module-settings.example.json`](../config/module-settings.example.json)。设置文件只保存实现 ID 和普通选项，不保存 API Key；外部模型的凭据通过环境变量传给运行时。
+当前开发版使用一个人类可读的 JSON 设置文件保存“选择哪种实现”。示例见 [`config/module-settings.example.json`](../config/module-settings.example.json)。`module-settings.json` 只保存实现 ID 和普通选项，不保存 API Key；普通用户的私有模型地址、模型名和 API Key 可以写在 Git 忽略的 `config/user-config.json`，也可以通过环境变量传给运行时。
 
 校验示例：
 
@@ -18,7 +18,7 @@ node scripts/configure-modules.mjs config/module-settings.json
 
 - `letters.provider`：离线 fallback、外部 OpenAI 兼容 API 或本地 OpenAI 兼容模型。
 - `letters.harness`：可选的 OliviaSoul v18 或其他已注册 Harness。
-- `letters.persona`：默认人格、静态人格或外部人格文件。外部人格文件可以指向 `olivia-lin` 的公开人格资料，但不会复制进本仓库。
+- `letters.persona`：默认人格、静态人格或外部人格文件。仓库已内置 `olivia-lin` 的公开人格资料，也可以指向用户自己的外部文件。
 - `letters.memory`：关闭记忆或使用 SQLite 记忆。
 - `music.renderer`：内置音频 Renderer 或其他已注册 Renderer。
 - `music.playbackAdapter`：Olivia Lin 原生播放器适配器或其他播放器适配器。

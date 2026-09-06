@@ -6,7 +6,7 @@
 
 ## 项目状态
 
-截至当前，Phase 0–3 已完成，已在 Steam 0.0.9.627 中验收离线回信和 DeepSeek + Persona + OliviaSoul Harness 真实回信。项目仍是开发版，不是发行版。Phase 4 尚未开始，上传曲目接管原生 WebPlayer 的问题 `LINLI-PLAY-001` 仍是 Phase 4 的跨层阻塞。
+截至当前，Phase 0–3 已完成，Phase 4-1 正在开发，首轮已打通音乐配置和媒体格式契约；已在 Steam 0.0.9.627 中验收离线回信和 DeepSeek + Persona + OliviaSoul Harness 真实回信。项目仍是开发版，不是发行版。上传曲目接管原生 WebPlayer 的问题 `LINLI-PLAY-001` 仍需证据调查。
 
 ## 当前功能
 
@@ -205,6 +205,7 @@ music.addToPlaylist(track);
 - [Phase 3 信件体验总览](./docs/phase3.md)
 - [Phase 3-7 Steam 实机验收](./docs/phase3-steam-integration.md)
 - [Phase 4 完整音乐体验总览](./docs/phase4.md)
+- [Phase 4-1 MIDI 预览与媒体任务设计和验收](./docs/phase4-1.md)
 - [Phase 3 到 Phase 4 及后续开发交接](./docs/phase_3_to_4_handoff.md)
 - [Phase 3 信件可靠性首个里程碑](./docs/phase3-letter-reliability.md)
 - [Phase 3 Provider 与 OliviaSoul Harness 适配](./docs/phase3-provider-integration.md)

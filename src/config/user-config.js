@@ -20,6 +20,11 @@ export function loadUserConfig(filename, { defaultSettings, runtimeRoot = '' } =
     memory: letters.memory?.enabled ? (letters.memory.provider ?? 'sqlite') : 'disabled',
     fallback: letters.fallbackEnabled !== false,
   };
+  for (const section of ['music', 'media', 'threeD']) {
+    if (user[section] && typeof user[section] === 'object') {
+      settings[section] = { ...(settings[section] ?? {}), ...user[section] };
+    }
+  }
   const external = base.external ?? {};
   const local = base.local ?? {};
   const selected = provider === 'external.openai-compatible' ? external : provider === 'local.openai-compatible' ? local : {};

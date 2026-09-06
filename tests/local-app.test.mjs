@@ -41,3 +41,20 @@ test('用户配置把基础模型、Persona 和 Harness 分开选择', async () 
   assert.equal(result.options.harness.environment.DEEPSEEK_MODEL, 'deepseek-v4-pro');
   assert.equal(result.userDisplayName, '嘉树');
 });
+
+test('用户配置的音乐选择、时区和编码器媒体契约进入本地应用', async () => {
+  const root = mkdtempSync(join(tmpdir(), 'linli-music-config-'));
+  const filename = join(root, 'user-config.json');
+  await import('node:fs/promises').then(({ writeFile }) => writeFile(filename, JSON.stringify({
+    version: 1,
+    user: { displayName: '嘉树', timeZone: 'America/Los_Angeles' },
+    letters: { baseModel: { provider: 'offline-fallback' } },
+    music: { renderer: 'builtin.audio', playbackAdapter: 'generic', encoder: 'builtin.audio-only-mp4' },
+  }), 'utf8'));
+  const app = createLocalApp({ dataRoot: join(root, 'data'), userConfigPath: filename, port: 0 });
+  assert.equal(app.settings.music.playbackAdapter, 'generic');
+  assert.equal(app.midiJobService.dayBoundary(new Date('2026-09-07T06:30:00.000Z')).startIso, '2026-09-06T07:00:00.000Z');
+  assert.equal(app.midiJobService.mediaExtension, 'mp4');
+  assert.equal(app.midiJobService.mediaContentType, 'video/mp4');
+  await app.stop();
+});
