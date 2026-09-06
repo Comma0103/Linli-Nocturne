@@ -37,6 +37,13 @@ export class LetterService {
     return this.store.insertLetter(letter);
   }
 
+  resend(id) {
+    const original = this.store.getLetter(id);
+    if (!original) throw Object.assign(new Error('Letter not found'), { code: 'letter_not_found' });
+    if (original.status !== 'failed') throw Object.assign(new Error('Only failed letters can be resent'), { code: 'letter_not_failed' });
+    return this.send({ recipient: original.recipient, body: original.body });
+  }
+
   async processNext() {
     const letter = this.store.claimNextLetter(this.clock().toISOString(), this.limits.maxAttempts);
     if (!letter) return null;

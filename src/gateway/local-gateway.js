@@ -61,7 +61,12 @@ export function createLocalGateway({ letterService, musicService = null, midiJob
       }
       if (request.method === 'GET' && url.pathname === '/toy/letter/unread_count') return sendJson(response, 200, compatResponse({ unreadCount: letterService.unreadCount() }));
       if (request.method === 'POST' && url.pathname === '/toy/letter/share') return sendJson(response, 200, compatResponse({ shareId: (await readJson(request)).letterId }));
-      if (request.method === 'POST' && url.pathname === '/toy/letter/resend') return sendJson(response, 409, { code: 409, message: 'only_failed_letters_can_be_resent' });
+      if (request.method === 'POST' && url.pathname === '/toy/letter/resend') {
+        const body = await readJson(request);
+        const id = body.letterId ?? body.letter_id ?? body.id;
+        const letter = letterService.resend(id);
+        return sendJson(response, 200, compatResponse({ letterId: letter.id, remainingToday: letterService.remainingToday(letter.recipient) }));
+      }
       if (videoReplyService && request.method === 'GET' && url.pathname === '/letters/videos') {
         response.writeHead(200, { 'content-type': 'text/html; charset=utf-8' });
         return response.end(videoPage(videoReplyService.listActive(), letterService.list(), origin));
@@ -201,7 +206,7 @@ export function createLocalGateway({ letterService, musicService = null, midiJob
       if (request.method === 'POST' && url.pathname === '/letter/process') return sendJson(response, 200, await letterService.processNext());
       return sendJson(response, 404, { error: 'not_found' });
     } catch (error) {
-      const status = error.code === 'daily_limit' ? 429 : error.code === 'video_too_large' ? 413 : error.code === 'video_job_conflict' ? 409 : error.code === 'letter_not_found' ? 404 : error.code === 'letter_not_replied' ? 409 : String(error.code ?? '').startsWith('video_') ? 400 : error instanceof SyntaxError ? 400 : 500;
+      const status = error.code === 'daily_limit' ? 429 : error.code === 'video_too_large' ? 413 : error.code === 'video_job_conflict' ? 409 : error.code === 'letter_not_found' ? 404 : error.code === 'letter_not_replied' || error.code === 'letter_not_failed' ? 409 : String(error.code ?? '').startsWith('video_') ? 400 : error instanceof SyntaxError ? 400 : 500;
       sendJson(response, status, { error: error.code ?? 'internal_error', message: error.message });
     }
   });

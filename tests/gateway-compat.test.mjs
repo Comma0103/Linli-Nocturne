@@ -90,6 +90,40 @@ test('toy compatibility routes expose local letters and playlist shapes', async 
   store.close();
 });
 
+test('失败信件可以通过原版重寄接口创建新信件', async () => {
+  const store = new SqliteStore();
+  const letters = new LetterService({
+    store,
+    modelAdapter: new ModelAdapter({ generate: async () => { throw Object.assign(new Error('测试失败'), { code: 'provider_failed' }); } }),
+    limits: { bypass: true, maxAttempts: 1 },
+  });
+  const server = createLocalGateway({ letterService: letters });
+  await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
+  try {
+    const base = `http://127.0.0.1:${server.address().port}`;
+    const original = letters.send({ body: '请重新处理这封信' });
+    await fetch(`${base}/letter/process`, { method: 'POST' });
+    assert.equal(letters.detail(original.id).status, 'failed');
+    const response = await fetch(`${base}/toy/letter/resend`, {
+      method: 'POST', headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ letterId: original.id }),
+    });
+    assert.equal(response.status, 200);
+    const payload = await response.json();
+    assert.equal(payload.code, 0);
+    assert.notEqual(payload.data.letterId, original.id);
+    assert.equal(letters.detail(payload.data.letterId).body, '请重新处理这封信');
+    const replied = await fetch(`${base}/toy/letter/resend`, {
+      method: 'POST', headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ letterId: payload.data.letterId }),
+    });
+    assert.equal(replied.status, 409);
+  } finally {
+    await new Promise(resolve => server.close(resolve));
+    store.close();
+  }
+});
+
 test('toy compatibility routes allow browser CORS preflight and follow-up reads', async () => {
   const store = new SqliteStore();
   const letters = new LetterService({ store, modelAdapter: new ModelAdapter(new FallbackLetterProvider()), limits: { bypass: true } });
