@@ -6,7 +6,7 @@
 
 ## 项目状态
 
-截至当前，Phase 0–3 已完成，Phase 4-1 正在开发，首轮已打通音乐配置和媒体格式契约；已在 Steam 0.0.9.627 中验收离线回信和 DeepSeek + Persona + OliviaSoul Harness 真实回信。项目仍是开发版，不是发行版。上传曲目接管原生 WebPlayer 的问题 `LINLI-PLAY-001` 仍需证据调查。
+截至当前，Phase 0–3 已完成，已在 Steam 0.0.9.627 中验收离线回信和 DeepSeek + Persona + OliviaSoul Harness 真实回信；Phase 4-1 正在开发，首轮已打通音乐配置和媒体格式契约。项目仍是开发版，不是发行版。上传曲目接管原生 WebPlayer 的问题 `LINLI-PLAY-001` 仍需证据调查。
 
 ## 当前功能
 
