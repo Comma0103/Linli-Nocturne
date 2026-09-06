@@ -10,18 +10,15 @@
 
 ## 当前功能
 
-- **信件**：默认遵循原游戏每日最多 3 封、每封延迟 5 分钟的规则，并提供高级 bypass 开关。
-- **信件身份**：`config/user-config.json` 的 `user.displayName` 是玩家本人（例如“嘉树”），会用于回信称呼和模型上下文；`林离`仍是游戏收信人和配额统计键。
-- **模型提供方**：外部 API、可插拔 Harness、本地模型和离线降级共用统一接口；OliviaSoul 只是其中一个可选 Harness。
-- **信件记忆**：默认关闭；启用后可使用有条数、单条字符数和上下文字符数限制的 MemoryProvider。
-- **模块选择**：当前已有可读配置文件、校验命令和配置向导，用户可以为信件、音乐播放、媒体渲染和未来 3D 同步选择实现与 fallback；最终 App 图形设置页会复用同一模型，第三方项目都通过适配器接入。
-- **MIDI 基础**：支持标准 MIDI 文件解析、音符/Tempo/延音踏板事件、时间轴清单、本地音频渲染和媒体任务；上传曲目完整接管原生 WebPlayer 的播放/演奏仍属于 Phase 4，受 `LINLI-PLAY-001` 影响。
-- **MIDI 网关**：已具备符合原版客户端响应契约的本地上传、任务创建、结果轮询、媒体读取、统一 RenderJob 字段、SQLite 任务元数据持久化，以及用户曲目游标分页；服务重启后会按当前网关地址恢复历史任务的媒体 URL。协议回归测试覆盖上传预检、下划线字段和数字任务状态。游戏播放使用可信的 `localhost` 回环媒体地址，避免把 `127.0.0.1` HTTP 资源当作混合内容拦截。
-- **本地歌单**：基于 SQLite 保存歌单条目，后续可暴露给游戏客户端。
-- **媒体任务**：音频、视频和未来 3D Renderer 共用 RenderJob 模型。
-- **可恢复性**：补丁前先建立游戏文件基线；用户数据和生成媒体放在 Steam 目录之外。
-- **原装接入**：安装器会区分原装、已被其他工具修改和未知状态；用户不需要预先安装 OliviaSoul。
-- **离线用户曲目**：针对已接入的客户端提供受控增量补丁，使本地生成曲目能够在离线曲库中显示；补丁会先备份当前前端包。
+- [x] 信件：每日 3 封、默认 5 分钟延迟和 bypass 开关。
+- [x] 文字回信：离线 fallback、外部 API、本地模型、可插拔 Persona/Harness、有限记忆和失败重试。
+- [x] Steam 信件体验：已在客户端 0.0.9.627 验收离线回信和 DeepSeek + Persona + OliviaSoul Harness 真实回信。
+- [x] MIDI：上传、解析、WAV/MP4 媒体任务、用户曲库分页、歌单和离线曲库入口。
+- [x] 模块化：Provider、Harness、Persona、Renderer、PlaybackAdapter、RenderJob、模块注册表和配置文件。
+- [x] 视频回信资产：导入、检查、保存、播放、替换和删除。
+- [ ] 上传 MIDI 接管原生 WebPlayer 播放/演奏（`LINLI-PLAY-001`）。
+- [ ] 外部歌单导入（网易云、QQ 音乐等）和宽松演奏模式。
+- [ ] 视频自动生成、即兴作曲、3D 同步、最终 GUI 设置、普通用户安装器和发行版。
 
 ## 安装
 
@@ -36,11 +33,7 @@ pnpm install
 pnpm test
 ```
 
-安装完成后，继续阅读“用户配置指南”。
-
 ## 用户配置指南
-
-本节是普通用户从“下载代码”到“在游戏中体验”的完整流程。
 
 ### 1. 创建本机配置
 
@@ -63,7 +56,7 @@ notepad config/user-config.json
 }
 ```
 
-`displayName` 是回信称呼和模型看到的玩家名字；游戏收信人“林离”由程序保留，不要把它改成玩家名字。
+`displayName` 用于回信称呼和模型上下文。
 
 ### 2. 选择信件模式
 
@@ -140,15 +133,19 @@ node scripts/apply-install.mjs "你的 Steam 游戏目录" "游戏目录外的�
 
 修改配置后必须重启服务。回信失败时，先检查模型地址、模型名、API Key 和 Harness 开关。
 
-## 当前用法
-
-普通用户按上面的“用户配置指南”操作即可。当前服务提供：
-
-- 信件发送、排队、离线回信、外部模型回信、本地模型回信、Persona、Harness、有限记忆和失败重试；
-- MIDI 上传、解析、本地媒体生成、用户曲库分页和歌单基础；
-- 视频回信资产导入、替换、播放和删除。
-
 ## 开发者用法
+
+用于不经过 Steam 直接调试领域服务、网关和模块实现。
+
+### 运行测试和本地服务
+
+```powershell
+pnpm test
+node scripts/start-local-service.mjs
+Invoke-RestMethod http://localhost:27149/health
+```
+
+### 调用领域接口
 
 开发者可以直接调用领域接口解析 MIDI、生成本地 WAV 并加入 SQLite 歌单：
 
@@ -162,7 +159,11 @@ const track = music.importMidi({ buffer: midiBytes, sourceName: 'my-song.mid', t
 music.addToPlaylist(track);
 ```
 
-写信功能使用 `LetterService` 和 `ModelAdapter`；默认规则与原游戏保持一致。本地 HTTP 网关是后续游戏客户端的兼容层。
+写信功能使用 `LetterService`、`ModelAdapter`、Persona 和 Harness；本地 HTTP 网关是游戏客户端的兼容层。
+
+### 开始增量开发
+
+先阅读 [`docs/phase_3_to_4_handoff.md`](./docs/phase_3_to_4_handoff.md) 和对应阶段设计文档，再按“开发路线”选择未完成的小里程碑：先补需求、设计和验收标准，再修改接口、实现、测试和文档。需要直接验证游戏接入时，使用 `scripts/plan-install.mjs` 做只读检查，确认基线后再执行安装计划。
 
 ## 架构
 
