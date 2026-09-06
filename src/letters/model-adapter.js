@@ -1,4 +1,4 @@
-import { readFile, rm, writeFile, mkdtemp } from 'node:fs/promises';
+import { cp, readFile, rm, writeFile, mkdtemp } from 'node:fs/promises';
 import { spawn } from 'node:child_process';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
@@ -135,19 +135,23 @@ export class OpenAICompatibleProvider extends FunctionProvider {
 }
 
 export class OliviaSoulHarnessProvider extends HarnessProvider {
-  constructor({ root, person = 'linli-local-user', powershell = 'powershell.exe', timeoutMs = 60 * 60 * 1000, runner = runProcess, environment = {} }) {
+  constructor({ root, runtimeRoot = '', person = 'linli-local-user', powershell = 'powershell.exe', timeoutMs = 60 * 60 * 1000, runner = runProcess, environment = {} }) {
     if (!root) throw new TypeError('OliviaSoul Harness root is required');
     super({ provider: 'olivia-soul-harness', timeoutMs, generate: async ({ prompt = '', memory = '', persona = '' }) => {
+      const executionRoot = runtimeRoot || root;
+      if (runtimeRoot) {
+        await cp(root, runtimeRoot, { recursive: true, force: true, filter: source => !/[\\/](_probe|信件往来|\.cursor)(?:[\\/]|$)/u.test(source) });
+      }
       const tempDir = await mkdtemp(join(tmpdir(), 'linli-olivia-soul-'));
       const letterFile = join(tempDir, 'incoming.txt');
       const replyFile = join(tempDir, 'reply.txt');
-      const script = join(root, 'run-live.ps1');
+      const script = join(executionRoot, 'run-live.ps1');
       await writeFile(letterFile, promptWithMemory(promptWithMemory(prompt, memory), persona), 'utf8');
       try {
         const result = await runner(powershell, [
           '-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', script,
           '-Person', person, '-Letter', letterFile, '-OutFile', replyFile,
-        ], { cwd: root, timeoutMs, env: { ...process.env, ...environment } });
+        ], { cwd: executionRoot, timeoutMs, env: { ...process.env, ...environment } });
         if (result.code !== 0 || !String(result.stdout ?? '').includes('HARNESS LIVE DONE')) {
           throw new ModelProviderError('OliviaSoul Harness returned no completed reply', 'provider_harness_failed', 'olivia-soul-harness');
         }

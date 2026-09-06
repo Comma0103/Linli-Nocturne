@@ -3,7 +3,7 @@ import { dirname, isAbsolute, resolve } from 'node:path';
 
 function clone(value) { return JSON.parse(JSON.stringify(value)); }
 
-export function loadUserConfig(filename, { defaultSettings } = {}) {
+export function loadUserConfig(filename, { defaultSettings, runtimeRoot = '' } = {}) {
   if (!filename || !existsSync(filename)) return null;
   const user = JSON.parse(readFileSync(filename, 'utf8'));
   if (user?.version !== 1) throw new Error('Unsupported user config version');
@@ -38,7 +38,7 @@ export function loadUserConfig(filename, { defaultSettings } = {}) {
       provider: { endpoint: selected.endpoint, apiKey: selected.apiKey ?? '', model: selected.model, systemPrompt: user.letters?.systemPrompt },
       external: { endpoint: external.endpoint, apiKey: external.apiKey ?? '', model: external.model, systemPrompt: user.letters?.systemPrompt },
       local: { endpoint: local.endpoint, apiKey: local.apiKey ?? '', model: local.model, systemPrompt: user.letters?.systemPrompt, provider: 'local-model' },
-      harness: { root: fromConfig(letters.harness?.root), person: letters.harness?.person ?? 'linli-local-user', environment: backendEnv },
+      harness: { root: fromConfig(letters.harness?.root), runtimeRoot, person: letters.harness?.person ?? 'linli-local-user', environment: backendEnv },
       persona: { path: fromConfig(letters.persona?.file), text: letters.persona?.text ?? '' },
       memory: { enabled: Boolean(letters.memory?.enabled), maxEpisodes: letters.memory?.maxEpisodes, maxEpisodeChars: letters.memory?.maxCharsPerEpisode, maxContextChars: letters.memory?.maxContextChars },
     },

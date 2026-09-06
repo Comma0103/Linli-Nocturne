@@ -32,7 +32,7 @@ function envOptions(env) {
 export function createLocalApp({ dataRoot = 'data', settingsPath = 'config/module-settings.json', userConfigPath = null, host = '127.0.0.1', port = 27149, env = process.env } = {}) {
   const store = new SqliteStore(join(dataRoot, 'linli.sqlite'));
   const registries = createDefaultModuleRegistries({ store });
-  const userConfig = loadUserConfig(userConfigPath, { defaultSettings: DEFAULT_MODULE_SETTINGS });
+  const userConfig = loadUserConfig(userConfigPath, { defaultSettings: DEFAULT_MODULE_SETTINGS, runtimeRoot: join(dataRoot, 'harness-runtime') });
   const settings = userConfig?.settings ?? new ModuleSettingsStore({ filename: settingsPath, registries }).load();
   const runtimeOptions = userConfig ? {
     ...envOptions(env),
