@@ -2,7 +2,7 @@
 
 ## 决策
 
-统一 `ModelAdapter` 协议，提供外部 API、本地模型和无模型降级三类 provider。每个 provider 只暴露 `generate(input)` 并返回可规范化的 `{ text, provider, metadata }`；`ModelProviderChain` 负责按外部、本地、fallback 顺序选择可用结果。额度、记忆、审核、重试和持久化由领域服务负责。
+统一 `ModelAdapter` 协议，提供外部 API、可插拔 Harness、本地模型和无模型降级四类 provider。每个 provider 只暴露 `generate(input)` 并返回可规范化的 `{ text, provider, metadata }`；`ModelProviderChain` 负责按外部、Harness、本地、fallback 顺序选择可用结果。OliviaSoul v18 通过适配器接入，是 Harness 的一个实现，不是核心依赖。额度、记忆、审核、重试和持久化由领域服务负责。
 
 ## 结果
 

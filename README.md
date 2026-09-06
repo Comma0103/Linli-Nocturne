@@ -29,7 +29,7 @@ Phase 3 的首个信件可靠性里程碑已完成：信件与 MIDI 共用显式
 ## 当前功能
 
 - **信件**：默认遵循原游戏每日最多 3 封、每封延迟 5 分钟的规则，并提供高级 bypass 开关。
-- **模型提供方**：当前包含离线降级实现，外部 API 和本地模型共用统一接口。
+- **模型提供方**：外部 API、可插拔 Harness、本地模型和离线降级共用统一接口；OliviaSoul 只是其中一个可选 Harness。
 - **MIDI 基础**：支持标准 MIDI 文件解析、音符/Tempo/延音踏板事件、时间轴清单、本地音频渲染和媒体任务；上传曲目完整接管原生 WebPlayer 的播放/演奏仍属于 Phase 4，受 `LINLI-PLAY-001` 影响。
 - **MIDI 网关**：已具备符合原版客户端响应契约的本地上传、任务创建、结果轮询、媒体读取、统一 RenderJob 字段、SQLite 任务元数据持久化，以及用户曲目游标分页；服务重启后会按当前网关地址恢复历史任务的媒体 URL。协议回归测试覆盖上传预检、下划线字段和数字任务状态。游戏播放使用可信的 `localhost` 回环媒体地址，避免把 `127.0.0.1` HTTP 资源当作混合内容拦截。
 - **本地歌单**：基于 SQLite 保存歌单条目，后续可暴露给游戏客户端。
@@ -104,6 +104,8 @@ music.addToPlaylist(track);
 - [RenderJob 状态机](./docs/render-job.md)
 - [Phase 0](./docs/phase0.md)、[Phase 1](./docs/phase1.md)、[Phase 2](./docs/phase2.md)
 - [Phase 3 信件可靠性首个里程碑](./docs/phase3-letter-reliability.md)
+- [Phase 3 Provider 与 OliviaSoul Harness 适配](./docs/phase3-provider-integration.md)
+- [第三方项目引用与复用说明](./docs/third-party-credits.md)
 - [原装游戏基线与插件接入](./docs/original-installation.md)
 - [原版前端接口审计](./docs/frontend-audit.md)
 - [Phase 2 收尾与 Phase 3 交接（完整 Prompt）](./docs/phase2-handoff.md)
