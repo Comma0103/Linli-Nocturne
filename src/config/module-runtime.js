@@ -10,7 +10,9 @@ export function resolveModuleSelections(settings, { registries, store = null, op
   if (letters.harness) modelConfig.harness = registries.harness.resolve(letters.harness, options.harness ?? {});
   if (letters.provider === 'offline-fallback') modelConfig.fallback = false;
   const modelAdapter = createConfiguredModelAdapter(modelConfig);
-  const memoryProvider = registries.memory.resolve(letters.memory ?? 'disabled', { ...(options.memory ?? {}), store });
+  const memoryOptions = { ...(options.memory ?? {}) };
+  if (store) memoryOptions.store = store;
+  const memoryProvider = registries.memory.resolve(letters.memory ?? 'disabled', memoryOptions);
   const personaProvider = registries.persona.resolve(letters.persona ?? 'default', options.persona ?? {});
   const renderer = registries.renderer.resolve(settings.music?.renderer ?? 'builtin.audio', options.renderer ?? {});
   const playbackAdapter = registries.playback.resolve(settings.music?.playbackAdapter ?? 'olivia-lin.native', options.playback ?? {});
