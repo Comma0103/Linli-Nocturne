@@ -1,4 +1,4 @@
-# Linli Nocturne（林离·余音）Phase 2 收尾与 Phase 3 交接
+# Linli Nocturne（林离·余音）：Phase 2 → Phase 3 交接文档
 
 > 本文是当前阶段唯一的完整交接文档。它记录截至 2026-09-06 的代码、测试、实机观察、已知阻塞和下一阶段启动方式。新 Task/Thread 应先读本文，再按文末 Prompt 工作，不要依赖旧对话中的口头结论。
 
