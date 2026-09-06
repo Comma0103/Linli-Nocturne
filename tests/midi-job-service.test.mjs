@@ -21,21 +21,24 @@ test('MIDI jobs survive service recreation through SQLite metadata and media fil
   const job = first.generate({ midiUrl: upload.url, filename: 'persist.mid', mediaBaseUrl: 'http://127.0.0.1:27149' });
   assert.equal(job.status, 'produced');
   assert.equal(job.info.renderJob.rendererId, 'builtin.audio');
-  const second = new MidiJobService({ store, mediaRoot });
+  const second = new MidiJobService({ store, mediaRoot, playbackBaseUrl: 'http://localhost:27149' });
   assert.equal(second.get(job.jobId).state, 'finished');
   assert.equal(second.get(job.jobId).status, 'produced');
   assert.equal(second.list().total, 1);
   assert.deepEqual(second.listUserSongs({ pageSize: 1 }).list[0], {
     userSongId: job.jobId, id: job.jobId, name: 'persist.mid', filename: 'persist.mid',
-    audioUrl: 'http://127.0.0.1:27149/toy/midi/media/' + job.jobId + '.mp4',
-    videoUrl: 'http://127.0.0.1:27149/toy/midi/media/' + job.jobId + '.mp4',
+    audioUrl: 'http://localhost:27149/toy/midi/media/' + job.jobId + '.mp4',
+    videoUrl: 'http://localhost:27149/toy/midi/media/' + job.jobId + '.mp4',
     videoByTodView: [
-      { url: 'http://127.0.0.1:27149/toy/midi/media/' + job.jobId + '.mp4', tod: 'TOD1200', view: 'NI', coverUrl: '', duration: Math.round(second.get(job.jobId).info.duration) },
-      { url: 'http://127.0.0.1:27149/toy/midi/media/' + job.jobId + '.mp4', tod: 'TOD1730', view: 'NI', coverUrl: '', duration: Math.round(second.get(job.jobId).info.duration) },
-      { url: 'http://127.0.0.1:27149/toy/midi/media/' + job.jobId + '.mp4', tod: 'TOD2000', view: 'NI', coverUrl: '', duration: Math.round(second.get(job.jobId).info.duration) },
+      { url: 'http://localhost:27149/toy/midi/media/' + job.jobId + '.mp4', tod: 'TOD1200', view: 'NI', coverUrl: '', duration: Math.round(second.get(job.jobId).info.duration) },
+      { url: 'http://localhost:27149/toy/midi/media/' + job.jobId + '.mp4', tod: 'TOD1730', view: 'NI', coverUrl: '', duration: Math.round(second.get(job.jobId).info.duration) },
+      { url: 'http://localhost:27149/toy/midi/media/' + job.jobId + '.mp4', tod: 'TOD2000', view: 'NI', coverUrl: '', duration: Math.round(second.get(job.jobId).info.duration) },
     ],
     nameKey: job.jobId, performanceType: 'Solo', duration: second.get(job.jobId).info.duration, source: 'linli-nocturne',
   });
+  const batch = second.batch([job.jobId]);
+  assert.equal(batch.list[0].info.audioUrl, 'http://localhost:27149/toy/midi/media/' + job.jobId + '.mp4');
+  assert.deepEqual(batch.list[0].info.videoUrls, ['http://localhost:27149/toy/midi/media/' + job.jobId + '.mp4']);
   assert.ok(second.mediaBytes(job.jobId).length > 44);
   assert.equal(second.delete(job.jobId), true);
   assert.equal(second.get(job.jobId), null);

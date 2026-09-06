@@ -83,15 +83,41 @@ export class MidiJobService {
     try { return decodeURIComponent(new URL(raw, 'http://localhost').pathname.split('/').pop()); } catch { return raw; }
   }
 
+  playbackUrl(jobId) {
+    return this.playbackBaseUrl
+      ? `${this.playbackBaseUrl.replace(/\/$/u, '')}/toy/midi/media/${jobId}.mp4`
+      : '';
+  }
+
+  normalizePersistedJob(job) {
+    if (!job) return null;
+    const renderJob = job.info?.renderJob ?? null;
+    const info = job.info ? { ...job.info } : {};
+    const mediaUrl = job.state === 'finished' ? this.playbackUrl(job.jobId) : '';
+    if (mediaUrl) {
+      info.audioUrl = mediaUrl;
+      info.videoUrls = [mediaUrl];
+    }
+    return {
+      ...job,
+      status: renderJob?.status ?? (job.state === 'finished' ? RenderJobStatus.PRODUCED : job.state === 'canceled' ? RenderJobStatus.CANCELLED : RenderJobStatus.FAILED),
+      progress: renderJob?.progress ?? (job.state === 'finished' ? 1 : 0),
+      attempt: renderJob?.attempt ?? 0,
+      errorCode: renderJob?.errorCode ?? job.errorCode ?? null,
+      info,
+    };
+  }
+
   get(jobId) {
     const id = String(jobId);
-    return this.jobs.get(id) ?? this.store?.getMidiJob(id) ?? null;
+    const inMemory = this.jobs.get(id);
+    return inMemory ?? this.normalizePersistedJob(this.store?.getMidiJob(id));
   }
 
   list({ pageSize = 20, cursor = 0 } = {}) {
     const offset = Number.isFinite(Number(cursor)) ? Math.max(0, Number(cursor)) : 0;
     const limit = Math.min(100, Math.max(1, Number(pageSize) || 20));
-    const all = this.store ? this.store.listMidiJobs(limit, offset) : [...this.jobs.values()].sort((a, b) => b.createdAt.localeCompare(a.createdAt)).slice(offset, offset + limit);
+    const all = this.store ? this.store.listMidiJobs(limit, offset).map(job => this.normalizePersistedJob(job)) : [...this.jobs.values()].sort((a, b) => b.createdAt.localeCompare(a.createdAt)).slice(offset, offset + limit);
     const total = this.store ? this.store.countMidiJobs() : this.jobs.size;
     return { list: all, hasMore: offset + all.length < total, nextCursor: offset + all.length, total };
   }
@@ -100,7 +126,7 @@ export class MidiJobService {
     const offset = Number.isFinite(Number(cursor)) ? Math.max(0, Number(cursor)) : 0;
     const limit = Math.min(100, Math.max(1, Number(pageSize) || 20));
     const all = this.store
-      ? this.store.listFinishedMidiJobs(limit, offset)
+      ? this.store.listFinishedMidiJobs(limit, offset).map(job => this.normalizePersistedJob(job))
       : [...this.jobs.values()].filter(job => job.state === 'finished').sort((a, b) => b.createdAt.localeCompare(a.createdAt)).slice(offset, offset + limit);
     const total = this.store ? this.store.countFinishedMidiJobs() : [...this.jobs.values()].filter(job => job.state === 'finished').length;
     return { list: all, hasMore: offset + all.length < total, nextCursor: offset + all.length, total };
@@ -113,8 +139,8 @@ export class MidiJobService {
       id: job.jobId,
       name: job.filename,
       filename: job.filename,
-      audioUrl: this.playbackBaseUrl ? `${this.playbackBaseUrl.replace(/\/$/u, '')}/toy/midi/media/${job.jobId}.mp4` : (job.info?.audioUrl ?? ''),
-      videoUrl: this.playbackBaseUrl ? `${this.playbackBaseUrl.replace(/\/$/u, '')}/toy/midi/media/${job.jobId}.mp4` : (job.info?.videoUrls?.[0] ?? job.info?.audioUrl ?? ''),
+      audioUrl: this.playbackUrl(job.jobId) || (job.info?.audioUrl ?? ''),
+      videoUrl: this.playbackUrl(job.jobId) || (job.info?.videoUrls?.[0] ?? job.info?.audioUrl ?? ''),
       // Lite's native player does not play a song from videoUrl alone. It
       // selects a TOD/view entry from this array before forwarding the URL to
       // NutWebPlayer. Local MIDI renders are audio-only, so all three TOD
@@ -123,9 +149,7 @@ export class MidiJobService {
       // literal clock buckets TOD1200 / TOD1730 / TOD2000.
       videoByTodView: (() => {
         const storedMediaUrl = job.info?.videoUrls?.[0] ?? job.info?.audioUrl ?? '';
-        const mediaUrl = this.playbackBaseUrl
-          ? `${this.playbackBaseUrl.replace(/\/$/u, '')}/toy/midi/media/${job.jobId}.mp4`
-          : storedMediaUrl;
+        const mediaUrl = this.playbackUrl(job.jobId) || storedMediaUrl;
         // The native VideoTodViewItem contract stores duration as an integer
         // number of seconds. Keep the richer fractional duration in RenderJob
         // metadata, but send an integer at the native bridge boundary.
