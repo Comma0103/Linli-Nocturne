@@ -33,7 +33,7 @@ Phase 2 已达到“可交接的阶段性完成”，不是“所有最终愿景
 - [ ] **`LINLI-PLAY-001`：上传曲目无法接管原生 WebPlayer。** 前端发出带完整 `song` 对象的本地曲目 `play`，原生桥也收到；但本地媒体没有成为当前媒体源，旧预设曲目继续产生时间事件，桌面不进入演奏且没有本地声音。上传短 MIDI、长 MIDI、重启和 `.mp4`/HEAD/Range 兼容尝试都未解决。不能把 `songPlayStart` 埋点或“停止”按钮当作成功证据。
 - [ ] 原生上传曲目需要原生 WebPlayer 的只读分析或更细粒度加载回调，才能继续定位；不要再盲改 `<video>` 为 `<audio>`，那条路曾导致桌面黑屏并已恢复原版。
 - [ ] 安装器目前是受保护的基础执行器，不是最终安装器：没有进程锁检测、完整事务日志、安装后全量基线验证和卸载命令；最新离线用户曲目增量补丁也尚未证明已完全整合到从 pristine 基线运行的单一发布流程。
-- [ ] 信件 HTTP 处理是手动 `POST /letter/process`，没有后台队列、失败重试、并发锁或完整外部/本地模型实现；当前 fallback 只是可测试的降级实现。不要宣称“自动文字回信”已经完成。
+- [ ] 信件 HTTP 处理仍是手动 `POST /letter/process`，后台 worker、进程崩溃后的处理租约和真实外部/本地模型连接尚未完成；Phase 3 首个里程碑已补齐 `pending/processing/replied/failed`、原子领取、失败重试上限和 fake provider 可验证的外部/本地/fallback 统一接口。不要宣称“自动文字回信”已经完成。
 - [ ] 视频回信导入、即兴作曲、真实 3D 手指/琴键/镜头/动作同步、普通用户安装器和 release 尚未完成。
 - [ ] 当前只验证过客户端 `0.0.9.627`；向下兼容尚未建立证据。
 - [ ] 右侧音乐桌面中历史 UUID 条目可能显示 `Invalid Date` 或空媒体，这是旧在线数据/歌单兼容债务，不等于官方预设曲目播放失败。
@@ -77,10 +77,10 @@ node scripts/plan-install.mjs "D:\Program Files (x86)\Steam\steamapps\common\BSi
 
 第一里程碑应先处理信件领域的可靠性，而不是回头重复 `LINLI-PLAY-001`：
 
-1. 统一信件和 MIDI 的“当天”边界为同一时区/可注入时钟，并补跨午夜测试。
-2. 为 Letter 增加明确的 `pending / processing / replied / failed` 状态、幂等领取、失败重试和最大尝试次数；保留 `POST /letter/process` 作为开发调试入口，同时设计后台 worker 接口。
-3. 将 `ModelAdapter` 拆成外部 API Provider、本地 Provider、离线 fallback 三类，配置、超时、重试和隐私策略写入文档；先用 fake provider 做单元测试。
-4. 在不依赖真实模型的情况下完成文字回信端到端测试，再设计视频回信导入的资产校验和 UI 状态。
+1. 已完成：统一信件和 MIDI 的“当天”边界为同一显式时区/可注入时钟，并补跨午夜和夏令时测试。
+2. 已完成：Letter 使用 `pending / processing / replied / failed`、幂等领取、失败重试和最大尝试次数；保留 `POST /letter/process` 作为开发调试入口。
+3. 已完成：`ModelAdapter` 提供外部 API Provider、本地 Provider、离线 fallback 的统一接口，并用 fake provider 覆盖选择和 fallback；真实模型连接和后台 worker 仍待实现。
+4. 已完成：在不依赖真实模型的情况下完成文字回信网关端到端测试；下一步再设计视频回信导入的资产校验和 UI 状态。
 5. 只有上述基础稳定后，才进入 Phase 4 的曲库体验和 Phase 5 即兴创作；`LINLI-PLAY-001` 另开只读原生调查任务，拥有日志/反汇编证据后再修改。
 
 ## 6. 可直接粘贴到新 Task/Thread 的 Prompt

@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto';
 import { mkdirSync, readFileSync, unlinkSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { createRenderJob, RenderJobStatus, transitionJob } from '../core/render-job.js';
+import { createDayBoundary, DEFAULT_TIME_ZONE } from '../core/time-boundary.js';
 import { inspectMidi } from './midi-manifest.js';
 import { renderMidiToWav } from './audio-renderer.js';
 
@@ -17,8 +18,9 @@ function makeRenderJob(jobId, filename) {
 }
 
 export class MidiJobService {
-  constructor({ clock = () => new Date(), store = null, mediaRoot = null, playbackBaseUrl = '', mediaEncoder = null, mediaExtension = 'wav', mediaContentType = 'audio/wav' } = {}) {
+  constructor({ clock = () => new Date(), timeZone = DEFAULT_TIME_ZONE, store = null, mediaRoot = null, playbackBaseUrl = '', mediaEncoder = null, mediaExtension = 'wav', mediaContentType = 'audio/wav' } = {}) {
     this.clock = clock;
+    this.dayBoundary = createDayBoundary(timeZone);
     this.store = store;
     this.mediaRoot = mediaRoot;
     // The API may remain HTTP for compatibility, while media playback can be
@@ -173,13 +175,10 @@ export class MidiJobService {
   batch(ids = []) { return { list: ids.map(id => this.get(id)).filter(Boolean) }; }
 
   dailyUsage() {
-    const start = new Date(this.clock());
-    start.setHours(0, 0, 0, 0);
-    const end = new Date(start);
-    end.setDate(end.getDate() + 1);
+    const { startIso, endIso } = this.dayBoundary(this.clock());
     const generatedToday = this.store
-      ? this.store.countFinishedMidiJobsBetween(start.toISOString(), end.toISOString())
-      : [...this.jobs.values()].filter(job => job.state === 'finished' && job.createdAt >= start.toISOString() && job.createdAt < end.toISOString()).length;
+      ? this.store.countFinishedMidiJobsBetween(startIso, endIso)
+      : [...this.jobs.values()].filter(job => job.state === 'finished' && job.createdAt >= startIso && job.createdAt < endIso).length;
     // Display contract only; configurable MIDI quota enforcement is a later task.
     return { generatedToday, dailyLimit: 3 };
   }

@@ -8,6 +8,8 @@
 
 Phase 2 已完成阶段性收尾并进入交接状态。基础领域服务、网关契约、分页、备份回滚、原版接入和官方预设曲目 Steam 实机验收已有证据；上传曲目仍受 `LINLI-PLAY-001` 阻塞，项目尚未达到最终 release 条件。完整状态、证据边界和下一阶段 Prompt 见 [`docs/phase2-handoff.md`](./docs/phase2-handoff.md)。
 
+Phase 3 的首个信件可靠性里程碑已完成：信件与 MIDI 共用显式时区日界线，信件具备 `pending/processing/replied/failed` 状态、原子领取、重试上限和可替换的外部/本地/fallback provider 接口；后台 worker、真实模型连接和视频回信仍未完成。设计与验收标准见 [`docs/phase3-letter-reliability.md`](./docs/phase3-letter-reliability.md)。
+
 当前有一个已登记的已知阻塞：上传曲目能够生成并显示，但暂时无法接管原生 WebPlayer 进入桌面演奏；详见 [`LINLI-PLAY-001`](./docs/known-issues.md)。
 
 ## 开发路线
@@ -101,6 +103,7 @@ music.addToPlaylist(track);
 - [普通用户流程](./docs/ui-flow.md)
 - [RenderJob 状态机](./docs/render-job.md)
 - [Phase 0](./docs/phase0.md)、[Phase 1](./docs/phase1.md)、[Phase 2](./docs/phase2.md)
+- [Phase 3 信件可靠性首个里程碑](./docs/phase3-letter-reliability.md)
 - [原装游戏基线与插件接入](./docs/original-installation.md)
 - [原版前端接口审计](./docs/frontend-audit.md)
 - [Phase 2 收尾与 Phase 3 交接（完整 Prompt）](./docs/phase2-handoff.md)

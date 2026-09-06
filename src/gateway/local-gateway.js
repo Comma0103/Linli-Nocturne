@@ -28,10 +28,11 @@ function toSeconds(value) {
 
 function visibleLetter(letter) {
   const replied = letter.status === 'replied';
+  const failed = letter.status === 'failed';
   return { letterId: letter.id, content: letter.body, summary: letter.body.length > 20 ? `${letter.body.slice(0, 20)}...` : letter.body,
-    material: null, letterStatus: replied ? 'replied' : 'llm_processing', auditStatus: 0, replyType: replied ? 1 : 0,
+    material: null, letterStatus: replied ? 'replied' : failed ? 'failed' : 'llm_processing', auditStatus: 0, replyType: replied ? 1 : 0,
     replyText: replied ? letter.reply : null, replyVideoUrl: null, isRead: replied ? (letter.read_at ? 1 : 0) : 1,
-    createdAt: toSeconds(letter.created_at), repliedAt: replied ? toSeconds(letter.replied_at) : null, error: null };
+    createdAt: toSeconds(letter.created_at), repliedAt: replied ? toSeconds(letter.replied_at) : null, error: failed ? letter.last_error : null };
 }
 
 export function createLocalGateway({ letterService, musicService = null, midiJobService = null, userProfile = {}, mediaLogger = null }) {
@@ -47,7 +48,7 @@ export function createLocalGateway({ letterService, musicService = null, midiJob
       if (request.method === 'POST' && url.pathname === '/toy/letter/send') {
         const body = await readJson(request);
         const letter = letterService.send({ recipient: body.person ?? body.recipient, body: body.content ?? body.body });
-        return sendJson(response, 200, compatResponse({ letterId: letter.id, remainingToday: Math.max(0, letterService.limits.dailyLimit - letterService.store.countToday(letter.recipient, new Date(new Date(letter.created_at).setHours(0, 0, 0, 0)).toISOString())) }));
+        return sendJson(response, 200, compatResponse({ letterId: letter.id, remainingToday: letterService.remainingToday(letter.recipient) }));
       }
       if (request.method === 'GET' && url.pathname === '/toy/letter/list') {
         const letters = letterService.list().map(visibleLetter);

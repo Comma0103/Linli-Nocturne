@@ -32,6 +32,35 @@ test('local gateway smoke test covers health, send, process and list', async () 
   store.close();
 });
 
+test('文字回信端到端链路返回统一 provider 的回复和状态', async () => {
+  const store = new SqliteStore();
+  const service = new LetterService({
+    store,
+    modelAdapter: new ModelAdapter({ generate: async ({ prompt }) => ({ text: `收到：${prompt}`, provider: 'fake-external' }) }),
+    limits: { bypass: true },
+  });
+  const server = createLocalGateway({ letterService: service });
+  await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
+  const base = `http://127.0.0.1:${server.address().port}`;
+  try {
+    const sent = await fetch(`${base}/toy/letter/send`, {
+      method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ content: '端到端测试' }),
+    });
+    const sentData = (await sent.json()).data;
+    const processed = await fetch(`${base}/letter/process`, { method: 'POST' });
+    assert.equal((await processed.json()).status, 'replied');
+    const detail = await fetch(`${base}/toy/letter/detail?letterId=${sentData.letterId}`);
+    const detailData = (await detail.json()).data;
+    assert.equal(detailData.letterStatus, 'replied');
+    assert.equal(detailData.replyText, '收到：端到端测试');
+    assert.equal(detailData.replyType, 1);
+    assert.equal((await (await fetch(`${base}/toy/letter/unread_count`)).json()).data.unreadCount, 0);
+  } finally {
+    await new Promise(resolve => server.close(resolve));
+    store.close();
+  }
+});
+
 for (const naming of ['snake_case', 'camelCase']) test(`MIDI client contract: upload, generation and polling with ${naming} requests`, async t => {
   const store = new SqliteStore();
   const service = new LetterService({ store, modelAdapter: new ModelAdapter(new FallbackLetterProvider()), limits: { bypass: true } });

@@ -17,7 +17,11 @@ export class SqliteStore {
         created_at TEXT NOT NULL,
         available_at TEXT NOT NULL,
         replied_at TEXT,
-        read_at TEXT
+        read_at TEXT,
+        attempt_count INTEGER NOT NULL DEFAULT 0,
+        processing_started_at TEXT,
+        last_error TEXT,
+        next_attempt_at TEXT
       );
       CREATE INDEX IF NOT EXISTS idx_letters_status_available ON letters(status, available_at);
       CREATE TABLE IF NOT EXISTS playlist_items (
@@ -52,12 +56,23 @@ export class SqliteStore {
       );
       CREATE INDEX IF NOT EXISTS idx_midi_jobs_created_at ON midi_jobs(created_at DESC);
     `);
+    const letterColumns = new Set(this.db.prepare('PRAGMA table_info(letters)').all().map(column => column.name));
+    const additions = [
+      ['attempt_count', 'INTEGER NOT NULL DEFAULT 0'],
+      ['processing_started_at', 'TEXT'],
+      ['last_error', 'TEXT'],
+      ['next_attempt_at', 'TEXT'],
+    ];
+    for (const [name, definition] of additions) {
+      if (!letterColumns.has(name)) this.db.exec(`ALTER TABLE letters ADD COLUMN ${name} ${definition}`);
+    }
+    this.db.exec("UPDATE letters SET status = 'pending' WHERE status = 'queued'");
   }
 
   insertLetter(letter) {
     this.db.prepare(`INSERT INTO letters
-      (id, recipient, body, reply, status, created_at, available_at, replied_at, read_at)
-      VALUES (?, ?, ?, NULL, 'queued', ?, ?, NULL, NULL)`).run(
+      (id, recipient, body, reply, status, created_at, available_at, replied_at, read_at, attempt_count, processing_started_at, last_error, next_attempt_at)
+      VALUES (?, ?, ?, NULL, 'pending', ?, ?, NULL, NULL, 0, NULL, NULL, NULL)`).run(
       letter.id, letter.recipient, letter.body, letter.createdAt, letter.availableAt
     );
     return this.getLetter(letter.id);
@@ -71,16 +86,41 @@ export class SqliteStore {
     return this.db.prepare('SELECT * FROM letters ORDER BY created_at DESC LIMIT ?').all(limit);
   }
 
-  countToday(recipient, startIso) {
-    return this.db.prepare('SELECT COUNT(*) AS count FROM letters WHERE recipient = ? AND created_at >= ?').get(recipient, startIso).count;
+  countToday(recipient, startIso, endIso) {
+    return this.db.prepare('SELECT COUNT(*) AS count FROM letters WHERE recipient = ? AND created_at >= ? AND created_at < ?')
+      .get(recipient, startIso, endIso).count;
   }
 
   nextReadyLetter(nowIso) {
-    return this.db.prepare("SELECT * FROM letters WHERE status = 'queued' AND available_at <= ? ORDER BY created_at LIMIT 1").get(nowIso) ?? null;
+    return this.db.prepare("SELECT * FROM letters WHERE status = 'pending' AND COALESCE(next_attempt_at, available_at) <= ? ORDER BY created_at LIMIT 1").get(nowIso) ?? null;
   }
 
   markReplied(id, reply, repliedAt) {
-    this.db.prepare("UPDATE letters SET reply = ?, status = 'replied', replied_at = ? WHERE id = ?").run(reply, repliedAt, id);
+    const existing = this.getLetter(id);
+    if (!existing || existing.status === 'replied') return existing;
+    this.db.prepare("UPDATE letters SET reply = ?, status = 'replied', replied_at = ?, processing_started_at = NULL, next_attempt_at = NULL WHERE id = ? AND status = 'processing'").run(reply, repliedAt, id);
+    return this.getLetter(id);
+  }
+
+  claimNextLetter(nowIso, maxAttempts = 3) {
+    const row = this.db.prepare(`UPDATE letters
+      SET status = 'processing', attempt_count = attempt_count + 1, processing_started_at = ?
+      WHERE id = (
+        SELECT id FROM letters
+        WHERE status = 'pending' AND attempt_count < ? AND COALESCE(next_attempt_at, available_at) <= ?
+        ORDER BY created_at LIMIT 1
+      ) AND status = 'pending'
+      RETURNING *`).get(nowIso, maxAttempts, nowIso);
+    return row ?? null;
+  }
+
+  markFailed(id, errorCode, failedAt, { maxAttempts = 3, retryDelayMs = 60_000 } = {}) {
+    const existing = this.getLetter(id);
+    if (!existing || existing.status === 'replied' || existing.status === 'failed') return existing;
+    const retry = existing.attempt_count < maxAttempts;
+    const retryAt = retry ? new Date(Date.parse(failedAt) + retryDelayMs * (2 ** Math.max(0, existing.attempt_count - 1))).toISOString() : null;
+    this.db.prepare(`UPDATE letters SET status = ?, last_error = ?, next_attempt_at = ?, processing_started_at = NULL
+      WHERE id = ? AND status = 'processing'`).run(retry ? 'pending' : 'failed', errorCode ?? 'provider_failed', retryAt, id);
     return this.getLetter(id);
   }
 
