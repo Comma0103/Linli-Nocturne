@@ -194,7 +194,7 @@
 
 整理许可证、第三方引用、安装说明、升级路径、已知问题和发行验证清单。
 
-详细的证据边界、历史记录和阶段交接仍以 [`docs/phase2-handoff.md`](./docs/phase2-handoff.md) 及各阶段文档为准。
+详细的证据边界、历史记录和阶段交接仍以 [`docs/phase_2_to_3_handoff.md`](./docs/phase_2_to_3_handoff.md) 及各阶段文档为准。
 
 ## 当前功能
 
@@ -295,6 +295,7 @@ music.addToPlaylist(track);
 - [Phase 3 信件体验总览](./docs/phase3.md)
 - [Phase 3-7 Steam 实机验收](./docs/phase3-steam-integration.md)
 - [Phase 4 完整音乐体验总览](./docs/phase4.md)
+- [Phase 3 到 Phase 4 及后续开发交接](./docs/phase_3_to_4_handoff.md)
 - [Phase 3 信件可靠性首个里程碑](./docs/phase3-letter-reliability.md)
 - [Phase 3 Provider 与 OliviaSoul Harness 适配](./docs/phase3-provider-integration.md)
 - [Phase 3 信件后台 Worker](./docs/phase3-letter-worker.md)
@@ -304,7 +305,7 @@ music.addToPlaylist(track);
 - [已内置的第三方 Persona/Harness 资产](./third_party/README.md)
 - [原装游戏基线与插件接入](./docs/original-installation.md)
 - [原版前端接口审计](./docs/frontend-audit.md)
-- [Phase 2 收尾与 Phase 3 交接（完整 Prompt）](./docs/phase2-handoff.md)
+- [Phase 2 收尾与 Phase 3 交接（完整 Prompt）](./docs/phase_2_to_3_handoff.md)
 
 ## 开发与测试
 

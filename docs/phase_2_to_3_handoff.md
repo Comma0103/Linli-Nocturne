@@ -104,7 +104,7 @@ Phase 3 与 Phase 4 没有“必须先完成 Phase 3 才能修复 MIDI”的技�
 ## 6. 可直接粘贴到新 Task/Thread 的 Prompt
 
 ```text
-你正在接手 GitHub 仓库 https://github.com/Comma0103/Linli-Nocturne 的后续开发。项目名称是 Linli Nocturne（林离·余音），默认分支 main，代码和展示文案使用简体中文，不添加任何地域限制。请先读取仓库中的 docs/phase2-handoff.md，再读取 README.md、docs/requirements.md、docs/architecture.md、docs/known-issues.md 和相关源码；不要依赖旧聊天记录中的未经证实结论。
+你正在接手 GitHub 仓库 https://github.com/Comma0103/Linli-Nocturne 的后续开发。项目名称是 Linli Nocturne（林离·余音），默认分支 main，代码和展示文案使用简体中文，不添加任何地域限制。请先读取仓库中的 docs/phase_2_to_3_handoff.md，再读取 README.md、docs/requirements.md、docs/architecture.md、docs/known-issues.md 和相关源码；不要依赖旧聊天记录中的未经证实结论。
 
 项目目标：在原版《BSide: Olivia Lin》Steam 本体之上恢复信件、文字/视频回信、MIDI 上传与曲库，并为即兴创作和未来 3D 手指/琴键/镜头/动作同步保留扩展点。当前不是发行版。原游戏默认规则是每天 3 封信、每封 5 分钟延迟，bypass 默认关闭但保留开关；回信必须同时预留外部模型 API 和完全本地模型接口。
 
@@ -132,3 +132,4 @@ Phase 3 的信件可靠性、真实 provider、后台 worker、有限记忆、�
 ## 8. 当前 Phase 3 状态校正
 
 Phase 3-7 已通过离线 fallback 的 Steam 界面验收，Phase 3-8 也已由用户在 Steam 0.0.9.627 中完成 DeepSeek + Persona + OliviaSoul Harness 真实模型测试；模型请求、Persona、Harness 和完整回信正文均已确认。Phase 3 的信件代码链路和 Steam 用户路径现已收尾，可以进入 Phase 4；这不代表上传 MIDI 播放、最终 GUI 设置页、普通用户安装器或发行版已经完成。
+

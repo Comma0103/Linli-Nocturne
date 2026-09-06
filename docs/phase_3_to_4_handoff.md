@@ -84,7 +84,7 @@ pnpm test
 
 然后按顺序读取：
 
-1. `docs/phase4-handoff.md`（本文）；
+1. `docs/phase_3_to_4_handoff.md`（本文）；
 2. `README.md` 的项目状态、开发路线、当前功能和架构；
 3. `docs/requirements.md`、`docs/architecture.md`、`docs/known-issues.md`；
 4. `docs/phase4.md`、`docs/render-job.md`、`docs/module-settings.md`、`docs/original-installation.md`；
@@ -140,7 +140,7 @@ git status
 ## 8. 可直接作为新 Task 首条消息的启动指令
 
 ```text
-你正在接手 GitHub 仓库 https://github.com/Comma0103/Linli-Nocturne 的后续开发。请把 docs/phase4-handoff.md 作为当前唯一交接入口，先完整阅读它，再读取 README.md、docs/requirements.md、docs/architecture.md、docs/known-issues.md、docs/phase4.md、docs/module-settings.md、docs/render-job.md 和当前相关源码；不要依赖旧聊天记录中的未经证实结论。
+你正在接手 GitHub 仓库 https://github.com/Comma0103/Linli-Nocturne 的后续开发。请把 docs/phase_3_to_4_handoff.md 作为当前唯一交接入口，先完整阅读它，再读取 README.md、docs/requirements.md、docs/architecture.md、docs/known-issues.md、docs/phase4.md、docs/module-settings.md、docs/render-job.md 和当前相关源码；不要依赖旧聊天记录中的未经证实结论。
 
 先运行 git status 和 pnpm test，确认当前基线。Phase 3 已完成并有真实 Steam 证据：DeepSeek + Persona + OliviaSoul Harness 已在客户端 0.0.9.627 中生成和显示以“嘉树”称呼玩家的完整回信。不要重复开发 Phase 3，也不要把 Phase 3 的旧待办当成当前阻塞。
 
@@ -152,3 +152,4 @@ git status
 
 每轮报告实际改动文件、测试命令和结果、未完成项、是否需要用户 Steam 操作。提交前运行 pnpm test、git diff --check、git status；只提交源代码、测试和文档，推送 main 后确认 HEAD 与 origin/main 一致。不要宣称 Phase 4、3D、最终安装器或发行版已经完成，除非有对应的代码、自动化测试和用户实机证据。
 ```
+
