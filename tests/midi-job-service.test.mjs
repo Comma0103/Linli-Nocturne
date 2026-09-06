@@ -30,9 +30,9 @@ test('MIDI jobs survive service recreation through SQLite metadata and media fil
     audioUrl: 'http://127.0.0.1:27149/toy/midi/media/' + job.jobId + '.mp4',
     videoUrl: 'http://127.0.0.1:27149/toy/midi/media/' + job.jobId + '.mp4',
     videoByTodView: [
-      { url: 'http://127.0.0.1:27149/toy/midi/media/' + job.jobId + '.mp4', tod: 'TOD12', view: 'NI', coverUrl: '', duration: Math.round(second.get(job.jobId).info.duration) },
+      { url: 'http://127.0.0.1:27149/toy/midi/media/' + job.jobId + '.mp4', tod: 'TOD1200', view: 'NI', coverUrl: '', duration: Math.round(second.get(job.jobId).info.duration) },
       { url: 'http://127.0.0.1:27149/toy/midi/media/' + job.jobId + '.mp4', tod: 'TOD1730', view: 'NI', coverUrl: '', duration: Math.round(second.get(job.jobId).info.duration) },
-      { url: 'http://127.0.0.1:27149/toy/midi/media/' + job.jobId + '.mp4', tod: 'TOD20', view: 'NI', coverUrl: '', duration: Math.round(second.get(job.jobId).info.duration) },
+      { url: 'http://127.0.0.1:27149/toy/midi/media/' + job.jobId + '.mp4', tod: 'TOD2000', view: 'NI', coverUrl: '', duration: Math.round(second.get(job.jobId).info.duration) },
     ],
     nameKey: job.jobId, performanceType: 'Solo', duration: second.get(job.jobId).info.duration, source: 'linli-nocturne',
   });

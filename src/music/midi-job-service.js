@@ -109,7 +109,8 @@ export class MidiJobService {
       // selects a TOD/view entry from this array before forwarding the URL to
       // NutWebPlayer. Local MIDI renders are audio-only, so all three TOD
       // slots intentionally point to the same rendered media while keeping
-      // the native song contract intact.
+      // the native song contract intact. The 0.0.9.627 client uses the
+      // literal clock buckets TOD1200 / TOD1730 / TOD2000.
       videoByTodView: (() => {
         const storedMediaUrl = job.info?.videoUrls?.[0] ?? job.info?.audioUrl ?? '';
         const mediaUrl = this.playbackBaseUrl
@@ -120,11 +121,11 @@ export class MidiJobService {
         // metadata, but send an integer at the native bridge boundary.
         const duration = Math.max(0, Math.round(Number(job.info?.duration ?? 0)));
         return mediaUrl ? [
-          { url: mediaUrl, tod: 'TOD12', view: 'NI', coverUrl: '', duration },
+          { url: mediaUrl, tod: 'TOD1200', view: 'NI', coverUrl: '', duration },
           // The official catalogue uses the literal TOD1730 key. The native
           // player selects this entry by key rather than by a numeric guess.
           { url: mediaUrl, tod: 'TOD1730', view: 'NI', coverUrl: '', duration },
-          { url: mediaUrl, tod: 'TOD20', view: 'NI', coverUrl: '', duration },
+          { url: mediaUrl, tod: 'TOD2000', view: 'NI', coverUrl: '', duration },
         ] : [];
       })(),
       nameKey: job.jobId,
