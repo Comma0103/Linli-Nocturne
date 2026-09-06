@@ -4,6 +4,10 @@
 
 本地服务入口、信件 Worker、provider 选择和兼容网关已经有自动化测试。2026-09-07 用户在 0.0.9.627 客户端中重新打开 test 和 test2，确认两封信都显示了文字回信正文，Phase 3-7 实机验收通过。此前的数字状态兼容问题已修复。
 
+## Phase 3-8：DeepSeek + Persona + OliviaSoul Harness 真实模型验收待完成
+
+离线 fallback 的 Steam 界面验收已经通过，但尚未在 Steam 游戏中完成 DeepSeek 外部模型、内置 Persona 和 OliviaSoul Harness 的组合测试。当前 config/user-config.json 仍选择 offline-fallback 且 Harness 未启用；在真实模型测试完成前，Phase 3 不能标记为整体完成。
+
 这次修复不改变游戏文件，也不需要重新生成已有回信；本地服务重启后会使用修复后的兼容转换。
 
 ## LINLI-PLAY-001：本地上传曲目无法接管原生 WebPlayer

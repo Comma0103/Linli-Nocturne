@@ -57,4 +57,6 @@ Invoke-RestMethod http://localhost:27149/health
 
 验收日期：2026-09-07（Asia/Shanghai）。验收结果：通过。
 
+注意：这里通过的是离线 fallback 的 Steam 界面路径，不代表 Phase 3 整体完成。Phase 3-8 的 DeepSeek + Persona + OliviaSoul Harness 真实模型验收仍未完成。
+
 本项通过后，Phase 3 才算完成“代码链路 + Steam 用户路径”两层收尾；之后进入 Phase 4。`LINLI-PLAY-001` 仍是 Phase 4 的原生 WebPlayer 跨层问题，不应在本项中猜测式修改。

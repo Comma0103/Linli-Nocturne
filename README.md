@@ -6,7 +6,7 @@
 
 ## 项目状态
 
-截至当前，Phase 0–2 已完成，Phase 3 的代码链路和自动化总体验收已完成；当前正在补最后的 Steam 游戏界面实机验收。项目仍是开发版，不是发行版。Phase 4 尚未开始，上传曲目接管原生 WebPlayer 的问题 `LINLI-PLAY-001` 仍是 Phase 4 的跨层阻塞。
+截至当前，Phase 0–2 已完成，Phase 3 的代码链路、自动化测试和离线 fallback 的 Steam 界面验收已完成；DeepSeek + Persona + OliviaSoul Harness 的真实模型测试尚未完成，因此 Phase 3 尚未整体收尾。项目仍是开发版，不是发行版。Phase 4 尚未开始，上传曲目接管原生 WebPlayer 的问题 `LINLI-PLAY-001` 仍是 Phase 4 的跨层阻塞。
 
 ## 开发路线
 
@@ -108,11 +108,15 @@
 
 总览与验收边界： [Phase 3 信件体验总览](./docs/phase3.md)。
 
-#### [x] Phase 3-7：Steam 游戏界面实机验收（已通过）
+#### [x] Phase 3-7：Steam 游戏界面实机验收（离线 fallback，已通过）
 
 用开发版本地服务和原版 0.0.9.627 客户端，已由用户实际验证发送信件、看到回信处理中状态，并在重新打开信件后看到文字回信正文。验收记录见 [Phase 3-7 Steam 实机验收](./docs/phase3-steam-integration.md)。
 
 设计和操作步骤见 [Phase 3-7 Steam 实机验收](./docs/phase3-steam-integration.md)。
+
+#### [ ] Phase 3-8：真实模型 Steam 实机验收（DeepSeek + Persona + OliviaSoul Harness）
+
+使用 DeepSeek 外部模型、已内置 Persona 和 OliviaSoul Harness，在 Steam 界面完成一次真实回信测试。需要确认模型请求成功、Harness 实际运行、Persona 生效，以及游戏内显示完整回信正文。设计依据见 [Phase 3 Provider 与 OliviaSoul Harness](./docs/phase3-provider-integration.md)。
 
 ### Phase 4 — 完整音乐体验
 

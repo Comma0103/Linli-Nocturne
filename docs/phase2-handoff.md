@@ -128,3 +128,7 @@ Phase 3 的信件可靠性、真实 provider、后台 worker、有限记忆、�
 - 收尾代码修改应通过完整自动化测试后再提交。
 - 本文是新 Task 的首要上下文；若 README 或旧 `docs/phase2.md` 与本文冲突，以本文的证据矩阵和限制说明为准。
 - 本交接不代表 release，不代表上传曲目演奏已解决，也不代表所有原版在线服务已被完整复刻。
+
+## 8. 当前 Phase 3 状态校正
+
+Phase 3-7 已通过离线 fallback 的 Steam 界面验收，但这不代表 Phase 3 整体完成。DeepSeek + Persona + OliviaSoul Harness 的真实模型 Steam 测试属于 Phase 3-8，完成前不得进入 Phase 4 或宣布 Phase 3 收尾。
