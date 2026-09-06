@@ -44,10 +44,12 @@ Harness（预检、记忆组装、检查和重写）
 
 因此，离线模型、DeepSeek 外部模型和本地模型都可以使用同一个 Persona 和 Harness。切换 `baseModel.provider` 不应清除或替换 `persona`、`harness` 的选择。
 
-仓库外的参考实现当前位于：
+信件里的两个名字有不同用途：`user.displayName` 是玩家本人（例如“嘉树”），用于回信称呼以及告诉模型这封信是谁写的；`林离`仍是游戏里的收信人标识，用于信件存储、每日配额和原生客户端契约。Harness 的 `person` 则是内部归档键，三者不能混用。
 
-- OliviaSoul v18 Harness：`third_party/OliviaSoul/v18-harness`
-- olivia-lin 人格资料：`third_party/olivia-lin/BSide_Olivia_Lin/persona`
+对应的上游项目和仓库内资产为：
+
+- 上游 OliviaSoul：[yilangren/OliviaSoul](https://github.com/yilangren/OliviaSoul)；仓库内资产：`third_party/OliviaSoul/v18-harness`
+- 上游 olivia-lin：[1Dreamer666/olivia-lin](https://github.com/1Dreamer666/olivia-lin)；仓库内资产：`third_party/olivia-lin/BSide_Olivia_Lin/persona`
 
 这两个目录是仓库内独立的第三方资产目录，不与核心代码混在一起。运行时生成的 `_probe`、往来档案和数据库不会写入这些目录。`src/letters/model-adapter.js` 中的 `OliviaSoulHarnessProvider` 是“完整 Harness 自己调用模型”的模式：它会使用基础模型配置作为外部脚本的后端。它不是第二个可替换模型；切换 offline/external/local 只改变后端，Persona 和 Harness 选择保持不变。当前 `offline-fallback` 只能做无模型链路测试，不能执行 OliviaSoul 的多步模型 Harness。
 

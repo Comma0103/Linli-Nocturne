@@ -33,6 +33,7 @@ export function loadUserConfig(filename, { defaultSettings, runtimeRoot = '' } =
   };
   return {
     user,
+    userDisplayName: String(user.user?.displayName ?? '').trim(),
     settings,
     options: {
       provider: { endpoint: selected.endpoint, apiKey: selected.apiKey ?? '', model: selected.model, systemPrompt: user.letters?.systemPrompt },

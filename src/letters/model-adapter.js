@@ -45,9 +45,9 @@ function systemWithPersona(systemPrompt, persona) {
   return [String(systemPrompt ?? '').trim(), String(persona ?? '').trim()].filter(Boolean).join('\n\n');
 }
 
-function runProcess(command, args, { cwd, timeoutMs, spawnImpl = spawn }) {
+export function runProcess(command, args, { cwd, timeoutMs, env = process.env, spawnImpl = spawn }) {
   return new Promise((resolve, reject) => {
-    const child = spawnImpl(command, args, { cwd, shell: false, windowsHide: true });
+    const child = spawnImpl(command, args, { cwd, env, shell: false, windowsHide: true });
     let stdout = '';
     let stderr = '';
     let settled = false;
@@ -118,13 +118,13 @@ export class OpenAICompatibleProvider extends FunctionProvider {
     const url = endpoint.replace(/\/$/u, '').endsWith('/chat/completions')
       ? endpoint.replace(/\/$/u, '')
       : `${endpoint.replace(/\/$/u, '')}${endpoint.replace(/\/$/u, '').endsWith('/v1') ? '/chat/completions' : '/v1/chat/completions'}`;
-    super({ provider, timeoutMs, generate: async ({ prompt = '', recipient = '林离', memory = '', persona = '' }) => {
+    super({ provider, timeoutMs, generate: async ({ prompt = '', recipient = '林离', userDisplayName = '', memory = '', persona = '' }) => {
       const payload = await requestJson(fetchImpl, url, {
         method: 'POST',
         headers: { 'content-type': 'application/json', authorization: `Bearer ${apiKey}` },
         body: JSON.stringify({ model, messages: [
           ...(systemWithPersona(systemPrompt, persona) ? [{ role: 'system', content: systemWithPersona(systemPrompt, persona) }] : []),
-          { role: 'user', content: `给${recipient}的来信：${promptWithMemory(prompt, memory)}` },
+          { role: 'user', content: `${userDisplayName ? `${userDisplayName}写给${recipient}` : `给${recipient}`}的来信：${promptWithMemory(prompt, memory)}` },
         ] }),
       }, timeoutMs, provider);
       const text = extractOpenAiText(payload);
@@ -137,7 +137,7 @@ export class OpenAICompatibleProvider extends FunctionProvider {
 export class OliviaSoulHarnessProvider extends HarnessProvider {
   constructor({ root, runtimeRoot = '', person = 'linli-local-user', powershell = 'powershell.exe', timeoutMs = 60 * 60 * 1000, runner = runProcess, environment = {} }) {
     if (!root) throw new TypeError('OliviaSoul Harness root is required');
-    super({ provider: 'olivia-soul-harness', timeoutMs, generate: async ({ prompt = '', memory = '', persona = '' }) => {
+    super({ provider: 'olivia-soul-harness', timeoutMs, generate: async ({ prompt = '', recipient = '林离', userDisplayName = '', memory = '', persona = '' }) => {
       const executionRoot = runtimeRoot || root;
       if (runtimeRoot) {
         await cp(root, runtimeRoot, { recursive: true, force: true, filter: source => !/[\\/](_probe|信件往来|\.cursor)(?:[\\/]|$)/u.test(source) });
@@ -146,7 +146,8 @@ export class OliviaSoulHarnessProvider extends HarnessProvider {
       const letterFile = join(tempDir, 'incoming.txt');
       const replyFile = join(tempDir, 'reply.txt');
       const script = join(executionRoot, 'run-live.ps1');
-      await writeFile(letterFile, promptWithMemory(promptWithMemory(prompt, memory), persona), 'utf8');
+      const senderLine = userDisplayName ? `来信人：${userDisplayName}\n收信人：${recipient}\n\n` : '';
+      await writeFile(letterFile, senderLine + promptWithMemory(promptWithMemory(prompt, memory), persona), 'utf8');
       try {
         const result = await runner(powershell, [
           '-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', script,
@@ -221,7 +222,8 @@ export class ModelAdapter {
 export class FallbackLetterProvider {
   constructor({ provider = 'offline-fallback' } = {}) { this.provider = provider; }
 
-  async generate({ recipient = '你', prompt = '' } = {}) {
-    return { provider: this.provider, text: `${recipient}，我收到了你的信。谢谢你把这些话告诉我。${prompt ? '我会记得你写下的心情。' : ''}` };
+  async generate({ recipient = '你', userDisplayName = '', prompt = '' } = {}) {
+    const salutation = String(userDisplayName ?? '').trim() || recipient;
+    return { provider: this.provider, text: `${salutation}，我收到了你的信。谢谢你把这些话告诉我。${prompt ? '我会记得你写下的心情。' : ''}` };
   }
 }

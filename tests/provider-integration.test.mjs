@@ -2,13 +2,34 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { existsSync } from 'node:fs';
 import { writeFile } from 'node:fs/promises';
+import { EventEmitter } from 'node:events';
 import { createServer } from 'node:http';
 import {
   createConfiguredModelAdapter,
   HarnessProvider,
   OpenAICompatibleProvider,
   OliviaSoulHarnessProvider,
+  runProcess,
 } from '../src/letters/model-adapter.js';
+
+test('Harness 子进程会继承 DeepSeek 环境变量', async () => {
+  let observed;
+  const child = new EventEmitter();
+  child.stdout = new EventEmitter();
+  child.stderr = new EventEmitter();
+  const result = await runProcess('powershell.exe', ['-File', 'run-live.ps1'], {
+    cwd: 'D:/reference/OliviaSoul/v18-harness',
+    env: { DEEPSEEK_API_KEY: 'local-only', DEEPSEEK_MODEL: 'deepseek-v4-pro' },
+    spawnImpl: (_command, _args, options) => {
+      observed = options;
+      queueMicrotask(() => child.emit('close', 0));
+      return child;
+    },
+  });
+  assert.equal(result.code, 0);
+  assert.equal(observed.env.DEEPSEEK_API_KEY, 'local-only');
+  assert.equal(observed.env.DEEPSEEK_MODEL, 'deepseek-v4-pro');
+});
 
 test('自定义 Harness 可以直接插入而不修改信件服务', async () => {
   const customHarness = new HarnessProvider({
@@ -47,13 +68,13 @@ test('OpenAI 兼容 provider 发送规范请求并返回统一文字', async t =
     endpoint: `http://127.0.0.1:${server.address().port}/v1`,
     apiKey: 'secret-key-for-test', model: 'fake-model', systemPrompt: '只输出回信', timeoutMs: 1000,
   });
-  const result = await provider.generate({ recipient: '林离', prompt: '今天很好' });
+  const result = await provider.generate({ recipient: '林离', userDisplayName: '嘉树', prompt: '今天很好' });
   assert.equal(result.text, '外部模型回信');
   assert.equal(received.headers.authorization, 'Bearer secret-key-for-test');
   assert.equal(received.body.model, 'fake-model');
   assert.deepEqual(received.body.messages, [
     { role: 'system', content: '只输出回信' },
-    { role: 'user', content: '给林离的来信：今天很好' },
+    { role: 'user', content: '嘉树写给林离的来信：今天很好' },
   ]);
 });
 
@@ -94,6 +115,22 @@ test('OliviaSoul v18 Harness provider 复用现成脚本并清理临时信件', 
   const replyPath = observed.args[observed.args.indexOf('-OutFile') + 1];
   assert.equal(existsSync(letterPath), false);
   assert.equal(existsSync(replyPath), false);
+});
+
+test('OliviaSoul Harness 输入包含玩家显示名和游戏收信人', async () => {
+  let letterContent;
+  const provider = new OliviaSoulHarnessProvider({
+    root: 'D:/reference/OliviaSoul/v18-harness',
+    runner: async (_command, args) => {
+      letterContent = await import('node:fs/promises').then(({ readFile }) => readFile(args[args.indexOf('-Letter') + 1], 'utf8'));
+      await writeFile(args[args.indexOf('-OutFile') + 1], 'Harness 生成的回信', 'utf8');
+      return { code: 0, stdout: 'HARNESS LIVE DONE', stderr: '' };
+    },
+  });
+  await provider.generate({ recipient: '林离', userDisplayName: '嘉树', prompt: '最近好吗' });
+  assert.match(letterContent, /来信人：嘉树/u);
+  assert.match(letterContent, /收信人：林离/u);
+  assert.match(letterContent, /最近好吗/u);
 });
 
 test('外部 provider 失败时切换到 OliviaSoul Harness，禁用 fallback 时不泄漏密钥', async () => {

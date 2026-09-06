@@ -31,6 +31,23 @@ test('bypass mode removes daily and delay limits', async () => {
   store.close();
 });
 
+test('回信使用用户显示名，收信人仍保留为林离', async () => {
+  const store = new SqliteStore();
+  let input;
+  const service = new LetterService({
+    store,
+    userDisplayName: '嘉树',
+    modelAdapter: new ModelAdapter({ generate: async value => { input = value; return { text: '收到啦', provider: 'fake' }; } }),
+    limits: { bypass: true },
+  });
+  const letter = service.send({ body: '给林离的消息' });
+  await service.processNext();
+  assert.equal(letter.recipient, '林离');
+  assert.equal(input.recipient, '林离');
+  assert.equal(input.userDisplayName, '嘉树');
+  store.close();
+});
+
 test('letter claiming is atomic and successful processing is idempotent', async () => {
   const store = new SqliteStore();
   let release;

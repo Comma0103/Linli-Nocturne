@@ -1,4 +1,4 @@
-# Immutable history snapshot and bounded local retrieval. PowerShell 5.x.
+﻿# Immutable history snapshot and bounded local retrieval. PowerShell 5.x.
 
 function Get-HistoryUtf8 {
     return New-Object System.Text.UTF8Encoding $false

@@ -24,7 +24,7 @@ test('用户配置把基础模型、Persona 和 Harness 分开选择', async () 
   const filename = join(root, 'user-config.json');
   await import('node:fs/promises').then(({ writeFile }) => writeFile(filename, JSON.stringify({
     version: 1,
-    user: { timeZone: 'Asia/Shanghai' },
+    user: { displayName: '嘉树', timeZone: 'Asia/Shanghai' },
     letters: {
       baseModel: { provider: 'external.openai-compatible', external: { endpoint: 'https://example.invalid', model: 'deepseek-v4-pro', apiKey: 'local-secret' } },
       fallbackEnabled: true,
@@ -39,4 +39,5 @@ test('用户配置把基础模型、Persona 和 Harness 分开选择', async () 
   assert.equal(result.settings.letters.harness, 'olivia-soul-v18');
   assert.equal(result.options.external.model, 'deepseek-v4-pro');
   assert.equal(result.options.harness.environment.DEEPSEEK_MODEL, 'deepseek-v4-pro');
+  assert.equal(result.userDisplayName, '嘉树');
 });

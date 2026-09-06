@@ -8,13 +8,14 @@ export class LetterLimitError extends Error {
 }
 
 export class LetterService {
-  constructor({ store, modelAdapter, memoryProvider = new NoopMemoryProvider(), personaProvider = new NoopPersonaProvider(), clock = () => new Date(), timeZone = DEFAULT_TIME_ZONE, limits = {} }) {
+  constructor({ store, modelAdapter, memoryProvider = new NoopMemoryProvider(), personaProvider = new NoopPersonaProvider(), userDisplayName = '', clock = () => new Date(), timeZone = DEFAULT_TIME_ZONE, limits = {} }) {
     this.store = store;
     this.modelAdapter = modelAdapter;
     if (!memoryProvider || typeof memoryProvider.recall !== 'function' || typeof memoryProvider.remember !== 'function') throw new TypeError('memoryProvider.recall and remember are required');
     this.memoryProvider = memoryProvider;
     if (!personaProvider || typeof personaProvider.getPrompt !== 'function') throw new TypeError('personaProvider.getPrompt is required');
     this.personaProvider = personaProvider;
+    this.userDisplayName = String(userDisplayName ?? '').trim();
     this.clock = clock;
     this.dayBoundary = createDayBoundary(timeZone);
     const maxAttempts = Number.isInteger(limits.maxAttempts) ? limits.maxAttempts : 3;
@@ -46,7 +47,7 @@ export class LetterService {
       let persona = { text: '' };
       try { persona = await this.personaProvider.getPrompt({ recipient: letter.recipient, letter }); } catch { /* persona is auxiliary */ }
       const personaText = String(persona?.text ?? '').slice(0, this.limits.memoryContextMaxChars);
-      const result = await this.modelAdapter.generateReply({ recipient: letter.recipient, prompt: letter.body, memory: memoryContext, persona: personaText });
+      const result = await this.modelAdapter.generateReply({ recipient: letter.recipient, userDisplayName: this.userDisplayName, prompt: letter.body, memory: memoryContext, persona: personaText });
       const replied = this.store.markReplied(letter.id, result.text, this.clock().toISOString());
       try { await this.memoryProvider.remember({ recipient: letter.recipient, letter, reply: result.text, createdAt: replied?.replied_at ?? this.clock().toISOString() }); } catch { /* memory is auxiliary */ }
       return replied;

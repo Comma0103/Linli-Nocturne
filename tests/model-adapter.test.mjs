@@ -20,10 +20,11 @@ test('provider chain uses external, local and fallback through one generate cont
     local: new LocalModelProvider({ generate: async () => { calls.push('local'); throw Object.assign(new Error('offline'), { code: 'offline' }); } }),
     fallback,
   }));
-  const fallbackResult = await fallbackAdapter.generateReply({ recipient: '林离', prompt: '你好' });
+  const fallbackResult = await fallbackAdapter.generateReply({ recipient: '林离', userDisplayName: '嘉树', prompt: '你好' });
   assert.equal(fallbackResult.provider, 'offline-fallback');
   assert.deepEqual(calls, ['external', 'local']);
   assert.equal(fallbackResult.metadata.providerFailures.length, 2);
+  assert.match(fallbackResult.text, /^嘉树，/u);
 });
 
 test('provider chain reports a clear exhausted error when fallback is disabled', async () => {
