@@ -36,96 +36,44 @@ pnpm install
 pnpm test
 ```
 
-当前版本可以运行领域核心和本地服务。服务默认使用离线 fallback，不需要 API Key；要在 Steam 游戏里体验文字回信，还需要先启动服务，再按受保护接入流程让已接入的客户端连接它。
-
-启动开发版本地服务：
-
-```powershell
-node scripts/start-local-service.mjs
-```
-
-默认地址是 `http://localhost:27149`。外部模型、完全本地模型、OliviaSoul Harness、人格和记忆的选择见 [模块设置与实现选择](./docs/module-settings.md)；API Key 只保存在本机的 `config/user-config.json`（或运行环境提供的凭据中），绝不能提交到仓库。
-
-仓库已内置可复用的 [OliviaSoul](https://github.com/yilangren/OliviaSoul) 和 [olivia-lin](https://github.com/1Dreamer666/olivia-lin) 的 Persona/Harness 资产，具体文件和来源记录见 [第三方资产说明](./third_party/README.md)。首次使用可复制配置模板：
-
-```powershell
-Copy-Item config/user-config.example.json config/user-config.json
-```
-
-`config/user-config.json` 是本机配置，已加入 `.gitignore`；模板只提供默认值和占位符，不包含任何密钥。
-
-可以先对游戏目录做只读接入检查（不会修改文件）：
-
-```powershell
-node scripts/plan-install.mjs "D:\Program Files (x86)\Steam\steamapps\common\BSide Olivia Lin Test" "D:\Aesthetic\Linli-Nocturne-Backups"
-```
-
-只有输出 `canApply: true` 时，后续安装器才会进入备份和补丁步骤。执行器还会在写入前再次校验原装基线，并在前端或 DLL 补丁失败时自动回滚；默认命令行仍以只读计划启动，避免误操作已有第三方修改的安装。
-
-开发版安装命令默认仍是只读计划：
-
-```powershell
-node scripts/apply-install.mjs "D:\Program Files (x86)\Steam\steamapps\common\BSide Olivia Lin Test" "D:\Aesthetic\Linli-Nocturne-Backups"
-```
-
-只有确认游戏已退出、目录是原装基线，并明确添加 `--apply --confirm=Linli-Nocturne` 时才会执行备份和补丁。当前 Steam 目录如果被其他工具修改，命令会直接拒绝执行。
+安装完成后，继续阅读“用户配置指南”。
 
 ## 用户配置指南
 
-本节面向不参与开发的普通用户，按“复制配置 → 启动服务 → 进入游戏”的顺序维护。以后每增加一个需要用户选择或填写的功能，都必须同步更新本节。
+本节是普通用户从“下载代码”到“在游戏中体验”的完整流程。
 
-### 第一次使用：离线回信
+### 1. 创建本机配置
 
-离线模式不需要 API Key，适合先确认服务和游戏接入是否正常。
+在仓库根目录执行：
 
-1. 在仓库根目录复制配置模板：
+```powershell
+Copy-Item config/user-config.example.json config/user-config.json
+notepad config/user-config.json
+```
 
-   ```powershell
-   Copy-Item config/user-config.example.json config/user-config.json
-   notepad config/user-config.json
-   ```
+只修改 `config/user-config.json`，不要修改模板。这个文件已被 Git 忽略。
 
-2. 在配置文件中至少填写自己的名字：
+至少填写玩家名字和时区：
 
-   ```json
-   "user": {
-     "displayName": "嘉树",
-     "language": "zh-CN",
-     "timeZone": "Asia/Shanghai"
-   }
-   ```
+```json
+"user": {
+  "displayName": "嘉树",
+  "language": "zh-CN",
+  "timeZone": "Asia/Shanghai"
+}
+```
 
-   `displayName` 是回信称呼和模型看到的玩家名字；游戏收信人“林离”由程序保留，不要把它改成玩家名字。
+`displayName` 是回信称呼和模型看到的玩家名字；游戏收信人“林离”由程序保留，不要把它改成玩家名字。
 
-3. 确认信件配置保持离线模式：
+### 2. 选择信件模式
 
-   ```json
-   "letters": {
-     "baseModel": {
-       "provider": "offline-fallback"
-     },
-     "fallbackEnabled": true,
-     "dailyLimitBypass": false,
-     "harness": {
-       "enabled": false
-     }
-   }
-   ```
+#### 离线回信（无需 API Key）
 
-   测试时如果不想等待原游戏的每日 3 封和 5 分钟延迟，可以临时把 `dailyLimitBypass` 改为 `true`；体验结束后建议改回 `false`。
+模板默认就是离线模式，适合先确认本地服务和游戏接入。测试时可把 `letters.dailyLimitBypass` 临时改为 `true`，跳过每日 3 封和 5 分钟等待。
 
-4. 启动本地服务并保持窗口运行：
+#### DeepSeek + Persona + OliviaSoul Harness（可选）
 
-   ```powershell
-   node scripts/start-local-service.mjs
-   Invoke-RestMethod http://localhost:27149/health
-   ```
-
-   返回 `ok: true` 后，再启动已完成接入的 Steam 客户端即可写信和查看离线回信。
-
-### 使用 DeepSeek、Persona 和 OliviaSoul Harness
-
-这一步是可选的真实模型体验。先关闭游戏，再编辑 `config/user-config.json`，把对应字段改成实际值：
+把 `letters` 中对应字段改为自己的模型信息：
 
 ```json
 "letters": {
@@ -151,37 +99,58 @@ node scripts/apply-install.mjs "D:\Program Files (x86)\Steam\steamapps\common\BS
 }
 ```
 
-API Key 只应写在本机的 `config/user-config.json`，该文件已被 Git 忽略，不能提交、截图公开或放进日志。仓库已经内置 OliviaSoul 和 olivia-lin 资产，不需要用户另外下载。Harness 会执行预检、记忆组装、生成、检查和必要重写；`fallbackEnabled` 仍可作为外部模型失败时的离线降级开关。启动服务后发送一封新信即可测试，旧的失败信件不会自动改写。
+API Key 只保存在本机的 `config/user-config.json`，不能提交或公开。仓库已经内置 OliviaSoul 和 olivia-lin 资产，不需要另外下载。`fallbackEnabled` 开启后，外部模型失败可以回到离线回信。
 
-### 在 Steam 游戏中使用
+#### 本地模型（可选）
 
-普通用户只需要在游戏运行前启动本地服务。第一次接入或更换游戏安装目录时，必须先完全退出游戏并执行只读检查：
+把 `baseModel.provider` 改为 `local.openai-compatible`，然后填写 `baseModel.local` 的本地 OpenAI 兼容地址、模型名和 Key；本地模型服务必须先在本机启动。
+
+### 3. 启动本地服务
+
+配置保存后，在仓库根目录执行，并保持窗口运行：
+
+```powershell
+node scripts/start-local-service.mjs
+Invoke-RestMethod http://localhost:27149/health
+```
+
+返回 `ok: true` 后，信件服务已经启动。修改配置后必须重启这个服务才会生效。
+
+### 4. 第一次接入 Steam 游戏
+
+如果只想调用本地 HTTP 服务，到这里即可；如果要在游戏界面体验，先完全退出游戏，再对游戏目录做只读检查：
 
 ```powershell
 node scripts/plan-install.mjs "你的 Steam 游戏目录" "游戏目录外的备份目录"
 ```
 
-只有输出 `canApply: true`、版本为 `0.0.9.627` 且安装状态为 `pristine` 时，才可以按“安装”一节的受保护命令执行补丁。游戏目录如果已经被其他工具修改，先停止，不要覆盖。服务启动后，在游戏中打开信箱、写信，等待回信显示；真实模型质量、游戏内正文和播放/演奏结果必须以用户实际看到的界面为准。
+只有输出 `canApply: true`、版本为 `0.0.9.627` 且状态为 `pristine` 时，才允许执行写入：
 
-### 配置项速查
+```powershell
+node scripts/apply-install.mjs "你的 Steam 游戏目录" "游戏目录外的备份目录" --apply --confirm=Linli-Nocturne
+```
 
-| 配置项 | 作用 | 普通用户建议 |
-| --- | --- | --- |
-| `user.displayName` | 玩家名字，回信会用它称呼用户 | 填自己的名字 |
-| `letters.baseModel.provider` | 选择 `offline-fallback`、外部 API 或本地模型 | 先用离线，确认正常后再接模型 |
-| `letters.baseModel.external` | 外部 OpenAI 兼容服务地址、模型和 API Key | 只填自己有权限使用的服务 |
-| `letters.baseModel.local` | 本机 OpenAI 兼容模型地址、模型和 Key | 需要先启动本地模型服务 |
-| `letters.persona` | 选择人格实现和 Persona 文件 | 默认使用内置 olivia-lin 资料 |
-| `letters.harness.enabled` | 是否启用完整 Harness | 离线测试关闭，真实模型测试可开启 |
-| `letters.fallbackEnabled` | provider 失败后是否降级到离线回信 | 普通用户建议开启 |
-| `letters.memory.enabled` | 是否保存有限的历史对话记忆 | 默认关闭，按隐私需要开启 |
-| `letters.dailyLimitBypass` | 是否跳过每日数量和等待时间 | 仅测试时临时开启 |
+游戏目录如果已经被其他工具修改、版本未知或游戏仍在运行，必须停止。执行器会在写入前再次校验基线并创建备份。
 
-配置修改后必须重启本地服务才会生效。遇到回信一直处理中，先查看服务窗口和信件列表状态；遇到最终失败，先确认模型地址、模型名、API Key 和 Harness 开关，不要重复点击发送造成多封测试信。
+### 5. 打开游戏并体验
+
+保持本地服务运行，启动已完成接入的 Steam 客户端，打开信箱并写信。打开信件详情即可查看回信正文；默认规则是每日 3 封、每封等待 5 分钟。
+
+当前阶段还可以使用已接入的 MIDI 上传、解析、生成和本地曲库入口；上传曲目真正接管原生 WebPlayer 的播放/演奏仍是 Phase 4 工作，受 `LINLI-PLAY-001` 影响。
+
+修改配置后必须重启服务。回信失败时，先检查模型地址、模型名、API Key 和 Harness 开关。
 
 ## 当前用法
 
-当前开发接口可以解析 MIDI、生成本地 WAV，并加入 SQLite 歌单：
+普通用户按上面的“用户配置指南”操作即可。当前服务提供：
+
+- 信件发送、排队、离线回信、外部模型回信、本地模型回信、Persona、Harness、有限记忆和失败重试；
+- MIDI 上传、解析、本地媒体生成、用户曲库分页和歌单基础；
+- 视频回信资产导入、替换、播放和删除。
+
+## 开发者用法
+
+开发者可以直接调用领域接口解析 MIDI、生成本地 WAV 并加入 SQLite 歌单：
 
 ```js
 import { SqliteStore } from './src/storage/sqlite-store.js';
