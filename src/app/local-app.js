@@ -9,6 +9,8 @@ import { createLocalGateway } from '../gateway/local-gateway.js';
 import { createDefaultModuleRegistries } from '../config/default-module-registries.js';
 import { ModuleSettingsStore } from '../config/module-settings.js';
 import { resolveModuleSelections } from '../config/module-runtime.js';
+import { DEFAULT_MODULE_SETTINGS } from '../config/module-settings.js';
+import { loadUserConfig } from '../config/user-config.js';
 
 function envOptions(env) {
   const modelOptions = {
@@ -27,15 +29,26 @@ function envOptions(env) {
   };
 }
 
-export function createLocalApp({ dataRoot = 'data', settingsPath = 'config/module-settings.json', host = '127.0.0.1', port = 27149, env = process.env } = {}) {
+export function createLocalApp({ dataRoot = 'data', settingsPath = 'config/module-settings.json', userConfigPath = null, host = '127.0.0.1', port = 27149, env = process.env } = {}) {
   const store = new SqliteStore(join(dataRoot, 'linli.sqlite'));
   const registries = createDefaultModuleRegistries({ store });
-  const settings = new ModuleSettingsStore({ filename: settingsPath, registries }).load();
-  const runtime = resolveModuleSelections(settings, { registries, options: envOptions(env) });
+  const userConfig = loadUserConfig(userConfigPath, { defaultSettings: DEFAULT_MODULE_SETTINGS });
+  const settings = userConfig?.settings ?? new ModuleSettingsStore({ filename: settingsPath, registries }).load();
+  const runtimeOptions = userConfig ? {
+    ...envOptions(env),
+    ...userConfig.options,
+    provider: { ...envOptions(env).provider, ...userConfig.options.provider },
+    external: { ...envOptions(env).external, ...userConfig.options.external },
+    local: { ...envOptions(env).local, ...userConfig.options.local },
+    harness: { ...envOptions(env).harness, ...userConfig.options.harness },
+    persona: { ...envOptions(env).persona, ...userConfig.options.persona },
+    memory: { ...envOptions(env).memory, ...userConfig.options.memory },
+  } : envOptions(env);
+  const runtime = resolveModuleSelections(settings, { registries, options: runtimeOptions });
   const letterService = new LetterService({
     store, modelAdapter: runtime.letters.modelAdapter, memoryProvider: runtime.letters.memoryProvider,
-    personaProvider: runtime.letters.personaProvider, timeZone: env.LINLI_TIME_ZONE ?? 'Asia/Shanghai',
-    limits: { bypass: env.LINLI_BYPASS === 'true' },
+    personaProvider: runtime.letters.personaProvider, timeZone: userConfig?.timeZone ?? env.LINLI_TIME_ZONE ?? 'Asia/Shanghai',
+    limits: { bypass: userConfig?.bypass ?? env.LINLI_BYPASS === 'true' },
   });
   const letterWorker = new LetterWorker({ letterService, intervalMs: Number(env.LINLI_WORKER_INTERVAL_MS) || 1_000 });
   const videoReplyService = new VideoReplyService({ store, mediaRoot: join(dataRoot, 'video-media'), importAdapter: runtime.media.videoImporter ?? registries.videoImporter.resolve('builtin.ffprobe.mp4', envOptions(env).videoImporter) });
@@ -62,4 +75,3 @@ export function createLocalApp({ dataRoot = 'data', settingsPath = 'config/modul
     },
   };
 }
-

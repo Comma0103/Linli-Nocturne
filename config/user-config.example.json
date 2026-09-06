@@ -1,0 +1,68 @@
+{
+  "version": 1,
+  "user": {
+    "displayName": "",
+    "language": "zh-CN",
+    "timeZone": "Asia/Shanghai"
+  },
+  "letters": {
+    "composition": "base-model-with-persona-and-harness",
+    "baseModel": {
+      "provider": "offline-fallback",
+      "external": {
+        "providerId": "external.openai-compatible",
+        "service": "deepseek",
+        "endpoint": "https://api.deepseek.com",
+        "model": "",
+        "apiKey": ""
+      },
+      "local": {
+        "providerId": "local.openai-compatible",
+        "endpoint": "http://127.0.0.1:1234/v1",
+        "model": "",
+        "apiKey": ""
+      }
+    },
+    "fallbackEnabled": true,
+    "dailyLimitBypass": false,
+    "memory": {
+      "enabled": false,
+      "provider": "sqlite",
+      "maxEpisodes": 12,
+      "maxCharsPerEpisode": 2000,
+      "maxContextChars": 6000
+    },
+    "persona": {
+      "providerId": "file",
+      "sourceProject": "olivia-lin",
+      "file": "../third_party/olivia-lin/BSide_Olivia_Lin/persona/olivia_lin.md",
+      "text": ""
+    },
+    "harness": {
+      "enabled": false,
+      "providerId": "olivia-soul-v18",
+      "sourceProject": "OliviaSoul",
+      "root": "../third_party/OliviaSoul/v18-harness",
+      "person": "linli-local-user"
+    }
+  },
+  "music": {
+    "renderer": "builtin.audio",
+    "playbackAdapter": "olivia-lin.native",
+    "encoder": "builtin.audio-only-mp4"
+  },
+  "media": {
+    "videoImporter": "builtin.ffprobe.mp4"
+  },
+  "threeD": {
+    "renderer": ""
+  },
+  "game": {
+    "serviceUrl": "http://localhost:27149",
+    "clientVersion": "0.0.9.627"
+  },
+  "privacy": {
+    "allowExternalModelRequests": false,
+    "allowExternalMediaSources": false
+  }
+}

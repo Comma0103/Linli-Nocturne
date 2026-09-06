@@ -7,7 +7,15 @@ export function resolveModuleSelections(settings, { registries, store = null, op
   const letters = settings.letters ?? {};
   const modelConfig = { fallback: letters.fallback !== false };
   if (registries.provider?.has(letters.provider)) modelConfig.provider = registries.provider.resolve(letters.provider, options.provider ?? options.external ?? options.local ?? {});
-  if (letters.harness) modelConfig.harness = registries.harness.resolve(letters.harness, options.harness ?? {});
+  if (letters.harness) {
+    const selectedHarness = registries.harness.resolve(letters.harness, options.harness ?? {});
+    if (selectedHarness?.mode === 'standalone') {
+      modelConfig.provider = selectedHarness;
+      modelConfig.fallback = false;
+    } else {
+      modelConfig.harness = selectedHarness;
+    }
+  }
   if (letters.provider === 'offline-fallback') modelConfig.fallback = false;
   const modelAdapter = createConfiguredModelAdapter(modelConfig);
   const memoryOptions = { ...(options.memory ?? {}) };

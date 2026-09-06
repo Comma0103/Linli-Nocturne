@@ -124,3 +124,21 @@ test('外部 provider 失败时切换到 OliviaSoul Harness，禁用 fallback �
     return true;
   });
 });
+
+test('组合设置把基础模型配置交给完整 OliviaSoul Harness，而不是把 Harness 当备用模型', async () => {
+  let environment;
+  const harness = new OliviaSoulHarnessProvider({
+    root: 'D:/reference/OliviaSoul/v18-harness',
+    environment: { DEEPSEEK_MODEL: 'deepseek-v4-pro', DEEPSEEK_API_KEY: 'local-only' },
+    runner: async (_command, args, options) => {
+      environment = options.env;
+      await writeFile(args[args.indexOf('-OutFile') + 1], '组合 Harness 回信', 'utf8');
+      return { code: 0, stdout: 'HARNESS LIVE DONE', stderr: '' };
+    },
+  });
+  const adapter = createConfiguredModelAdapter({ provider: harness, fallback: false });
+  const result = await adapter.generateReply({ prompt: '组合测试' });
+  assert.equal(result.provider, 'olivia-soul-harness');
+  assert.equal(environment.DEEPSEEK_MODEL, 'deepseek-v4-pro');
+  assert.equal(environment.DEEPSEEK_API_KEY, 'local-only');
+});

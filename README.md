@@ -229,6 +229,14 @@ node scripts/start-local-service.mjs
 
 默认地址是 `http://localhost:27149`。外部模型、完全本地模型、OliviaSoul Harness、人格和记忆的选择见 [模块设置与实现选择](./docs/module-settings.md)；API Key 只通过环境变量或系统凭据配置，不要写入设置文件或提交到仓库。
 
+仓库已内置可复用的 [第三方 Persona/Harness 资产](./third_party/README.md)。首次使用可先复制配置模板：
+
+```powershell
+Copy-Item config/user-config.example.json secrets/user-config.json
+```
+
+模板默认使用 olivia-lin Persona 和离线 fallback，OliviaSoul Harness 默认关闭；第二轮 DeepSeek 测试时再切换 `letters.baseModel.provider`、填写 `letters.baseModel.external.model/apiKey` 并把 `letters.harness.enabled` 改为 `true`。
+
 可以先对游戏目录做只读接入检查（不会修改文件）：
 
 ```powershell
@@ -288,6 +296,7 @@ music.addToPlaylist(track);
 - [Phase 3 信件记忆和连续对话](./docs/phase3-letter-memory.md)
 - [第三方项目引用与复用说明](./docs/third-party-credits.md)
 - [模块设置与实现选择](./docs/module-settings.md)
+- [已内置的第三方 Persona/Harness 资产](./third_party/README.md)
 - [原装游戏基线与插件接入](./docs/original-installation.md)
 - [原版前端接口审计](./docs/frontend-audit.md)
 - [Phase 2 收尾与 Phase 3 交接（完整 Prompt）](./docs/phase2-handoff.md)

@@ -12,7 +12,7 @@ export function createDefaultModuleRegistries({ store = null } = {}) {
     .register({ id: 'offline-fallback', version: '1.0.0', label: '离线降级回信', create: () => new FallbackLetterProvider() })
     .register({ id: 'external.openai-compatible', version: '1.0.0', label: '外部 OpenAI 兼容 API', create: options => new OpenAICompatibleProvider(options) })
     .register({ id: 'local.openai-compatible', version: '1.0.0', label: '本地 OpenAI 兼容模型', create: options => new OpenAICompatibleProvider({ ...options, provider: 'local-model' }) });
-  const harness = new ModuleRegistry('harness').register({ id: 'olivia-soul-v18', version: '1.0.0', label: 'OliviaSoul v18 Harness', create: options => new OliviaSoulHarnessProvider(options) });
+  const harness = new ModuleRegistry('harness').register({ id: 'olivia-soul-v18', version: '1.0.0', label: 'OliviaSoul v18 完整 Harness', create: options => new OliviaSoulHarnessProvider(options) });
   const persona = new ModuleRegistry('persona')
     .register({ id: 'default', version: '1.0.0', label: '不注入额外人格', create: () => new NoopPersonaProvider() })
     .register({ id: 'static', version: '1.0.0', label: '设置中的静态人格', create: options => new StaticPersonaProvider(options) })

@@ -135,7 +135,7 @@ export class OpenAICompatibleProvider extends FunctionProvider {
 }
 
 export class OliviaSoulHarnessProvider extends HarnessProvider {
-  constructor({ root, person = 'linli-local-user', powershell = 'powershell.exe', timeoutMs = 60 * 60 * 1000, runner = runProcess }) {
+  constructor({ root, person = 'linli-local-user', powershell = 'powershell.exe', timeoutMs = 60 * 60 * 1000, runner = runProcess, environment = {} }) {
     if (!root) throw new TypeError('OliviaSoul Harness root is required');
     super({ provider: 'olivia-soul-harness', timeoutMs, generate: async ({ prompt = '', memory = '', persona = '' }) => {
       const tempDir = await mkdtemp(join(tmpdir(), 'linli-olivia-soul-'));
@@ -147,7 +147,7 @@ export class OliviaSoulHarnessProvider extends HarnessProvider {
         const result = await runner(powershell, [
           '-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', script,
           '-Person', person, '-Letter', letterFile, '-OutFile', replyFile,
-        ], { cwd: root, timeoutMs });
+        ], { cwd: root, timeoutMs, env: { ...process.env, ...environment } });
         if (result.code !== 0 || !String(result.stdout ?? '').includes('HARNESS LIVE DONE')) {
           throw new ModelProviderError('OliviaSoul Harness returned no completed reply', 'provider_harness_failed', 'olivia-soul-harness');
         }
@@ -159,6 +159,7 @@ export class OliviaSoulHarnessProvider extends HarnessProvider {
         await rm(tempDir, { recursive: true, force: true });
       }
     } });
+    this.mode = 'standalone';
   }
 }
 
@@ -187,7 +188,7 @@ export function createConfiguredModelAdapter(config = {}) {
     : config.external?.endpoint
       ? new OpenAICompatibleProvider(config.external)
       : null;
-  let harness = config.harness?.generate ? config.harness : null;
+  let harness = config.harness?.generate || config.harness?.wrap ? config.harness : null;
   if (!harness && (config.harness?.kind === 'olivia-soul-harness' || config.harness?.kind === 'olivia-soul-v18')) {
     harness = new OliviaSoulHarnessProvider(config.harness);
   }

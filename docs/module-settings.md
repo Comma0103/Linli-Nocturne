@@ -28,6 +28,29 @@ node scripts/configure-modules.mjs config/module-settings.json
 
 领域服务通过 `ModuleRegistry` 和 `resolveModuleSelections()` 取得实现，服务本身不读取设置文件，也不依赖某个具体第三方项目。未来 GUI 设置页直接编辑同一份设置模型，不再另造配置协议。
 
+## 信件组合关系
+
+用户私有配置 `secrets/user-config.json` 使用更直白的组合结构：
+
+```text
+baseModel（offline / external / local）
+        ↓
+Persona（人格和书信技艺）
+        ↓
+Harness（预检、记忆组装、检查和重写）
+        ↓
+统一回信结果
+```
+
+因此，离线模型、DeepSeek 外部模型和本地模型都可以使用同一个 Persona 和 Harness。切换 `baseModel.provider` 不应清除或替换 `persona`、`harness` 的选择。
+
+仓库外的参考实现当前位于：
+
+- OliviaSoul v18 Harness：`D:\Aesthetic\work\OliviaSoul-reference\v18-harness`
+- olivia-lin 人格资料：`D:\Aesthetic\work\olivia-lin-reference\BSide_Olivia_Lin\persona`
+
+这两个目录不属于 Git 仓库，不会被提交。`src/letters/model-adapter.js` 中的 `OliviaSoulHarnessProvider` 是“完整 Harness 自己调用模型”的模式：它会使用基础模型配置作为外部脚本的后端。它不是第二个可替换模型；切换 offline/external/local 只改变后端，Persona 和 Harness 选择保持不变。当前 `offline-fallback` 只能做无模型链路测试，不能执行 OliviaSoul 的多步模型 Harness。
+
 ## 启动开发版本地服务
 
 普通玩家测试 Steam 游戏路径时，不需要手写 Node 组装代码：
@@ -36,6 +59,8 @@ node scripts/configure-modules.mjs config/module-settings.json
 node scripts/configure-modules.mjs config/module-settings.json
 node scripts/start-local-service.mjs
 ```
+
+仓库已经内置 `third_party/olivia-lin` 的 Persona 资产和 `third_party/OliviaSoul/v18-harness` 的开发版 Harness，不需要用户再下载这两个仓库。可复制 `config/user-config.example.json` 到 `secrets/user-config.json` 作为起点；`secrets/` 被 Git 忽略。
 
 默认使用离线 fallback，服务地址为 `http://localhost:27149`。如果选择外部 OpenAI 兼容 provider，可用环境变量配置地址、模型和密钥，例如：
 

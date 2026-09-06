@@ -33,7 +33,7 @@ Linli Nocturne 不重写 OliviaSoul 已经成熟的 Harness。通过配置 `harn
 
 1. 支持配置外部 OpenAI 兼容模型端点，发送 system prompt、来信、模型名和认证头，并解析标准 JSON 回复。
 2. 提供通用 Harness 插槽。任何实现 `generate(input)` 并返回统一结果的 Harness 都可以注入；同时提供 OliviaSoul v18 适配器，调用 `run-live.ps1`，校验 `HARNESS LIVE DONE`、非空正文和 `[BLOCKED]` 安全结果。
-3. 外部 provider 失败或超时后，按外部 provider、Harness、本地模型、fallback 的顺序尝试；禁用 fallback 时返回明确错误。
+3. 基础模型可以选择外部 API、本地模型或离线 fallback；Persona 始终作为基础模型输入层复用。OliviaSoul v18 是完整 Harness，它自己执行预检、生成、检查和重写，但后端端点、模型名和 Key 由基础模型配置提供；离线 fallback 只能做无模型链路测试，不能执行这套多步流程。
 4. API Key 只存在于请求头或进程环境，不写入信件、SQLite、错误文本、测试快照或日志。
 5. provider 路径、端点、模型名、超时、system prompt 和 fallback 开关全部由调用方配置，不写死任何用户路径或地域。
 6. 保持现有 `ModelAdapter.generateReply()` 契约不变，旧 fake provider 和当前信件重试逻辑继续通过。
@@ -42,7 +42,7 @@ Linli Nocturne 不重写 OliviaSoul 已经成熟的 Harness。通过配置 `harn
 
 - `OpenAICompatibleProvider` 负责外部 HTTP 调用，使用 `fetch`、超时和最小化错误码；响应正文只提取模型文本，不把原始响应写入错误。
 - `HarnessProvider` 是项目拥有的通用插槽；自定义 Harness 可以直接注入，不需要修改 `LetterService`。`OliviaSoulHarnessProvider` 只是一个适配器实现，使用参数数组启动 PowerShell，不拼接 shell 命令；临时来信和回信文件放在系统临时目录，完成后删除。
-- `createConfiguredModelAdapter(config)` 按 `external`、`harness`、`local`、`fallback` 创建 `ModelProviderChain`。`harness` 可以是任意 provider 对象，也可以配置为 `olivia-soul-v18`；旧的 `local.kind = olivia-soul-harness` 仅保留兼容。
+- `createConfiguredModelAdapter(config)` 保留通用 provider 链；启用完整 OliviaSoul Harness 时，运行时应把它作为当前回信执行管线，并把选中的基础模型配置传给它。不能把 Harness 当成与基础模型互斥、却又在链中永远排不到的第二个模型。
 - OliviaSoul 的 Harness 自己维护人物档案、跨封账本和记忆投影；本轮不把这些文件复制到 Linli Nocturne，也不再另造一套同功能的 Prompt。
 
 ## 配置示例
