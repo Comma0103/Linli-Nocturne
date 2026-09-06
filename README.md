@@ -27,15 +27,15 @@
 ### 可插拔模块与游戏资产
 
 * [x] **可插拔模块体系**：Provider、Persona、Harness、Renderer、PlaybackAdapter、Encoder、Importer、RenderJob 和 ModuleRegistry 均通过统一接口或适配器连接，可按配置选择实现。
-* [x] **视频回信资产管理**：支持视频资产导入、格式检查、保存、播放、替换、删除，以及处理中、成功和失败状态管理；这不包括视频自动生成。
+* [x] **视频回信资产管理**：支持已有视频资产导入、格式检查、保存、播放、替换、删除，以及处理中、成功和失败状态管理；这不包括视频回信自动生成。
 * [x] **安全安装与恢复**：支持版本白名单、SHA-256 基线校验、游戏目录外备份、已知补丁回滚和修改检测。
 
 ### 尚未完成
 
 * [ ] 网易云、QQ 音乐等外部歌单或歌曲导入。
 * [ ] 宽松演奏模式。
-* [ ] 视频自动生成。
-* [ ] 即兴作曲。
+* [ ] 视频回信自动生成（包括视频回信中的即兴创作）。
+* [ ] 定制演奏的规则化或模型辅助即兴作曲。
 * [ ] 3D 手指、琴键、镜头和动作同步。
 * [ ] 最终 GUI 设置、普通用户安装器和发行版。
 
@@ -63,61 +63,9 @@ Copy-Item config/user-config.example.json config/user-config.json
 notepad config/user-config.json
 ```
 
-只修改 `config/user-config.json`，不要修改模板。这个文件已被 Git 忽略。
+只修改 `config/user-config.json`，不要修改模板。这个文件已被 Git 忽略。完整的 `user-config.json` 属性说明、允许取值，以及信件、预设曲库、上传 MIDI、视频回信和记忆等功能的配置示例，见 [`docs/user-config.md`](./docs/user-config.md)。
 
-至少填写玩家名字和时区：
-
-```json
-"user": {
-  "displayName": "嘉树",
-  "language": "zh-CN",
-  "timeZone": "Asia/Shanghai"
-}
-```
-
-`displayName` 用于回信称呼和模型上下文。
-
-### 2. 选择信件模式
-
-#### 离线回信（无需 API Key）
-
-模板默认就是离线模式，适合先确认本地服务和游戏接入。测试时可把 `letters.dailyLimitBypass` 临时改为 `true`，跳过每日 3 封和 5 分钟等待。
-
-#### DeepSeek + Persona + OliviaSoul Harness（可选）
-
-把 `letters` 中对应字段改为自己的模型信息：
-
-```json
-"letters": {
-  "baseModel": {
-    "provider": "external.openai-compatible",
-    "external": {
-      "endpoint": "https://api.deepseek.com",
-      "model": "你的模型名称",
-      "apiKey": "你的 API Key"
-    }
-  },
-  "fallbackEnabled": true,
-  "persona": {
-    "providerId": "file",
-    "file": "../third_party/olivia-lin/BSide_Olivia_Lin/persona/olivia_lin.md"
-  },
-  "harness": {
-    "enabled": true,
-    "providerId": "olivia-soul-v18",
-    "root": "../third_party/OliviaSoul/v18-harness",
-    "person": "linli-local-user"
-  }
-}
-```
-
-API Key 只保存在本机的 `config/user-config.json`，不能提交或公开。仓库已经内置 OliviaSoul 和 olivia-lin 资产，不需要另外下载。`fallbackEnabled` 开启后，外部模型失败可以回到离线回信。
-
-#### 本地模型（可选）
-
-把 `baseModel.provider` 改为 `local.openai-compatible`，然后填写 `baseModel.local` 的本地 OpenAI 兼容地址、模型名和 Key；本地模型服务必须先在本机启动。
-
-### 3. 启动本地服务
+### 2. 启动本地服务
 
 配置保存后，在仓库根目录执行，并保持窗口运行：
 
@@ -126,9 +74,9 @@ node scripts/start-local-service.mjs
 Invoke-RestMethod http://localhost:27149/health
 ```
 
-返回 `ok: true` 后，信件服务已经启动。修改配置后必须重启这个服务才会生效。
+返回 `ok: true` 后，本地服务已经启动。修改配置后必须重启这个服务才会生效。
 
-### 4. 第一次接入 Steam 游戏
+### 3. 第一次接入 Steam 游戏
 
 如果只想调用本地 HTTP 服务，到这里即可；如果要在游戏界面体验，先完全退出游戏，再对游戏目录做只读检查：
 
@@ -144,13 +92,11 @@ node scripts/apply-install.mjs "你的 Steam 游戏目录" "游戏目录外的�
 
 游戏目录如果已经被其他工具修改、版本未知或游戏仍在运行，必须停止。执行器会在写入前再次校验基线并创建备份。
 
-### 5. 打开游戏并体验
+### 4. 打开游戏并体验
 
-保持本地服务运行，启动已完成接入的 Steam 客户端，打开信箱并写信。打开信件详情即可查看回信正文；默认规则是每日 3 封、每封等待 5 分钟。
+保持本地服务运行，启动已完成接入的 Steam 客户端，试用想使用的功能。
 
-当前阶段还可以使用已接入的 MIDI 上传、解析、生成和本地曲库入口；上传曲目真正接管原生 WebPlayer 的播放/演奏仍是 Phase 4 工作，受 `LINLI-PLAY-001` 影响。
-
-修改配置后必须重启服务。回信失败时，先检查模型地址、模型名、API Key 和 Harness 开关。
+当前可使用已经接入的信件、MIDI 上传、解析、生成、本地曲库和视频回信资产功能。上传曲目真正接管原生 WebPlayer 的播放/演奏仍受 `LINLI-PLAY-001` 影响。
 
 ## 开发者用法
 
@@ -192,7 +138,7 @@ music.addToPlaylist(track);
 领域服务 ── SQLite 存储
     ├─ LetterService + LetterWorker + MemoryProvider + ModelAdapter
     ├─ MusicService + MIDI Parser
-    └─ RenderJob + Audio/Video/Future3D Renderer
+    └─ RenderJob + AudioRenderer / VideoGenerator / VideoRenderer / Future3DRenderer
 ```
 
 设计文档位于 [`docs/`](./docs/)：
@@ -216,6 +162,7 @@ music.addToPlaylist(track);
 - [Phase 3 → Phase 4 交接文档](./docs/phase_3_to_4_handoff.md)
 - [Phase 4 完整音乐体验总览](./docs/phase4.md)
 - [Phase 4-1 音乐设置与媒体契约设计和验收](./docs/phase4-1-music-settings-and-media.md)
+- [Phase 6-1 视频回信与即兴创作设计和验收](./docs/phase6-1-video-reply-and-improvisation.md)
 - [第三方项目引用与复用说明](./docs/third-party-credits.md)
 - [模块设置与实现选择](./docs/module-settings.md)
 - [已内置的第三方 Persona/Harness 资产](./third_party/README.md)
@@ -336,7 +283,7 @@ music.addToPlaylist(track);
 
 #### [ ] Phase 4-1：用户 MIDI 预览和媒体任务
 
-完成上传曲目的预览、音频/视频生成、状态轮询、取消、失败恢复和本地媒体播放。
+完成上传曲目的预览、本地音频媒体生成、状态轮询、取消、失败恢复和本地媒体播放。
 
 #### [ ] Phase 4-2：曲库、歌单和 App 选择入口
 
@@ -356,55 +303,91 @@ music.addToPlaylist(track);
 
 #### [ ] Phase 4-6：宽松演奏模式
 
-允许导入的歌曲以音频播放或近似 MIDI 事件进入演奏流程。这个阶段不要求手指、琴键和音乐逐帧完全匹配；严格的 3D 同步仍留给 Phase 6，并且播放器、渲染器和同步器都保持可插拔。
+允许导入的歌曲以音频播放或近似 MIDI 事件进入演奏流程。这个阶段不要求手指、琴键和音乐逐帧完全匹配；严格的 3D 同步仍留给 Phase 5，并且播放器、渲染器和同步器都保持可插拔。
 
-### Phase 5 — 即兴创作
+#### [ ] Phase 4-7：Phase 4 完整音乐体验总验收与交接
 
-#### [ ] Phase 5-1：作曲中间表示和约束
+汇总前六轮的音乐设置、曲库歌单、原生证据、Steam 播放/演奏、外部来源和宽松演奏结果，完成 Phase 4 的整体验收与下一阶段交接。视频回信和 Phase 5 的定制演奏技术底座不在本轮提前实现。
 
-定义音符、节奏、和声、段落和风格约束的统一表示。
+### Phase 5 — 定制演奏与 3D 表现（技术基础）
 
-#### [ ] Phase 5-2：外部 API、本地模型和 fallback 作曲 provider
+这一阶段是整个项目中技术风险最高的基础阶段之一。先做现有实现、素材、渲染路线和许可边界调研，再做最小技术预研，最后才进入可替换的正式实现。它不实现视频回信，但要为 Phase 6 提供可复用的演奏时间轴、动作轨道和渲染能力。
 
-沿用可插拔 provider 设计，让用户选择外部 API、完全本地模型或无模型路径。
+#### [ ] Phase 5-1：现有实现、素材和技术路线调研
 
-#### [ ] Phase 5-3：生成、编辑、校验和导出 MIDI
+调查原游戏的演奏表现、社区样例、可复用开源项目、角色与环境资产、3D 引擎、实时渲染和离线渲染方案，并记录许可证、硬件要求、输入输出和不可复用部分。
 
-把模型输出转换为可校验、可预览、可编辑和可加入曲库的 MIDI。
+#### [ ] Phase 5-2：最小可行技术预研
 
-### Phase 6 — 3D 演奏
+用一首短 MIDI 和最小场景验证“音符时间轴 → 音频 → 琴键/手部动作 → 镜头/场景 → 视频”的最短链路，测量同步误差、渲染时间、资源占用和输出质量。预研失败时记录原因，不直接进入大规模实现。
 
-#### [ ] Phase 6-1：统一演奏时间轴
+#### [ ] Phase 5-3：统一演奏中间表示和时间轴
 
-把 MIDI、音频、手指、琴键、镜头和动作轨道放入统一的时间轴中间表示。
+定义 MIDI、音频、琴键、手指、镜头、动作、表情和音色轨道的统一时间轴、中间表示、版本和校验规则，让不同 Renderer 可以使用同一份输入。
 
-#### [ ] Phase 6-2：手指与琴键同步模块
+#### [ ] Phase 5-4：手指、琴键和演奏动作同步
 
-实现可替换的手指/琴键映射和同步校验，不把某个 3D 引擎写死。
+实现可替换的手指/琴键映射、动作约束和同步校验，明确哪些表现可以近似、哪些表现必须精确，不把某个 3D 引擎或角色绑定写死。
 
-#### [ ] Phase 6-3：镜头、动作和音色轨道
+#### [ ] Phase 5-5：镜头、环境、动作和音色轨道
 
-增加镜头、动作、音色和演奏表现轨道，并保持与 RenderJob 的状态和媒体输出一致。
+建立演奏场景、镜头、角色动作、表情和音色表现轨道，并让它们与音频、MIDI 时间轴和 RenderJob 输出保持一致。
 
-#### [ ] Phase 6-4：可插拔 3D Renderer
+#### [ ] Phase 5-6：可替换 3D Renderer 和资源能力报告
 
-接入一个或多个 3D 渲染器，统一输入输出、进度、失败和资源配置。
+接入至少一个可运行的 Renderer，统一输入输出、进度、失败、缓存和资源配置；同时报告不同 Renderer 对角色、环境、动作和硬件的能力差异。
+
+#### [ ] Phase 5-7：定制演奏技术底座验收与 Phase 6 交接
+
+完成从 MIDI/曲目到演奏媒体的端到端验收，记录同步误差、画面质量、性能和已知限制。只有达到明确的交接标准后，Phase 6 才能使用这套能力开发视频回信。
+
+### Phase 6 — 视频回信与即兴创作
+
+视频回信依赖 Phase 5 的演奏时间轴、动作轨道和 Renderer。这里的“即兴创作”指根据回信上下文触发的即兴演奏或改编，不等同于 Phase 5 的通用演奏技术底座。
+
+#### [ ] Phase 6-1：现有功能调研、行为边界和用户流程
+
+调查关服前视频回信、即兴创作的实际表现和用户样例，确认触发条件、回复结构、角色动作、声音、演奏和环境要求，再冻结输入、输出和验收边界。设计与验收记录见 [Phase 6-1 视频回信与即兴创作设计和验收](./docs/phase6-1-video-reply-and-improvisation.md)。
+
+#### [ ] Phase 6-2：回信上下文与即兴创作中间表示
+
+定义文字回信、玩家关系、角色状态、情绪、场景、声音、演奏意图和即兴约束如何转换为 Phase 5 可消费的演奏与表现计划。
+
+#### [ ] Phase 6-3：VideoGenerator 接口、注册表和本地 fallback
+
+实现独立的 `VideoGenerator` 和注册表，接入确定性的本地技术 fallback，验证排队、处理中、成功、失败、取消、重启恢复、媒体保存、格式检查和查询；它与已有 `videoImporter` 完全分离。
+
+#### [ ] Phase 6-4：外部/本地高质量生成或渲染 provider
+
+根据 Phase 6-1 的调研结果选择可行路线，接入外部视频模型、本地模型或实时/离线 Renderer；记录输入资产、硬件要求、成本、延迟、隐私和质量边界。
+
+#### [ ] Phase 6-5：视频回信任务、网关和用户入口
+
+把回信上下文、即兴计划、Phase 5 演奏输出和视频生成结果串成可恢复的任务流程，让用户在收到回信时能够查看、播放和管理视频资产。
+
+#### [ ] Phase 6-6：视频回信与即兴创作验收
+
+分别完成离线 fallback 技术验收、provider 质量验收和 Steam 实机验收；不能用简单 fallback 的成功替代正式角色表现质量验收。
 
 ### Phase 7 — 发布发行
 
-#### [ ] Phase 7-1：普通用户安装器
+#### [ ] Phase 7-1：发行形态和安装边界调研
+
+确认进程锁、安装目录、依赖打包、更新、回滚、日志和卸载的实际约束，形成发行前置清单。
+
+#### [ ] Phase 7-2：普通用户安装器
 
 补齐进程锁、事务日志、安装后完整验证、卸载命令和安全回滚。
 
-#### [ ] Phase 7-2：配置向导和模块选择
+#### [ ] Phase 7-3：配置向导和模块选择
 
 让用户为信件、模型、播放器、渲染器和 3D 模块选择实现、填写配置并切换 fallback。
 
-#### [ ] Phase 7-3：诊断、备份和恢复
+#### [ ] Phase 7-4：诊断、备份和恢复
 
 提供版本检查、能力检查、日志导出、外置备份、恢复和可读错误提示。
 
-#### [ ] Phase 7-4：发行包和最终文档
+#### [ ] Phase 7-5：发行包和最终文档
 
 整理许可证、第三方引用、安装说明、升级路径、已知问题和发行验证清单。
 

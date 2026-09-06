@@ -14,7 +14,9 @@ Game Client -> Local Gateway -> Domain Services -> Stores and Renderers
 - MediaStore：校验、元数据、Range 读取、备份。
 - DesktopApp：安装、配置、启动、诊断和恢复。
 - ModuleRegistry/ModuleSettings：登记可用实现，保存用户对 provider、renderer、播放适配器、人格和记忆的选择；敏感凭据不进入设置文件。
-- VideoReplyService：将外部 MP4 作为信件附属资产导入、检查、发布和替换；视频检查器通过 `media.videoImporter` 选择。
+- VideoAssetService：将已有 MP4 作为信件附属资产导入、检查、发布、替换和删除；视频检查器通过 `media.videoImporter` 选择。
+- VideoReplyService：编排未来的“视频回信”领域流程，把文字回信上下文、角色/场景输入和可选即兴演奏交给独立的 `VideoGenerator`；它不复用 `videoImporter`。
+- VideoGeneratorRegistry：登记可替换的视频回信生成器。生成器可以是本地 fallback、外部视频模型适配器或本地高质量渲染器；当前版本只保留接口方向，不声称自动视频回信已经可用。
 - LocalApp 启动入口：把模块设置、SQLite、LetterWorker、兼容网关和媒体服务装配成一个开发版本地服务；默认离线 fallback，不把凭据写入设置文件。
 
 关键实体：
@@ -35,7 +37,8 @@ Linli Nocturne 的核心层只处理统一接口和中间表示，不把任何�
 
 - **信件**：`LetterProvider` 统一外部 API、本地模型、第三方 Harness 和 fallback；OliviaSoul 是一个可选适配器。
 - **音乐与演奏**：`MusicPlayer`/播放适配器统一 MIDI、音频、原生 WebPlayer 和其他播放器；`LINLI-PLAY-001` 只描述其中一个接入缺陷。
-- **媒体与 3D**：`RenderJob` 是统一中间表示，Audio、Video、Future3D 和动作同步器都是可替换实现。
+- **媒体与 3D**：`RenderJob` 是统一任务生命周期。AudioRenderer、定制演奏用的视频 Renderer、视频回信用的 `VideoGenerator` 和 Future3D Renderer 都是可替换实现，但视频回信生成与已有视频导入是两条不同链路。
+- **三种用户体验**：文字回信、视频回信（含即兴创作）和定制演奏分别拥有自己的输入与验收边界；可以共用任务基础设施，不能共用一个含义模糊的“视频功能”。
 - **用户设置**：App 保存每个模块当前选择、配置和 fallback 策略；切换实现不应要求修改领域服务代码。
 - **信件身份**：`user.displayName` 表示玩家本人，`林离`表示游戏收信人；前者进入回信上下文和称呼，后者保留在存储、配额及原生协议中。
 - **外部音乐来源**：网易云音乐、QQ 音乐等来源只能通过独立导入适配器转换到统一曲目中间表示；来源服务不是 MusicService 的固定依赖。

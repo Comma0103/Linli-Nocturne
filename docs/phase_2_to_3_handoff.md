@@ -99,7 +99,8 @@ Phase 3 与 Phase 4 没有“必须先完成 Phase 3 才能修复 MIDI”的技�
 | Phase 2 | 网关、补丁、备份回滚、离线入口、官方曲目播放、用户曲目基础数据可见 | 上传曲目完整原生演奏、模型回信、3D 手指同步 |
 | Phase 3 | 信件状态、时区、重试、provider、文字回信和后续视频回信资产流程 | MIDI 播放接管、WebPlayer 逆向 |
 | Phase 4 | 用户上传 MIDI、预览、媒体任务、曲库、上传曲目播放/演奏 | 真实 3D 手指/镜头/动作生成 |
-| Phase 5/6 | 即兴作曲与 3D 时间轴、手指、镜头、动作 Renderer | 重新设计 Phase 2 接入基础 |
+| Phase 5 | 定制演奏与 3D 时间轴、手指、镜头、动作 Renderer | 重新设计 Phase 2 接入基础 |
+| Phase 6 | 视频回信与即兴创作 | 依赖 Phase 5 的演奏与 3D 技术底座 |
 
 ## 6. 可直接粘贴到新 Task/Thread 的 Prompt
 

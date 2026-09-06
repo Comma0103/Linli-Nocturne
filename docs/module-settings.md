@@ -24,6 +24,7 @@ node scripts/configure-modules.mjs config/module-settings.json
 - `music.playbackAdapter`：Olivia Lin 原生播放器适配器或其他播放器适配器。
 - `music.encoder`：媒体编码器实现。
 - `media.videoImporter`：视频导入检查器；默认使用 FFprobe MP4 检查器，也可以注册其他实现。
+- 视频回信生成器：未来通过独立的 `VideoGeneratorRegistry` 选择；当前尚未写入用户配置模板，也不能用 `media.videoImporter` 代替。
 - `threeD.renderer`：未来的 3D Renderer。
 
 领域服务通过 `ModuleRegistry` 和 `resolveModuleSelections()` 取得实现，服务本身不读取设置文件，也不依赖某个具体第三方项目。未来 GUI 设置页直接编辑同一份设置模型，不再另造配置协议。
