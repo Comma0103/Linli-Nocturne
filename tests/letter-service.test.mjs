@@ -27,6 +27,7 @@ test('bypass mode removes daily and delay limits', async () => {
   const service = new LetterService({ store, modelAdapter: new ModelAdapter(new FallbackLetterProvider()), limits: { bypass: true } });
   service.send({ body: '即时信' });
   assert.equal((await service.processNext()).status, 'replied');
+  assert.equal(service.remainingToday(), 3, 'bypass 模式不能让客户端把写信按钮置灰');
   store.close();
 });
 

@@ -81,7 +81,7 @@ test('toy compatibility routes expose local letters and playlist shapes', async 
   const list = await fetch(`${base}/toy/letter/list`);
   const listPayload = await list.json();
   assert.equal(listPayload.data.list[0].content, '兼容测试');
-  assert.equal(listPayload.data.remainingToday, 2);
+  assert.equal(listPayload.data.remainingToday, 3, 'bypass 模式继续允许客户端打开写信入口');
   const added = await fetch(`${base}/toy/addToPlaylist`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ itemType: 3, itemId: 'local-1', name: '本地曲目' }) });
   assert.equal((await added.json()).data.itemId, 'local-1');
   const playlist = await fetch(`${base}/toy/searchPlaylist`);

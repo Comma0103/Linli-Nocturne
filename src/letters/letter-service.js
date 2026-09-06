@@ -64,6 +64,7 @@ export class LetterService {
 
   list() { return this.store.listLetters(); }
   remainingToday(recipient = '林离') {
+    if (this.limits.bypass) return this.limits.dailyLimit;
     const now = this.clock();
     const { startIso, endIso } = this.dayBoundary(now);
     return Math.max(0, this.limits.dailyLimit - this.store.countToday(recipient, startIso, endIso));
