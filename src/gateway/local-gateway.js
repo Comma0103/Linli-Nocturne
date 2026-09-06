@@ -34,7 +34,7 @@ function visibleLetter(letter) {
     createdAt: toSeconds(letter.created_at), repliedAt: replied ? toSeconds(letter.replied_at) : null, error: null };
 }
 
-export function createLocalGateway({ letterService, musicService = null, midiJobService = null, userProfile = {} }) {
+export function createLocalGateway({ letterService, musicService = null, midiJobService = null, userProfile = {}, mediaLogger = null }) {
   return createServer(async (request, response) => {
     try {
       response.setHeader('access-control-allow-origin', request.headers.origin ?? '*');
@@ -107,8 +107,13 @@ export function createLocalGateway({ letterService, musicService = null, midiJob
       const media = url.pathname.match(/^\/toy\/midi\/media\/([^/]+)$/u);
       if (midiJobService && request.method === 'GET' && media) {
         const bytes = midiJobService.mediaBytes(media[1]);
-        if (!bytes) return sendJson(response, 404, { error: 'media_not_found' });
-        response.writeHead(200, { 'content-type': midiJobService.mediaContentType ?? 'audio/wav', 'access-control-allow-origin': '*', 'content-length': bytes.length });
+        if (!bytes) {
+          mediaLogger?.({ method: request.method, pathname: url.pathname, range: request.headers.range ?? null, status: 404, contentType: null, bytes: 0 });
+          return sendJson(response, 404, { error: 'media_not_found' });
+        }
+        const contentType = midiJobService.mediaContentType ?? 'audio/wav';
+        mediaLogger?.({ method: request.method, pathname: url.pathname, range: request.headers.range ?? null, status: 200, contentType, bytes: bytes.length });
+        response.writeHead(200, { 'content-type': contentType, 'access-control-allow-origin': '*', 'content-length': bytes.length });
         return response.end(bytes);
       }
       if (request.method === 'POST' && url.pathname === '/toy/addToPlaylist') {

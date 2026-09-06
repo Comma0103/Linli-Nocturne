@@ -121,7 +121,9 @@ export class MidiJobService {
         const duration = Math.max(0, Math.round(Number(job.info?.duration ?? 0)));
         return mediaUrl ? [
           { url: mediaUrl, tod: 'TOD12', view: 'NI', coverUrl: '', duration },
-          { url: mediaUrl, tod: 'TOD17', view: 'NI', coverUrl: '', duration },
+          // The official catalogue uses the literal TOD1730 key. The native
+          // player selects this entry by key rather than by a numeric guess.
+          { url: mediaUrl, tod: 'TOD1730', view: 'NI', coverUrl: '', duration },
           { url: mediaUrl, tod: 'TOD20', view: 'NI', coverUrl: '', duration },
         ] : [];
       })(),
