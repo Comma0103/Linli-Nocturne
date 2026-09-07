@@ -4,6 +4,8 @@
 
 README 只介绍通用启动流程。本页先解释所有配置属性，再按信件、预设曲库和上传曲子等功能给出配置示例。配置保存后必须重启本地服务。
 
+实验分支新增 `olivia-lin.offline`、`linli.persona-bundle`、`linli.fusion-v1` 和 `persona-contract`；这些资产已随仓库提供，不需要另行下载。
+
 ## 一、所有属性
 
 ### 根属性
@@ -17,13 +19,14 @@ README 只介绍通用启动流程。本页先解释所有配置属性，再按�
 | `media`   | 对象                 | 模板中的媒体设置 | 视频回信导入检查器选择。                                               |
 | `threeD`  | 对象                 | 模板中的 3D 设置 | 未来 3D 演奏模块的预留位置，目前没有可用的默认 3D Renderer。           |
 | `game`    | 对象                 | 模板中的游戏信息 | 当前主要用于记录目标游戏信息；本地服务不会用它替代启动参数或环境变量。 |
-| `privacy` | 对象                 | 模板中的隐私选项 | 当前是预留的隐私声明字段，尚未独立控制运行时请求。                     |
+| `privacy` | 对象                 | 模板中的隐私选项 | 外部模型请求需要明确允许；外部媒体来源仍未接入。                     |
 
 ### `user`
 
 | 属性               | 类型和允许值                                                 | 默认值          | 说明                                                                       |
 | ------------------ | ------------------------------------------------------------ | --------------- | -------------------------------------------------------------------------- |
 | `user.displayName` | 字符串                                                       | `""`            | 玩家名字，用于回信称呼和模型上下文。它不是游戏信件收件人；收件人仍是林离。 |
+| `user.profileId` | 字符串 | `"default"` | 本机多套用户/会话的记忆隔离键。 |
 | `user.language`    | 字符串，模板为 `"zh-CN"`                                     | `"zh-CN"`       | 界面语言预留字段。当前服务主要使用简体中文文案，暂不根据它切换整套界面。   |
 | `user.timeZone`    | IANA 时区字符串，例如 `Asia/Shanghai`、`America/Los_Angeles` | `Asia/Shanghai` | 信件和 MIDI 任务的自然日边界。填写本机实际使用的时区。                     |
 
@@ -34,7 +37,8 @@ README 只介绍通用启动流程。本页先解释所有配置属性，再按�
 | 属性                                    | 类型和允许值                                                                | 默认值                     | 说明                                                                                                          |
 | --------------------------------------- | --------------------------------------------------------------------------- | -------------------------- | ------------------------------------------------------------------------------------------------------------- |
 | `letters.composition`                   | 字符串，模板为 `base-model-with-persona-and-harness`                        | 模板值                     | 给人看的组合说明。当前启动器根据下面的具体字段选择实现，不靠它切换模型。                                      |
-| `letters.baseModel.provider`            | `offline-fallback`、`external.openai-compatible`、`local.openai-compatible` | `offline-fallback`         | 选择离线回信、外部 OpenAI 兼容服务或本地 OpenAI 兼容服务。                                                    |
+| `letters.baseModel.provider`            | `olivia-lin.offline`、`offline-fallback`、`external.openai-compatible`、`local.openai-compatible` | `olivia-lin.offline` | 选择仓库内离线人格引擎、最简 fallback、外部 API 或本地模型。 |
+| `letters.baseModel.offline.python` | Python 命令或路径 | `python` | 仅离线人格引擎使用；命令不含路径分隔符时从 PATH 查找。 |
 | `letters.baseModel.external.providerId` | 字符串，模板为 `external.openai-compatible`                                 | 模板值                     | 外部服务的说明字段。真正的选择由 `baseModel.provider` 决定。                                                  |
 | `letters.baseModel.external.service`    | 字符串，例如 `deepseek`                                                     | `deepseek`                 | 服务来源说明字段，不会替代 `endpoint`。                                                                       |
 | `letters.baseModel.external.endpoint`   | URL 字符串                                                                  | `https://api.deepseek.com` | 外部 OpenAI 兼容接口地址。                                                                                    |
@@ -46,18 +50,19 @@ README 只介绍通用启动流程。本页先解释所有配置属性，再按�
 | `letters.baseModel.local.apiKey`        | 字符串                                                                      | 空字符串                   | 本地服务密钥；若本地服务不需要密钥可留空。                                                                    |
 | `letters.systemPrompt`                  | 字符串                                                                      | 内置中文林离提示词         | 可选的基础模型系统提示词，会传给外部或本地 OpenAI 兼容 provider。                                             |
 | `letters.fallbackEnabled`               | 布尔值                                                                      | `true`                     | 普通外部或本地 provider 失败时是否允许回到可用的 fallback。完整 OliviaSoul Harness 的降级边界仍由其实现决定。 |
+| `letters.outputPolicy.providerId` | `persona-contract` 或 `none` | `persona-contract` | 保存前按所选 Persona 的输出契约校验落款；林离素材包要求 `—— 林离` 恰好出现一次。 |
 | `letters.dailyLimitBypass`              | 布尔值                                                                      | `false`                    | `true` 时跳过每日 3 封和 5 分钟等待，适合本地测试；不改变游戏中仍可写信的协议返回。                           |
 
 #### Persona、Harness 和记忆
 
 | 属性                                | 类型和允许值                                       | 默认值                                 | 说明                                                                                            |
 | ----------------------------------- | -------------------------------------------------- | -------------------------------------- | ----------------------------------------------------------------------------------------------- |
-| `letters.persona.providerId`        | `default`、`static`、`file`，或已注册的 Persona ID | 模板为 `file`                          | 选择不额外注入人格、使用静态文本或读取人格文件。                                                |
+| `letters.persona.providerId`        | `default`、`static`、`file`、`linli.persona-bundle`，或已注册 ID | 模板为 `linli.persona-bundle` | 选择人格来源；素材包同时加载人格、书信技艺、背景、示例和来源哈希。 |
 | `letters.persona.sourceProject`     | 字符串                                             | `olivia-lin`                           | 资产来源说明字段，不负责加载文件。                                                              |
 | `letters.persona.file`              | 文件路径                                           | 模板中的 `olivia-lin` 路径             | `providerId` 为 `file` 时使用。相对路径以 `user-config.json` 所在目录解析；也可以填写绝对路径。 |
 | `letters.persona.text`              | 字符串                                             | 空字符串                               | `providerId` 为 `static` 时使用的静态人格文本。                                                 |
 | `letters.harness.enabled`           | 布尔值                                             | `false`                                | 是否启用 Harness。关闭后不会选择 `providerId` 指定的 Harness。                                  |
-| `letters.harness.providerId`        | `olivia-soul-v18`，或已注册的 Harness ID           | `olivia-soul-v18`                      | 选择 Harness 实现。                                                                             |
+| `letters.harness.providerId`        | `linli.fusion-v1`、`olivia-soul-v18`，或已注册 ID | `linli.fusion-v1` | 选择 Harness 实现；融合实现把所选基础模型作为唯一模型，并显式传入一份历史。 |
 | `letters.harness.sourceProject`     | 字符串                                             | `OliviaSoul`                           | 资产来源说明字段。                                                                              |
 | `letters.harness.root`              | 文件夹路径                                         | 模板中的 `OliviaSoul/v18-harness` 路径 | Harness 运行目录。相对路径以 `user-config.json` 所在目录解析。                                  |
 | `letters.harness.person`            | 字符串                                             | `linli-local-user`                     | Harness 内部归档键，不是玩家显示名，也不是游戏收件人。                                          |
@@ -96,7 +101,7 @@ README 只介绍通用启动流程。本页先解释所有配置属性，再按�
 | ------------------------------------ | ------------ | ------------------------ | ---------------------------------------------------------------------------------------------- |
 | `game.serviceUrl`                    | URL 字符串   | `http://localhost:27149` | 模板中的目标服务记录。当前服务地址由 `LINLI_HOST`、`LINLI_PORT` 或启动器默认值决定。           |
 | `game.clientVersion`                 | 版本字符串   | `0.0.9.627`              | 模板中的目标客户端记录。安装计划会单独检查游戏版本，不由此字段放行未知版本。                   |
-| `privacy.allowExternalModelRequests` | 布尔值       | `false`                  | 隐私意图预留字段；选择外部 provider 时仍必须明确填写外部配置，当前代码不会仅靠此字段阻止请求。 |
+| `privacy.allowExternalModelRequests` | 布尔值       | `false`                  | 选择 `external.openai-compatible` 时必须改为 `true`，否则服务不会启动；来信和启用的记忆可能发送给该服务。 |
 | `privacy.allowExternalMediaSources`  | 布尔值       | `false`                  | 外部音乐来源预留字段；当前没有外部来源适配器，不会自动开启下载或绕过访问控制。                 |
 
 ## 二、按功能配置

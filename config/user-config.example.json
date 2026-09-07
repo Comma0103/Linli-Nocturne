@@ -2,28 +2,32 @@
   "version": 1,
   "user": {
     "displayName": "",
+    "profileId": "default",
     "language": "zh-CN",
     "timeZone": "Asia/Shanghai"
   },
   "letters": {
     "composition": "base-model-with-persona-and-harness",
     "baseModel": {
-      "provider": "offline-fallback",
+      "provider": "olivia-lin.offline",
+      "offline": { "python": "python" },
       "external": {
         "providerId": "external.openai-compatible",
         "service": "deepseek",
         "endpoint": "https://api.deepseek.com",
         "model": "",
-        "apiKey": ""
+        "apiKey": "",
+        "timeoutMs": 180000
       },
       "local": {
         "providerId": "local.openai-compatible",
         "endpoint": "http://127.0.0.1:1234/v1",
         "model": "",
-        "apiKey": ""
+        "apiKey": "",
+        "timeoutMs": 180000
       }
     },
-    "fallbackEnabled": true,
+    "fallbackEnabled": false,
     "dailyLimitBypass": false,
     "memory": {
       "enabled": false,
@@ -33,18 +37,21 @@
       "maxContextChars": 6000
     },
     "persona": {
-      "providerId": "file",
-      "sourceProject": "olivia-lin",
-      "file": "../third_party/olivia-lin/BSide_Olivia_Lin/persona/olivia_lin.md",
+      "providerId": "linli.persona-bundle",
+      "maxChars": 40000,
+      "file": "",
       "text": ""
     },
     "harness": {
       "enabled": false,
-      "providerId": "olivia-soul-v18",
+      "providerId": "linli.fusion-v1",
       "sourceProject": "OliviaSoul",
       "root": "../third_party/OliviaSoul/v18-harness",
-      "person": "linli-local-user"
-    }
+      "person": "linli-local-user",
+      "maxRewrites": 1,
+      "timeoutMs": 900000
+    },
+    "outputPolicy": { "providerId": "persona-contract" }
   },
   "music": {
     "renderer": "builtin.audio",

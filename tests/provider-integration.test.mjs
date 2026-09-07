@@ -75,7 +75,7 @@ test('OpenAI 兼容 provider 发送规范请求并返回统一文字', async t =
   assert.equal(received.body.model, 'fake-model');
   assert.deepEqual(received.body.messages, [
     { role: 'system', content: '只输出回信' },
-    { role: 'user', content: '嘉树写给林离的来信：今天很好' },
+    { role: 'user', content: JSON.stringify({ currentLetter: { sender: '嘉树', recipient: '林离', body: '今天很好' }, history: '' }) },
   ]);
 });
 
@@ -89,7 +89,8 @@ test('OpenAI 兼容 provider 接收统一的有限记忆上下文', async () => 
     },
   });
   await provider.generate({ prompt: '今天好吗', memory: '来信：昨天很好\n回信：我也记得。' });
-  assert.match(received.messages.at(-1).content, /此前对话记忆/u);
+  assert.equal(JSON.parse(received.messages.at(-1).content).currentLetter.body, '今天好吗');
+  assert.equal(JSON.parse(received.messages.at(-1).content).history, '来信：昨天很好\n回信：我也记得。');
   assert.match(received.messages.at(-1).content, /昨天很好/u);
 });
 

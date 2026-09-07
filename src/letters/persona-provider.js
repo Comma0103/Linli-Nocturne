@@ -1,4 +1,11 @@
 import { readFile } from 'node:fs/promises';
+import { createHash } from 'node:crypto';
+
+function checked(text, maxChars) {
+  if (!Number.isFinite(maxChars) || text.length > maxChars) throw Object.assign(new Error('人格文本超出预算，未截断规则'), { code: 'persona_budget_exceeded' });
+  return text;
+}
+const digest = text => createHash('sha256').update(text).digest('hex');
 
 export class PersonaProvider {
   constructor({ provider = 'persona' } = {}) { this.provider = provider; }
@@ -16,7 +23,7 @@ export class StaticPersonaProvider extends PersonaProvider {
     this.maxChars = Math.max(0, Math.floor(maxChars));
   }
 
-  async getPrompt() { return { text: this.text.slice(0, this.maxChars), provider: this.provider, metadata: { source: 'static' } }; }
+  async getPrompt() { return { text: checked(this.text, this.maxChars), provider: this.provider, metadata: { version: '1.0.0', sha256: digest(this.text) } }; }
 }
 
 export class FilePersonaProvider extends PersonaProvider {
@@ -29,6 +36,6 @@ export class FilePersonaProvider extends PersonaProvider {
 
   async getPrompt() {
     const text = await readFile(this.path, 'utf8');
-    return { text: text.slice(0, this.maxChars), provider: this.provider, metadata: { source: 'file', path: this.path } };
+    return { text: checked(text, this.maxChars), provider: this.provider, metadata: { version: '1.0.0', sha256: digest(text) } };
   }
 }

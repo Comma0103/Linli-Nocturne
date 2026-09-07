@@ -45,7 +45,7 @@ function systemWithPersona(systemPrompt, persona) {
   return [String(systemPrompt ?? '').trim(), String(persona ?? '').trim()].filter(Boolean).join('\n\n');
 }
 
-export function runProcess(command, args, { cwd, timeoutMs, env = process.env, spawnImpl = spawn }) {
+export function runProcess(command, args, { cwd, timeoutMs, env = process.env, spawnImpl = spawn, label = 'olivia-soul-harness', maxOutputChars = 1_000_000 }) {
   return new Promise((resolve, reject) => {
     const child = spawnImpl(command, args, { cwd, env, shell: false, windowsHide: true });
     let stdout = '';
@@ -55,15 +55,22 @@ export function runProcess(command, args, { cwd, timeoutMs, env = process.env, s
       if (settled) return;
       settled = true;
       child.kill?.();
-      reject(new ModelProviderError('OliviaSoul Harness timed out', 'provider_timeout', 'olivia-soul-harness'));
+      reject(new ModelProviderError('生成程序运行超时', 'provider_timeout', label));
     }, timeoutMs);
-    child.stdout?.on('data', chunk => { stdout += chunk.toString(); });
-    child.stderr?.on('data', chunk => { stderr += chunk.toString(); });
+    const collect = (key, chunk) => {
+      if (key === 'stdout') stdout += chunk.toString(); else stderr += chunk.toString();
+      if (!settled && stdout.length + stderr.length > maxOutputChars) {
+        settled = true; clearTimeout(timer); child.kill?.();
+        reject(new ModelProviderError('生成程序输出过大', 'provider_output_limit', label));
+      }
+    };
+    child.stdout?.on('data', chunk => collect('stdout', chunk));
+    child.stderr?.on('data', chunk => collect('stderr', chunk));
     child.once('error', error => {
       if (settled) return;
       settled = true;
       clearTimeout(timer);
-      reject(new ModelProviderError('OliviaSoul Harness could not start', error?.code ?? 'provider_unavailable', 'olivia-soul-harness'));
+      reject(new ModelProviderError('生成程序无法启动，请检查运行环境', error?.code ?? 'provider_unavailable', label));
     });
     child.once('close', code => {
       if (settled) return;
@@ -118,19 +125,21 @@ export class OpenAICompatibleProvider extends FunctionProvider {
     const url = endpoint.replace(/\/$/u, '').endsWith('/chat/completions')
       ? endpoint.replace(/\/$/u, '')
       : `${endpoint.replace(/\/$/u, '')}${endpoint.replace(/\/$/u, '').endsWith('/v1') ? '/chat/completions' : '/v1/chat/completions'}`;
-    super({ provider, timeoutMs, generate: async ({ prompt = '', recipient = '林离', userDisplayName = '', memory = '', persona = '' }) => {
+    super({ provider, timeoutMs, generate: async ({ prompt = '', recipient = '林离', userDisplayName = '', memory = '', persona = '', system, now, timeZone }) => {
+      const systemText = system ?? systemWithPersona(systemPrompt, persona);
       const payload = await requestJson(fetchImpl, url, {
         method: 'POST',
         headers: { 'content-type': 'application/json', authorization: `Bearer ${apiKey}` },
         body: JSON.stringify({ model, messages: [
-          ...(systemWithPersona(systemPrompt, persona) ? [{ role: 'system', content: systemWithPersona(systemPrompt, persona) }] : []),
-          { role: 'user', content: `${userDisplayName ? `${userDisplayName}写给${recipient}` : `给${recipient}`}的来信：${promptWithMemory(prompt, memory)}` },
+          ...(systemText ? [{ role: 'system', content: systemText }] : []),
+          { role: 'user', content: JSON.stringify({ currentLetter: { sender: userDisplayName, recipient, body: prompt }, history: memory, ...(now ? { now, timeZone } : {}) }) },
         ] }),
       }, timeoutMs, provider);
       const text = extractOpenAiText(payload);
       if (!text) throw new ModelProviderError(`${provider} returned an empty reply`, 'provider_empty_reply', provider);
-      return { text, provider, metadata: { model, protocol: 'openai-compatible' } };
+      return { text, provider, metadata: { model: typeof payload.model === 'string' ? payload.model : model, requestedModel: model, version: '1.0.0', protocol: 'openai-compatible' } };
     } });
+    this.model = model;
   }
 }
 
@@ -178,12 +187,15 @@ export class ModelProviderChain {
     for (const provider of this.providers) {
       try {
         const result = await provider.generate(input);
-        return { ...result, metadata: { ...(result?.metadata ?? {}), providerFailures: failures } };
+        if (!result?.text?.trim()) throw new ModelProviderError('生成结果没有正文', 'provider_empty_reply', provider.provider);
+        return { ...result, metadata: { ...(result?.metadata ?? {}), actualModule: provider.moduleInfo ?? { id: provider.provider ?? 'unknown', version: provider.version ?? 'unknown' },
+          providerFailures: failures } };
       } catch (error) {
-        failures.push({ provider: provider.provider ?? provider.constructor.name, code: error?.code ?? 'provider_failed' });
+        failures.push({ provider: provider.provider ?? provider.constructor.name, module: provider.moduleInfo,
+          code: safeErrorCode(error), execution: error.execution });
       }
     }
-    throw new ModelProviderError('No model provider could generate a reply', 'provider_chain_exhausted', 'chain');
+    throw Object.assign(new ModelProviderError('No model provider could generate a reply', 'provider_chain_exhausted', 'chain'), { execution: { providerFailures: failures } });
   }
 }
 
@@ -220,10 +232,14 @@ export class ModelAdapter {
 }
 
 export class FallbackLetterProvider {
-  constructor({ provider = 'offline-fallback' } = {}) { this.provider = provider; }
+  constructor({ provider = 'offline-fallback' } = {}) { this.provider = provider; this.version = '1.0.0'; this.offline = true; }
 
   async generate({ recipient = '你', userDisplayName = '', prompt = '' } = {}) {
     const salutation = String(userDisplayName ?? '').trim() || recipient;
-    return { provider: this.provider, text: `${salutation}，我收到了你的信。谢谢你把这些话告诉我。${prompt ? '我会记得你写下的心情。' : ''}` };
+    return { provider: this.provider, text: `${salutation}，我收到了你的信。谢谢你把这些话告诉我。${prompt ? '我会记得你写下的心情。' : ''}`, metadata: { version: this.version, stages: [{ id: 'minimal-fallback', status: 'completed' }] } };
   }
+}
+
+export function safeErrorCode(error) {
+  return /^[a-z][a-z0-9_.:-]{0,79}$/iu.test(error?.code ?? '') ? error.code : 'provider_failed';
 }

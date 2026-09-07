@@ -123,7 +123,9 @@ function Invoke-Ds {
         [Parameter(Mandatory = $true)][string]$System,
         [Parameter(Mandatory = $true)][string]$User
     )
-    for ($attempt = 1; $attempt -le 3; $attempt++) {
+    $maxAttempts = 3
+    if ($script:DsMaxAttempts) { $maxAttempts = $script:DsMaxAttempts }
+    for ($attempt = 1; $attempt -le $maxAttempts; $attempt++) {
         try {
             return Invoke-DsOnce -System $System -User $User
         }
@@ -133,7 +135,7 @@ function Invoke-Ds {
                 $message -match "DeepSeek returned empty content" -or
                 $message -match "DeepSeek HTTP (408|409|425|429|5\d\d)" -or
                 $_.Exception -is [Net.WebException]
-            if (-not $retryable -or $attempt -eq 3) { throw }
+            if (-not $retryable -or $attempt -eq $maxAttempts) { throw }
             Write-Host ("DS RETRY attempt={0} reason={1}" -f ($attempt + 1), $message)
             Start-Sleep -Seconds ([Math]::Pow(2, $attempt - 1))
         }

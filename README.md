@@ -6,15 +6,15 @@
 
 ## 项目状态
 
-截至当前，Phase 0–3 已完成，已在 Steam 0.0.9.627 中验收离线回信和 DeepSeek + Persona + OliviaSoul Harness 真实回信；Phase 4-1 正在开发，首轮已打通音乐配置和媒体格式契约。项目仍是开发版，不是发行版。上传曲目接管原生 WebPlayer 的问题 `LINLI-PLAY-001` 仍需证据调查。
+截至当前，Phase 0–3 已完成；本实验分支新增 Persona/Harness 融合实现，等待离线与 DeepSeek Steam 实机验收。Phase 4-1 正在开发，首轮已打通音乐配置和媒体格式契约。项目仍是开发版，不是发行版。
 
 ## 当前功能
 
 ### 信件与回信
 
 * [x] **信件规则与可靠处理**：遵循每日最多 3 封、默认每封延迟 5 分钟的原版规则；支持排队、状态流转、原子领取、过期任务恢复、失败重试和最大尝试次数。
-* [x] **可替换的回信生成链路**：支持离线回信、外部 OpenAI 兼容 API、本地 OpenAI 兼容模型，并可组合 Persona、Harness 与有限记忆；外部实现失败时可按配置回退。
-* [x] **Persona、Harness 与有限记忆**：支持默认、静态文件和外部文件 Persona，通用 Harness 插槽，以及受限 SQLite MemoryProvider；记忆默认关闭，并限制条数、单条长度和上下文长度。OliviaSoul v18 是可选 Harness 实现。
+* [x] **可替换的回信生成链路**：支持仓库内 Olivia-lin 离线人格引擎、外部 OpenAI 兼容 API、本地 OpenAI 兼容模型，并可组合 Persona、Harness 与有限记忆；失败时可按配置回退。
+* [x] **Persona、Harness 与有限记忆**：已内置 Olivia-lin 人格/书信素材包、OliviaSoul v18 检查流程、融合 Harness 和 SQLite 单一历史来源；每封信记录实际实现、版本、素材哈希和阶段。融合链路仍待本实验分支 Steam 验收。
 * [x] **Steam 实机回信**：已在 Steam 客户端 `0.0.9.627` 中验收离线回信，以及 DeepSeek + Persona + OliviaSoul Harness 的真实回信。
 
 ### MIDI、曲库与媒体任务
@@ -43,7 +43,7 @@
 
 ### 当前开发版
 
-环境要求：Windows 10/11、Node.js 22 及以上（当前使用 Node.js 24）、pnpm 9 及以上。后续游戏接入阶段还需要安装《BSide: Olivia Lin》本体。
+环境要求：Windows 10/11、Node.js 22 及以上（当前使用 Node.js 24）、pnpm 9 及以上；使用仓库内离线人格引擎还需要 Python 3。后续游戏接入阶段还需要安装《BSide: Olivia Lin》本体。
 
 ```powershell
 git clone https://github.com/Comma0103/Linli-Nocturne.git
@@ -124,7 +124,9 @@ const track = music.importMidi({ buffer: midiBytes, sourceName: 'my-song.mid', t
 music.addToPlaylist(track);
 ```
 
-写信功能使用 `LetterService`、`ModelAdapter`、Persona 和 Harness；本地 HTTP 网关是游戏客户端的兼容层。
+写信功能使用 `LetterService`、`ModelAdapter`、Persona 和 Harness；本地 HTTP 网关是游戏客户端的兼容层。单封信的只读执行记录可通过 `GET /letter/execution/<letterId>` 查看。
+
+想在不编辑 JSON 的情况下更换已注册模块，可执行 `node scripts/configure-modules.mjs --user-config config/user-config.json`；外部模型的 API Key 仍只在本机配置文件中填写。
 
 ### 开始增量开发
 
@@ -158,6 +160,8 @@ music.addToPlaylist(track);
 - [Phase 3-5 视频回信资产流程](./docs/phase3-5-letter-video-assets.md)
 - [Phase 3-6 信件体验总体验收](./docs/phase3.md)
 - [Phase 3-7 Steam 实机验收](./docs/phase3-7-steam-acceptance.md)
+- [Phase 3 Persona 与 Harness 融合实验](./docs/phase3-exp-persona-harness-fusion.md)
+- [第三方 Persona/Harness 复用清单](./docs/third-party-fusion-map.md)
 - [Phase 3-8 真实模型 Steam 实机验收](./docs/phase3-2-provider-and-harness.md)
 - [Phase 3 → Phase 4 交接文档](./docs/phase_3_to_4_handoff.md)
 - [Phase 4 完整音乐体验总览](./docs/phase4.md)

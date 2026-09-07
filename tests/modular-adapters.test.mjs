@@ -38,12 +38,14 @@ test('模块设置只保存实现选择，不接受 API Key 等敏感字段', ()
 
 test('PersonaProvider 支持静态文本和外部人格文件', async () => {
   const staticProvider = new StaticPersonaProvider({ text: '保持克制地回信', maxChars: 6 });
-  assert.equal((await staticProvider.getPrompt()).text, '保持克制地回信'.slice(0, 6));
+  await assert.rejects(() => staticProvider.getPrompt(), { code: 'persona_budget_exceeded' });
+  assert.equal((await new StaticPersonaProvider({ text: '保持克制地回信' }).getPrompt()).text, '保持克制地回信');
   const directory = mkdtempSync(join(tmpdir(), 'linli-persona-'));
   const filename = join(directory, 'persona.md');
   writeFileSync(filename, '林离人格资料', 'utf8');
   const fileProvider = new FilePersonaProvider({ path: filename, maxChars: 5 });
-  assert.equal((await fileProvider.getPrompt()).text, '林离人格资料'.slice(0, 5));
+  await assert.rejects(() => fileProvider.getPrompt(), { code: 'persona_budget_exceeded' });
+  assert.equal((await new FilePersonaProvider({ path: filename }).getPrompt()).text, '林离人格资料');
 });
 
 test('模块设置可以解析成信件和音乐运行时实现', async () => {

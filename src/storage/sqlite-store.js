@@ -24,6 +24,11 @@ export class SqliteStore {
         next_attempt_at TEXT
       );
       CREATE INDEX IF NOT EXISTS idx_letters_status_available ON letters(status, available_at);
+      CREATE TABLE IF NOT EXISTS letter_attempts (
+        letter_id TEXT NOT NULL, attempt INTEGER NOT NULL, status TEXT NOT NULL,
+        started_at TEXT NOT NULL, ended_at TEXT, error_code TEXT, metadata_json TEXT NOT NULL,
+        PRIMARY KEY(letter_id, attempt)
+      );
       CREATE TABLE IF NOT EXISTS memory_episodes (
         id TEXT PRIMARY KEY,
         recipient TEXT NOT NULL,
@@ -95,11 +100,14 @@ export class SqliteStore {
       ['processing_started_at', 'TEXT'],
       ['last_error', 'TEXT'],
       ['next_attempt_at', 'TEXT'],
+      ['conversation_id', "TEXT NOT NULL DEFAULT 'default'"],
     ];
     for (const [name, definition] of additions) {
       if (!letterColumns.has(name)) this.db.exec(`ALTER TABLE letters ADD COLUMN ${name} ${definition}`);
     }
     this.db.exec("UPDATE letters SET status = 'pending' WHERE status = 'queued'");
+    const memoryColumns = new Set(this.db.prepare('PRAGMA table_info(memory_episodes)').all().map(column => column.name));
+    if (!memoryColumns.has('conversation_id')) this.db.exec("ALTER TABLE memory_episodes ADD COLUMN conversation_id TEXT NOT NULL DEFAULT 'default'");
   }
 
   insertLetter(letter) {
@@ -108,6 +116,7 @@ export class SqliteStore {
       VALUES (?, ?, ?, NULL, 'pending', ?, ?, NULL, NULL, 0, NULL, NULL, NULL)`).run(
       letter.id, letter.recipient, letter.body, letter.createdAt, letter.availableAt
     );
+    this.db.prepare('UPDATE letters SET conversation_id = ? WHERE id = ?').run(letter.conversationId ?? 'default', letter.id);
     return this.getLetter(letter.id);
   }
 
@@ -135,21 +144,59 @@ export class SqliteStore {
     return this.getLetter(id);
   }
 
-  claimNextLetter(nowIso, maxAttempts = 3) {
+  claimNextLetter(nowIso, maxAttempts = 3, conversationId = 'default') {
+    this.db.exec('BEGIN IMMEDIATE');
+    try {
     const row = this.db.prepare(`UPDATE letters
       SET status = 'processing', attempt_count = attempt_count + 1, processing_started_at = ?
       WHERE id = (
         SELECT id FROM letters
-        WHERE status = 'pending' AND attempt_count < ? AND COALESCE(next_attempt_at, available_at) <= ?
+        WHERE status = 'pending' AND attempt_count < ? AND COALESCE(next_attempt_at, available_at) <= ? AND conversation_id = ?
         ORDER BY created_at LIMIT 1
       ) AND status = 'pending'
-      RETURNING *`).get(nowIso, maxAttempts, nowIso);
+      RETURNING *`).get(nowIso, maxAttempts, nowIso, conversationId);
+    if (row) this.db.prepare("INSERT INTO letter_attempts VALUES (?, ?, 'processing', ?, NULL, NULL, '{}')").run(row.id, row.attempt_count, nowIso);
+    this.db.exec('COMMIT');
     return row ?? null;
+    } catch (error) { this.db.exec('ROLLBACK'); throw error; }
+  }
+
+  updateAttempt(letter, metadata) {
+    this.db.prepare("UPDATE letter_attempts SET metadata_json = ? WHERE letter_id = ? AND attempt = ? AND status = 'processing'").run(JSON.stringify(metadata), letter.id, letter.attempt_count);
+  }
+  getLetterAttempts(id) {
+    return this.db.prepare('SELECT * FROM letter_attempts WHERE letter_id = ? ORDER BY attempt').all(id)
+      .map(({ metadata_json, ...row }) => ({ ...row, metadata: JSON.parse(metadata_json) }));
+  }
+  renewLetterLease(letter, now) {
+    this.db.prepare("UPDATE letters SET processing_started_at = ? WHERE id = ? AND status = 'processing' AND attempt_count = ?").run(now, letter.id, letter.attempt_count);
+  }
+  finishLetterAttempt(letter, { text, errorCode, at, metadata, memory, retryOptions } = {}) {
+    this.db.exec('BEGIN IMMEDIATE');
+    try {
+      const current = this.getLetter(letter.id);
+      if (current?.status !== 'processing' || current.attempt_count !== letter.attempt_count) {
+        this.db.exec('ROLLBACK'); return current;
+      }
+      const result = errorCode ? this.markFailed(letter.id, errorCode, at, retryOptions) : this.markReplied(letter.id, text, at);
+      if (!errorCode && memory?.episode) {
+        this.insertMemoryEpisode(memory.episode);
+        this.trimMemoryEpisodes(memory.episode.recipient, memory.maxEpisodes, memory.episode.conversationId);
+      }
+      this.db.prepare('UPDATE letter_attempts SET status = ?, ended_at = ?, error_code = ?, metadata_json = ? WHERE letter_id = ? AND attempt = ?')
+        .run(errorCode ? 'failed' : 'replied', at, errorCode ?? null, JSON.stringify(metadata), letter.id, letter.attempt_count);
+      this.db.exec('COMMIT'); return result;
+    } catch (error) { this.db.exec('ROLLBACK'); throw error; }
   }
 
   recoverStaleLetters(nowIso, leaseMs, maxAttempts = 3, retryDelayMs = 0) {
     const cutoffIso = new Date(Date.parse(nowIso) - Math.max(0, leaseMs)).toISOString();
     const retryAt = new Date(Date.parse(nowIso) + Math.max(0, retryDelayMs)).toISOString();
+    this.db.exec('BEGIN IMMEDIATE');
+    try {
+    this.db.prepare(`UPDATE letter_attempts SET status = 'failed', ended_at = ?, error_code = 'processing_lease_expired'
+      WHERE status = 'processing' AND EXISTS (SELECT 1 FROM letters l WHERE l.id = letter_id AND l.attempt_count = attempt
+      AND l.status = 'processing' AND l.processing_started_at <= ?)`).run(nowIso, cutoffIso);
     const result = this.db.prepare(`UPDATE letters
       SET status = CASE WHEN attempt_count < ? THEN 'pending' ELSE 'failed' END,
           last_error = 'processing_lease_expired',
@@ -157,7 +204,8 @@ export class SqliteStore {
           processing_started_at = NULL
       WHERE status = 'processing' AND processing_started_at IS NOT NULL AND processing_started_at <= ?`)
       .run(maxAttempts, maxAttempts, retryAt, cutoffIso);
-    return result.changes;
+    this.db.exec('COMMIT'); return result.changes;
+    } catch (error) { this.db.exec('ROLLBACK'); throw error; }
   }
 
   markFailed(id, errorCode, failedAt, { maxAttempts = 3, retryDelayMs = 60_000 } = {}) {
@@ -181,8 +229,8 @@ export class SqliteStore {
 
   insertMemoryEpisode(episode) {
     this.db.prepare(`INSERT OR IGNORE INTO memory_episodes
-      (id, recipient, source_letter_id, content, created_at) VALUES (?, ?, ?, ?, ?)`)
-      .run(episode.id, episode.recipient, episode.sourceLetterId, episode.content, episode.createdAt);
+      (id, recipient, source_letter_id, content, created_at, conversation_id) VALUES (?, ?, ?, ?, ?, ?)`)
+      .run(episode.id, episode.recipient, episode.sourceLetterId, episode.content, episode.createdAt, episode.conversationId ?? 'default');
     return this.getMemoryEpisodeByLetter(episode.sourceLetterId);
   }
 
@@ -190,15 +238,21 @@ export class SqliteStore {
     return this.db.prepare('SELECT * FROM memory_episodes WHERE source_letter_id = ?').get(sourceLetterId) ?? null;
   }
 
-  listMemoryEpisodes(recipient, limit = 8) {
-    return this.db.prepare('SELECT * FROM memory_episodes WHERE recipient = ? ORDER BY created_at DESC LIMIT ?').all(recipient, limit);
+  listMemoryEpisodes(recipient, limit = 8, conversationId = 'default') {
+    return this.db.prepare('SELECT * FROM memory_episodes WHERE recipient = ? AND conversation_id = ? ORDER BY created_at DESC, rowid DESC LIMIT ?').all(recipient, conversationId, limit);
   }
 
-  trimMemoryEpisodes(recipient, maxEpisodes = 8) {
+  trimMemoryEpisodes(recipient, maxEpisodes = 8, conversationId = 'default') {
     return this.db.prepare(`DELETE FROM memory_episodes
-      WHERE recipient = ? AND id NOT IN (
-        SELECT id FROM memory_episodes WHERE recipient = ? ORDER BY created_at DESC LIMIT ?
-      )`).run(recipient, recipient, maxEpisodes).changes;
+      WHERE recipient = ? AND conversation_id = ? AND id NOT IN (
+        SELECT id FROM memory_episodes WHERE recipient = ? AND conversation_id = ? ORDER BY created_at DESC, rowid DESC LIMIT ?
+      )`).run(recipient, conversationId, recipient, conversationId, maxEpisodes).changes;
+  }
+
+  deleteMemoryEpisodes(conversationId = 'default', sourceLetterId = null) {
+    return sourceLetterId
+      ? this.db.prepare('DELETE FROM memory_episodes WHERE conversation_id = ? AND source_letter_id = ?').run(conversationId, sourceLetterId).changes
+      : this.db.prepare('DELETE FROM memory_episodes WHERE conversation_id = ?').run(conversationId).changes;
   }
 
   addPlaylistItem(item) {

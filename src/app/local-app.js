@@ -49,7 +49,8 @@ export function createLocalApp({ dataRoot = 'data', settingsPath = 'config/modul
   const runtime = resolveModuleSelections(settings, { registries, options: runtimeOptions });
   const letterService = new LetterService({
     store, modelAdapter: runtime.letters.modelAdapter, memoryProvider: runtime.letters.memoryProvider,
-    personaProvider: runtime.letters.personaProvider, timeZone: userConfig?.timeZone ?? env.LINLI_TIME_ZONE ?? 'Asia/Shanghai',
+    personaProvider: runtime.letters.personaProvider, outputPolicy: runtime.letters.outputPolicy, conversationId: userConfig?.conversationId ?? 'default',
+    timeZone: userConfig?.timeZone ?? env.LINLI_TIME_ZONE ?? 'Asia/Shanghai',
     userDisplayName: userConfig?.userDisplayName ?? env.LINLI_USER_DISPLAY_NAME ?? '',
     limits: { bypass: userConfig?.bypass ?? env.LINLI_BYPASS === 'true' },
   });

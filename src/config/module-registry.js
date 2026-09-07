@@ -17,7 +17,9 @@ export class ModuleRegistry {
   resolve(id, options = {}) {
     const module = this.modules.get(id);
     if (!module) throw new Error(`Unknown ${this.kind} module: ${id}`);
-    return module.create(options);
+    const instance = module.create(options);
+    if (instance && Object.isExtensible(instance)) Object.defineProperty(instance, 'moduleInfo', { value: { id: module.id, version: module.version }, configurable: true });
+    return instance;
   }
 
   list() {

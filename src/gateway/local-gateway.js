@@ -199,6 +199,11 @@ export function createLocalGateway({ letterService, musicService = null, midiJob
         return sendJson(response, 200, compatResponse({ ...body, deleted }));
       }
       if (request.method === 'POST' && url.pathname === '/letter/send') return sendJson(response, 200, letterService.send(await readJson(request)));
+      const execution = url.pathname.match(/^\/letter\/execution\/([^/]+)$/u);
+      if (request.method === 'GET' && execution) {
+        const result = letterService.execution(decodeURIComponent(execution[1]));
+        return sendJson(response, result ? 200 : 404, result ?? { error: 'letter_not_found' });
+      }
       if (request.method === 'GET' && url.pathname === '/letter/send/list') return sendJson(response, 200, { letters: letterService.list() });
       if (request.method === 'GET' && url.pathname === '/letter/send/unread_count') return sendJson(response, 200, { count: letterService.unreadCount() });
       const detail = url.pathname.match(/^\/letter\/send\/detail\/([^/]+)$/);
