@@ -49,7 +49,7 @@
 
 - 默认每日 3 封、每封延迟 5 分钟；`letters.dailyLimitBypass` 默认关闭，开启后跳过次数和等待限制，并向游戏报告仍可写信。
 - 领域状态为 `pending/processing/replied/failed`；有 SQLite 原子领取、有限重试、最大尝试次数、Worker 和过期 processing 租约恢复。
-- 外部、本地 OpenAI 兼容模型和无模型 fallback 已接入；Persona、Harness、Memory 可组合。有限 SQLite 记忆默认关闭。
+- 外部、本地 OpenAI 兼容模型和无模型 fallback 已接入；Persona、Harness、Memory 可组合。有限 SQLite 记忆默认开启，也可显式关闭。
 - 视频回信已有 MP4 资产导入、检查、保存、播放、替换、删除及状态处理；这不是视频自动生成，也不是 3D 回信。
 - Steam 信件兼容层的数字状态、写信额度、玩家称呼、失败重寄和 Harness 路径问题已修复，有对应回归测试，不要重新制造这些问题。
 

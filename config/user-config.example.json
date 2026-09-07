@@ -30,7 +30,7 @@
     "fallbackEnabled": false,
     "dailyLimitBypass": false,
     "memory": {
-      "enabled": false,
+      "enabled": true,
       "provider": "sqlite",
       "maxEpisodes": 12,
       "maxCharsPerEpisode": 2000,

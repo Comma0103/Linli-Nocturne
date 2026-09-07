@@ -66,7 +66,7 @@ README 只介绍通用启动流程。本页先解释所有配置属性，再按�
 | `letters.harness.sourceProject`     | 字符串                                             | `OliviaSoul`                           | 资产来源说明字段。                                                                              |
 | `letters.harness.root`              | 文件夹路径                                         | 模板中的 `OliviaSoul/v18-harness` 路径 | Harness 运行目录。相对路径以 `user-config.json` 所在目录解析。                                  |
 | `letters.harness.person`            | 字符串                                             | `linli-local-user`                     | Harness 内部归档键，不是玩家显示名，也不是游戏收件人。                                          |
-| `letters.memory.enabled`            | 布尔值                                             | `false`                                | 是否保存有限的本地对话记忆。关闭时不写入记忆。                                                  |
+| `letters.memory.enabled`            | 布尔值                                             | `true`                                 | 是否保存有限的本地对话记忆。关闭时不写入记忆。                                                  |
 | `letters.memory.provider`           | 当前可用为 `sqlite`                                | `sqlite`                               | 开启记忆时选择 MemoryProvider。关闭记忆应使用 `enabled: false`。                                |
 | `letters.memory.maxEpisodes`        | 正整数                                             | `12`                                   | 最多保留多少条对话记忆。                                                                        |
 | `letters.memory.maxCharsPerEpisode` | 正整数                                             | `2000`                                 | 单条记忆最大字符数。                                                                            |
@@ -192,7 +192,7 @@ API Key 只保存在本机的 `config/user-config.json`，不能提交或公开�
 }
 ```
 
-记忆默认关闭；开启后仍会限制条数、单条大小和上下文大小。关闭时把 `enabled` 改回 `false`，不会继续写入新的记忆。
+记忆默认开启；仍会限制条数、单条大小和上下文大小。关闭时把 `enabled` 改为 `false`，不会继续写入新的记忆。
 
 ### 演奏
 

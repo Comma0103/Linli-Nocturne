@@ -3,7 +3,7 @@ import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from '
 
 export const DEFAULT_MODULE_SETTINGS = Object.freeze({
   version: 1,
-  letters: Object.freeze({ provider: 'offline-fallback', harness: null, persona: 'default', memory: 'disabled', outputPolicy: 'persona-contract', fallback: true }),
+  letters: Object.freeze({ provider: 'offline-fallback', harness: null, persona: 'default', memory: 'sqlite', outputPolicy: 'persona-contract', fallback: true }),
   music: Object.freeze({ renderer: 'builtin.audio', playbackAdapter: 'olivia-lin.native', encoder: 'builtin.audio-only-mp4' }),
   media: Object.freeze({ renderer: 'builtin.audio', videoImporter: 'builtin.ffprobe.mp4' }),
   threeD: Object.freeze({ renderer: null }),

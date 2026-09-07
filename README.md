@@ -251,7 +251,7 @@ music.addToPlaylist(track);
 
 #### [x] Phase 3-4：信件记忆和连续对话（`2c20767`）
 
-把必要的历史内容整理为受限记忆，让回信能够参考上下文，同时限制保存范围和长度；默认关闭，启用后可使用 SQLite 或其他 MemoryProvider。
+把必要的历史内容整理为受限记忆，让回信能够参考上下文，同时限制保存范围和长度；默认使用 SQLite，也可以关闭或替换 MemoryProvider。
 
 设计与验收： [Phase 3-4 信件记忆](./docs/phase3-4-letter-memory.md)。
 

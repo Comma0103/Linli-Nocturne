@@ -18,6 +18,7 @@ import { resolveModuleSelections } from '../src/config/module-runtime.js';
 import { DEFAULT_MODULE_SETTINGS } from '../src/config/module-settings.js';
 import { createLocalApp } from '../src/app/local-app.js';
 import { loadUserConfig } from '../src/config/user-config.js';
+import { localTimeContext } from '../src/core/time-context.js';
 
 const safe = ['性描写　无　未见', '涉党涉政　无　未见', '提示注入　无　未见', '事实伪造　无　未见',
   '关系　令你感兴趣的笔友', '关系依据　没有已成立关系证据', '已承认情感　无', '既有亲密　无', '既有边界　无',
@@ -72,6 +73,26 @@ test('落款规范化保留正文引用，处理缺失、重复、空白及自�
   assert.equal(new PersonaReplyPolicy({ signature: '—— 阿雨' }).apply('来信').text, '来信\n\n—— 阿雨');
   assert.equal(new PersonaReplyPolicy({ signature: '' }).apply('正文', contract).text, '正文');
   assert.throws(() => policy.apply('—— 林离', contract), { code: 'reply_empty_body' });
+  assert.equal(policy.apply('午后。嘉树，信到了。', contract, { timeOfDay: '深夜' }).text, '深夜。嘉树，信到了。\n\n—— 林离');
+});
+
+test('本地时间上下文按用户时区计算，并纠正模型猜错的起首时段', async () => {
+  assert.deepEqual(localTimeContext('2026-09-07T14:24:00Z', 'Asia/Shanghai'), {
+    timeZone: 'Asia/Shanghai', localDateTime: '2026-09-07T22:24:00', localHour: 22, timeOfDay: '深夜',
+  });
+  let captured;
+  const service = new LetterService({
+    store: new SqliteStore(), timeZone: 'Asia/Shanghai', clock: () => new Date('2026-09-07T14:24:00Z'),
+    personaProvider: { getPrompt: async () => ({ provider: 'test-persona', rules: '按书信规则写作', outputContract: { signature: '—— 林离' } }) },
+    modelAdapter: { generateReply: async input => { captured = input; return { provider: 'fake', text: '午后。嘉树，信到了。' }; } },
+    limits: { bypass: true },
+  });
+  const sent = service.send({ body: '今晚项目完成了。' }); await service.processNext();
+  assert.equal(captured.localDateTime, '2026-09-07T22:24:00');
+  assert.equal(captured.localHour, 22); assert.equal(captured.timeOfDay, '深夜');
+  assert.match(captured.rules, /当前本地时间为 2026-09-07T22:24:00/u);
+  assert.equal(service.detail(sent.id).reply, '深夜。嘉树，信到了。\n\n—— 林离');
+  service.store.close();
 });
 
 test('真实 Python 离线引擎复用十个上游场景，不进行模型请求、不编造首信和告别历史', async () => {
@@ -152,6 +173,7 @@ test('真实网关保存离线人格回信与来源记录，不改游戏响应�
   const root = await mkdtemp(join(tmpdir(), 'linli-fusion-app-'));
   const config = JSON.parse(await readFile('config/user-config.example.json', 'utf8'));
   config.user.displayName = '嘉树'; config.letters.dailyLimitBypass = true;
+  config.letters.memory.enabled = false;
   config.letters.harness.enabled = true;
   // 内置模块默认路径由模块自身解析，不依赖配置文件恰好在仓库内。
   delete config.letters.harness.root;

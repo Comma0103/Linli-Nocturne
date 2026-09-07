@@ -71,8 +71,9 @@ export class FusionHarness {
         endpoint: `http://127.0.0.1:${server.address().port}/chat/completions`, token, output,
         persona: input.persona || '使用所选基础模型的人格设置，不加载其它人格档案。',
         rules: input.rules || '采用所选人格的书信规则，素材与用户正文分开。', fields,
-        context: JSON.stringify({ currentLetter: { sender: input.userDisplayName, recipient: input.recipient, body: input.prompt },
-          history: input.memory || '', now: input.now, timeZone: input.timeZone }), maxRewrites: this.maxRewrites }), 'utf8');
+          context: JSON.stringify({ currentLetter: { sender: input.userDisplayName, recipient: input.recipient, body: input.prompt },
+          history: input.memory || '', now: input.now, timeZone: input.timeZone, localDateTime: input.localDateTime,
+          localHour: input.localHour, timeOfDay: input.timeOfDay }), maxRewrites: this.maxRewrites }), 'utf8');
       const run = await this.runner(this.powershell, ['-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', join(this.root, 'scripts/harness-4step.ps1'), '-ExplicitInput', filename],
         { cwd: directory, timeoutMs: this.timeoutMs, label: this.provider });
       if (run.code !== 0) throw new ModelProviderError('融合 Harness 脚本执行失败', 'harness_process_failed', this.provider);

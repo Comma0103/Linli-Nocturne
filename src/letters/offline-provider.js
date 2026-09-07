@@ -4,11 +4,10 @@ import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { runProcess, ModelProviderError } from './model-adapter.js';
 import { sha256, LIN_COMMIT } from './persona-bundle.js';
+import { localTimeContext } from '../core/time-context.js';
 
 export function localDateTime(now, timeZone) {
-  const parts = new Intl.DateTimeFormat('sv-SE', { timeZone, year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit', hourCycle: 'h23' }).formatToParts(new Date(now));
-  const p = Object.fromEntries(parts.map(({ type, value }) => [type, value]));
-  return `${p.year}-${p.month}-${p.day}T${p.hour}:${p.minute}:${p.second}`;
+  return localTimeContext(now, timeZone).localDateTime;
 }
 
 export class OliviaLinOfflineProvider {

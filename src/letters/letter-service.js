@@ -5,6 +5,7 @@ import { NoopPersonaProvider } from './persona-provider.js';
 import { PersonaReplyPolicy } from './reply-policy.js';
 import { executionTrace } from './execution-trace.js';
 import { safeErrorCode } from './model-adapter.js';
+import { localTimeContext } from '../core/time-context.js';
 
 export class LetterLimitError extends Error {
   constructor(message, code) { super(message); this.name = 'LetterLimitError'; this.code = code; }
@@ -70,12 +71,16 @@ export class LetterService {
       const persona = await this.personaProvider.getPrompt({ recipient: letter.recipient, letter });
       trace.persona = { id: this.personaProvider.moduleInfo?.id ?? persona.provider, version: this.personaProvider.moduleInfo?.version ?? 'unknown', ...persona.metadata };
       saveTrace();
+      const now = this.clock();
+      const localTime = localTimeContext(now, this.timeZone);
+      const temporalRule = `当前本地时间为 ${localTime.localDateTime}（${this.timeZone}），当前时段为“${localTime.timeOfDay}”。起首必须遵循这个本地时段，不得根据 UTC 时间自行猜测。`;
       const result = await this.modelAdapter.generateReply({ recipient: letter.recipient, userDisplayName: this.userDisplayName, prompt: letter.body,
         memory: memoryContext, memoryEcho: memoryContext ? memory.memoryEcho : '', persona: String(persona?.text ?? ''), personaId: persona.provider,
-        rules: persona.rules, now: this.clock().toISOString(), timeZone: this.timeZone,
+        rules: `${persona.rules ?? ''}\n${temporalRule}`, now: now.toISOString(), timeZone: this.timeZone,
+        ...localTime,
         onExecution: execution => { trace.execution = execution; saveTrace(); } });
       trace.execution = { provider: result.provider, version: 'unknown', ...result.metadata };
-      const finalized = this.outputPolicy.apply(result.text, persona);
+      const finalized = this.outputPolicy.apply(result.text, persona, { timeOfDay: localTime.timeOfDay });
       trace.outputPolicy = finalized.metadata;
       const at = this.clock().toISOString();
       const memoryInput = { recipient: letter.recipient, conversationId: this.conversationId, letter, reply: finalized.text, createdAt: at };

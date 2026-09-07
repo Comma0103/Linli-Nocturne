@@ -125,14 +125,15 @@ export class OpenAICompatibleProvider extends FunctionProvider {
     const url = endpoint.replace(/\/$/u, '').endsWith('/chat/completions')
       ? endpoint.replace(/\/$/u, '')
       : `${endpoint.replace(/\/$/u, '')}${endpoint.replace(/\/$/u, '').endsWith('/v1') ? '/chat/completions' : '/v1/chat/completions'}`;
-    super({ provider, timeoutMs, generate: async ({ prompt = '', recipient = '林离', userDisplayName = '', memory = '', persona = '', system, now, timeZone }) => {
+    super({ provider, timeoutMs, generate: async ({ prompt = '', recipient = '林离', userDisplayName = '', memory = '', persona = '', system, now, timeZone, localDateTime, localHour, timeOfDay }) => {
       const systemText = system ?? systemWithPersona(systemPrompt, persona);
       const payload = await requestJson(fetchImpl, url, {
         method: 'POST',
         headers: { 'content-type': 'application/json', authorization: `Bearer ${apiKey}` },
         body: JSON.stringify({ model, messages: [
           ...(systemText ? [{ role: 'system', content: systemText }] : []),
-          { role: 'user', content: JSON.stringify({ currentLetter: { sender: userDisplayName, recipient, body: prompt }, history: memory, ...(now ? { now, timeZone } : {}) }) },
+          { role: 'user', content: JSON.stringify({ currentLetter: { sender: userDisplayName, recipient, body: prompt }, history: memory,
+            ...(now ? { now, timeZone, localDateTime, localHour, timeOfDay } : {}) }) },
         ] }),
       }, timeoutMs, provider);
       const text = extractOpenAiText(payload);

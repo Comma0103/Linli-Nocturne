@@ -14,7 +14,7 @@
 
 ## 设计
 
-- `MemoryProvider` 是项目自己的稳定契约。`NoopMemoryProvider` 保持关闭状态，`SqliteMemoryProvider` 提供本地 bounded memory；未来可增加 OliviaSoul memory、向量库或其他远程实现。
+- `MemoryProvider` 是项目自己的稳定契约。默认使用 `SqliteMemoryProvider` 提供本地 bounded memory，也可显式选择 `NoopMemoryProvider` 或未来的其他实现。
 - `SqliteStore` 增加 `memory_episodes` 表，每条记录关联 `source_letter_id`，通过唯一约束保证同一封信不会重复写入；插入后按收信人裁剪最旧记录。
 - 记忆上下文以统一纯文本传给 `ModelAdapter.generateReply()` 的 `memory` 字段。外部 OpenAI provider 和 OliviaSoul Harness 只负责把它转换为各自输入格式，领域服务不读取第三方记忆文件。
 - 记忆 provider 的异常只记录为可诊断状态并跳过本轮记忆；回信正文和信件状态仍以 LetterService/SQLite 为准。
