@@ -92,6 +92,7 @@ function Invoke-DsOnce {
     $req.Timeout = 500000
     $req.ReadWriteTimeout = 500000
     $req.Headers.Add("Authorization", "Bearer " + $script:DsKey)
+    if ($script:DsStageId) { $req.Headers.Add("X-Linli-Stage", $script:DsStageId) }
     $rs = $req.GetRequestStream()
     $rs.Write($bytes, 0, $bytes.Length)
     $rs.Close()

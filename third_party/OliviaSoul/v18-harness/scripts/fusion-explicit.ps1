@@ -29,8 +29,9 @@ function Stage([string]$id, [string]$pattern, [hashtable]$map, [string]$extra = 
     $sys += "`n" + $inputData.rules
     $evt = @{ id = $id; status = 'processing' }; [void]$events.Add($evt)
     # Only stage IDs and statuses are persisted; never the draft/check/precheck reasoning.
-    try { $reply = Invoke-Ds -System $sys -User ($usr + $extra); $evt.status = 'completed'; return $reply }
+    try { $script:DsStageId = $id; $reply = Invoke-Ds -System $sys -User ($usr + $extra); $evt.status = 'completed'; return $reply }
     catch { $evt.status = 'failed'; throw 'harness_stage_failed' }
+    finally { $script:DsStageId = $null }
 }
 function Valid-Safe([string]$safe) {
     $lines = @($safe -split '\r?\n' | Where-Object { $_.Trim() })
@@ -44,17 +45,18 @@ function Check-Bad([string]$check) {
     $lines = @($check -split '\r?\n' | Where-Object { $_.Trim() })
     $names = @('温度','情感','亲密','主动亲密','挑选','口气','边界','关照','事实','节奏','句长','形状','声音','手法','泄漏','载体','茶味','逻辑','点名遗漏','关系回撤')
     if ($lines.Count -ne ($names.Count + 1)) { throw 'harness_check_invalid' }
-    $bad = 0
+    $bad = 0; $violations = @()
     for ($i = 0; $i -lt $names.Count; $i++) {
         $pattern = '^' + $names[$i] + '　(过|违规)　.+'
         if ($lines[$i] -notmatch $pattern) { throw 'harness_check_invalid' }
-        if ($Matches[1] -eq '违规') { $bad++ }
+        if ($Matches[1] -eq '违规') { $bad++; $violations += $names[$i] }
     }
     if ($lines[-1] -notmatch '^违规合计\s+(\d+)[。.]?$' -or [int]$Matches[1] -ne $bad) { throw 'harness_check_invalid' }
+    $script:LastCheckViolations = @($violations)
     return $bad
 }
 
-$result = @{ version = 'linli.fusion-v1'; stages = $events; rewriteCount = 0; status = 'failed' }
+$result = @{ version = 'linli.fusion-v1'; stages = $events; qualityChecks = @(); rewriteCount = 0; status = 'failed' }
 try {
     $map = @{ ctx = $inputData.context; rules = $inputData.rules; persona = $inputData.persona; fields = $inputData.fields; previousState = '无（只依据本次提供的有效历史初始化）'; relationshipMemory = '无' }
     $safe = Stage 'precheck' '01-预检.md' $map
@@ -68,6 +70,7 @@ try {
     $map.draft = $draft
     $check = Stage 'check' '04-*.md' $map
     $bad = Check-Bad $check
+    $result.qualityChecks += @{ id = 'check'; violationCount = $bad; failedColumns = @($script:LastCheckViolations) }
     if ($bad -gt 0) {
         if ($inputData.maxRewrites -lt 1) { throw 'harness_quality_failed' }
         $map.check = $check
@@ -75,7 +78,9 @@ try {
         $result.rewriteCount = 1
         $map.draft = $draft
         $check = Stage 'recheck' '04-*.md' $map
-        if ((Check-Bad $check) -gt 0) { throw 'harness_quality_failed' }
+        $recheckBad = Check-Bad $check
+        $result.qualityChecks += @{ id = 'recheck'; violationCount = $recheckBad; failedColumns = @($script:LastCheckViolations) }
+        if ($recheckBad -gt 0) { throw 'harness_quality_failed' }
     }
     $result.text = $draft
     $result.status = 'completed'

@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
+import { mkdtemp, readFile, readdir, rm, writeFile } from 'node:fs/promises';
 import { createServer } from 'node:http';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
@@ -157,6 +157,23 @@ test('融合脚本拒绝无效检查结果，预检拦截不会继续生成', as
     });
     assert.equal(received.length, mode.invalid ? 3 : 1);
   }
+});
+
+test('开启本机诊断时保留每阶段正文并脱敏，关闭时不落盘', async t => {
+  const root = await mkdtemp(join(tmpdir(), 'linli-diagnostics-')); t.after(() => rm(root, { recursive: true, force: true }));
+  const { endpoint } = await fixture(t, { rewrite: true });
+  const base = new OpenAICompatibleProvider({ endpoint, model: 'fake', apiKey: 'test-secret', timeoutMs: 3000 });
+  const input = { ...(await bundleInput()), letterId: 'diagnostic-letter', attempt: 1 };
+  const result = await new FusionHarness({ timeoutMs: 30_000, diagnostics: { enabled: true, directory: root, secrets: ['test-secret'] } }).wrap(base).generate(input);
+  const files = (await readdir(root)).filter(name => name.endsWith('.json'));
+  assert.equal(files.length, 1); assert.equal(result.metadata.diagnostics.status, 'completed');
+  const document = JSON.parse(await readFile(join(root, files[0]), 'utf8'));
+  assert.deepEqual(document.stages.map(stage => stage.id), ['precheck', 'draft', 'check', 'rewrite', 'recheck']);
+  assert.ok(document.stages.every(stage => typeof stage.text === 'string' && stage.text.length));
+  assert.doesNotMatch(JSON.stringify(document), /test-secret/u);
+  const off = await mkdtemp(join(root, 'off-'));
+  await new FusionHarness({ timeoutMs: 30_000, diagnostics: { enabled: false, directory: off } }).wrap(base).generate(input);
+  assert.deepEqual((await readdir(off)).filter(name => name.endsWith('.json')), []);
 });
 const awaitInput = { prompt: '你好', persona: '用简体中文写信', memory: '' };
 

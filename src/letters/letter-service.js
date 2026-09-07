@@ -75,6 +75,7 @@ export class LetterService {
       const localTime = localTimeContext(now, this.timeZone);
       const temporalRule = `当前本地时间为 ${localTime.localDateTime}（${this.timeZone}），当前时段为“${localTime.timeOfDay}”。起首必须遵循这个本地时段，不得根据 UTC 时间自行猜测。`;
       const result = await this.modelAdapter.generateReply({ recipient: letter.recipient, userDisplayName: this.userDisplayName, prompt: letter.body,
+        letterId: letter.id, attempt: letter.attempt_count,
         memory: memoryContext, memoryEcho: memoryContext ? memory.memoryEcho : '', persona: String(persona?.text ?? ''), personaId: persona.provider,
         rules: `${persona.rules ?? ''}\n${temporalRule}`, now: now.toISOString(), timeZone: this.timeZone,
         ...localTime,

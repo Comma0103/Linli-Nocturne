@@ -5,15 +5,17 @@ import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { runProcess, ModelProviderError, safeErrorCode } from './model-adapter.js';
 import { THIRD_PARTY_ROOT, sha256, SOUL_COMMIT } from './persona-bundle.js';
+import { LocalLetterDiagnostics } from './local-diagnostics.js';
 
 const SCRIPT_ASSETS = ['scripts/harness-4step.ps1', 'scripts/fusion-explicit.ps1', 'scripts/ds-call.ps1',
   'harness/00-栏目.md', 'harness/01-预检.md', 'harness/03-中段生成.md', 'harness/04-尾端检查.md', 'harness/05-反馈重写.md'];
 
 export class FusionHarness {
-  constructor({ root = join(THIRD_PARTY_ROOT, 'OliviaSoul/v18-harness'), powershell = 'powershell.exe', timeoutMs = 15 * 60_000, maxRewrites = 1, runner = runProcess } = {}) {
+  constructor({ root = join(THIRD_PARTY_ROOT, 'OliviaSoul/v18-harness'), powershell = 'powershell.exe', timeoutMs = 15 * 60_000, maxRewrites = 1, runner = runProcess, diagnostics = {} } = {}) {
     this.root = resolve(root); this.powershell = powershell; this.timeoutMs = timeoutMs;
     if (![0, 1].includes(maxRewrites)) throw new TypeError('harness.maxRewrites 只能是 0 或 1');
     this.maxRewrites = maxRewrites; this.runner = runner; this.provider = 'linli.fusion-v1'; this.version = '1.0.0-exp';
+    this.diagnostics = new LocalLetterDiagnostics(diagnostics);
   }
   wrap(base) {
     if (!base?.generate) throw new TypeError('融合 Harness 需要基础模型');
@@ -33,6 +35,9 @@ export class FusionHarness {
     }
     const directory = await mkdtemp(join(tmpdir(), 'linli-fusion-'));
     const token = randomUUID();
+    const diagnostic = this.diagnostics.start({ letterId: input.letterId, attempt: input.attempt, model: base.model,
+      time: { now: input.now, timeZone: input.timeZone, localDateTime: input.localDateTime, timeOfDay: input.timeOfDay }, secrets: [token] });
+    metadata.diagnostics = diagnostic.metadata;
     let stopped = false;
     const server = createServer(async (request, response) => {
       if (stopped || request.method !== 'POST' || request.url !== '/chat/completions' || request.headers.authorization !== `Bearer ${token}`) { response.writeHead(403).end(); return; }
@@ -43,7 +48,9 @@ export class FusionHarness {
         const payload = JSON.parse(Buffer.concat(chunks).toString('utf8'));
         const messages = payload.messages;
         if (!Array.isArray(messages) || messages.length !== 2 || messages[0].role !== 'system' || messages[1].role !== 'user') throw new Error('invalid input');
-        call = { sequence: calls.length + 1, provider: base.provider, module: base.moduleInfo, model: base.model ?? null, status: 'processing' };
+        const stage = request.headers['x-linli-stage'];
+        const stageId = ['precheck', 'precheck-format-repair', 'draft', 'check', 'rewrite', 'recheck'].includes(stage) ? stage : 'unknown';
+        call = { id: stageId, sequence: calls.length + 1, provider: base.provider, module: base.moduleInfo, model: base.model ?? null, status: 'processing' };
         calls.push(call);
         input.onExecution?.(metadata);
         const result = await base.generate({ ...input, persona: '', memory: '',
@@ -52,11 +59,13 @@ export class FusionHarness {
         call.provider = result.provider ?? base.provider;
         call.model = result.metadata?.model ?? base.model ?? null;
         call.status = 'completed';
+        await diagnostic.record({ id: stageId, sequence: call.sequence, status: call.status, text: result.text });
         input.onExecution?.(metadata);
         response.writeHead(200, { 'content-type': 'application/json; charset=utf-8' });
         response.end(JSON.stringify({ choices: [{ message: { content: result.text }, finish_reason: 'stop' }] }));
       } catch (error) {
         if (call) { call.status = 'failed'; call.code = safeErrorCode(error); }
+        if (call) await diagnostic.record({ id: call.id, sequence: call.sequence, status: 'failed', code: call.code });
         input.onExecution?.(metadata);
         response.writeHead(400, { 'content-type': 'application/json' }).end(JSON.stringify({ error: safeErrorCode(error) }));
       }
@@ -71,7 +80,7 @@ export class FusionHarness {
         endpoint: `http://127.0.0.1:${server.address().port}/chat/completions`, token, output,
         persona: input.persona || '使用所选基础模型的人格设置，不加载其它人格档案。',
         rules: input.rules || '采用所选人格的书信规则，素材与用户正文分开。', fields,
-          context: JSON.stringify({ currentLetter: { sender: input.userDisplayName, recipient: input.recipient, body: input.prompt },
+        context: JSON.stringify({ currentLetter: { sender: input.userDisplayName, recipient: input.recipient, body: input.prompt },
           history: input.memory || '', now: input.now, timeZone: input.timeZone, localDateTime: input.localDateTime,
           localHour: input.localHour, timeOfDay: input.timeOfDay }), maxRewrites: this.maxRewrites }), 'utf8');
       const run = await this.runner(this.powershell, ['-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', join(this.root, 'scripts/harness-4step.ps1'), '-ExplicitInput', filename],
@@ -80,9 +89,12 @@ export class FusionHarness {
       let result;
       try { result = JSON.parse(await readFile(output, 'utf8')); } catch { throw new ModelProviderError('融合 Harness 输出无效', 'harness_output_invalid', this.provider); }
       metadata.stages = result.stages; metadata.rewriteCount = result.rewriteCount;
+      metadata.qualityChecks = result.qualityChecks;
       if (result.status !== 'completed' || !result.text?.trim()) throw new ModelProviderError('融合 Harness 未通过检查', safeErrorCode({ code: result.errorCode }), this.provider);
+      await diagnostic.finish('completed');
       return { provider: base.provider, text: result.text, metadata: { ...metadata, model: calls.at(-1)?.model ?? null } };
     } catch (error) {
+      await diagnostic.finish('failed', safeErrorCode(error));
       throw Object.assign(new ModelProviderError('融合 Harness 处理失败，请查看本封执行记录', safeErrorCode(error), this.provider), { execution: metadata });
     } finally {
       stopped = true; server.closeAllConnections();

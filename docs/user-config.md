@@ -66,6 +66,8 @@ README 只介绍通用启动流程。本页先解释所有配置属性，再按�
 | `letters.harness.sourceProject`     | 字符串                                             | `OliviaSoul`                           | 资产来源说明字段。                                                                              |
 | `letters.harness.root`              | 文件夹路径                                         | 模板中的 `OliviaSoul/v18-harness` 路径 | Harness 运行目录。相对路径以 `user-config.json` 所在目录解析。                                  |
 | `letters.harness.person`            | 字符串                                             | `linli-local-user`                     | Harness 内部归档键，不是玩家显示名，也不是游戏收件人。                                          |
+| `letters.harness.diagnostics.enabled` | 布尔值                                          | `false`                                | 是否在本机保存每个 Harness 阶段的诊断正文；只建议调试时开启。                                  |
+| `letters.harness.diagnostics.directory` | 文件夹路径                                     | `../logs/letter-diagnostics`            | 诊断文件目录；相对路径以 `user-config.json` 所在目录解析。                                     |
 | `letters.memory.enabled`            | 布尔值                                             | `true`                                 | 是否保存有限的本地对话记忆。关闭时不写入记忆。                                                  |
 | `letters.memory.provider`           | 当前可用为 `sqlite`                                | `sqlite`                               | 开启记忆时选择 MemoryProvider。关闭记忆应使用 `enabled: false`。                                |
 | `letters.memory.maxEpisodes`        | 正整数                                             | `12`                                   | 最多保留多少条对话记忆。                                                                        |
