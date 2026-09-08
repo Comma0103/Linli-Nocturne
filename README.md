@@ -6,7 +6,7 @@
 
 ## 项目状态
 
-Phase 0–3 的基础功能已完成。本实验分支已接入持续记忆、关系账本与数据迁移，最新增量待 Steam 离线/在线复验；此前的回信实机记录不代表新版记忆已验收。Phase 4-1 正在开发。项目仍是开发版。
+Phase 0–3 的基础功能已完成。本实验分支的持续记忆、关系账本与数据迁移已通过 Steam 离线及 DeepSeek 在线回信复验；Phase 4-1 正在开发。项目仍是开发版。
 
 ## 当前功能
 
@@ -290,13 +290,13 @@ music.addToPlaylist(track);
 
 设计和操作步骤见 [Phase 3-7 Steam 实机验收](./docs/phase3-7-steam-acceptance.md)。
 
-#### [x] Phase 3-8：真实模型 Steam 实机验收（DeepSeek + Persona + OliviaSoul Harness）（`b7cd5ef`）
+#### [x] Phase 3-8：真实模型 Steam 实机验收（DeepSeek + Persona + OliviaSoul Harness）（`243c3e4`）
 
 使用 DeepSeek 外部模型、已内置 Persona 和 OliviaSoul Harness，在 Steam 界面完成真实回信测试；已确认模型请求成功、Harness 实际运行、Persona 生效，以及游戏内显示以玩家名字“嘉树”开头的完整回信正文。设计与验收记录见 [Phase 3 Provider 与 OliviaSoul Harness](./docs/phase3-2-provider-and-harness.md)。
 
-#### [ ] Phase 3-EXP：融合流程与持续记忆复验
+#### [x] Phase 3-EXP：融合流程与持续记忆复验（`8fb4eee`）
 
-实验分支已实现人格融合、分层长期记忆、关系账本、玩家隔离及数据迁移；最新增量待 Steam 离线/在线验收。
+实验分支已实现人格融合、分层长期记忆、关系账本、玩家隔离及数据迁移，并由用户在 Steam 中完成离线和 DeepSeek 在线回信复验。
 
 设计与验收：[Persona 与 Harness 融合实验](./docs/phase3-exp-persona-harness-fusion.md)。
 
