@@ -50,7 +50,7 @@ README 只介绍通用启动流程。本页先解释所有配置属性，再按�
 | `letters.baseModel.local.apiKey`        | 字符串                                                                      | 空字符串                   | 本地服务密钥；若本地服务不需要密钥可留空。                                                                    |
 | `letters.systemPrompt`                  | 字符串                                                                      | 内置中文林离提示词         | 可选的基础模型系统提示词，会传给外部或本地 OpenAI 兼容 provider。                                             |
 | `letters.fallbackEnabled`               | 布尔值                                                                      | `true`                     | 普通外部或本地 provider 失败时是否允许回到可用的 fallback。完整 OliviaSoul Harness 的降级边界仍由其实现决定。 |
-| `letters.outputPolicy.providerId` | `persona-contract` 或 `none` | `persona-contract` | 保存前按所选 Persona 的输出契约校验落款；林离素材包要求 `—— 林离` 恰好出现一次。 |
+| `letters.outputPolicy.providerId` | `persona-contract` 或 `none` | `persona-contract` | 保存前按所选 Persona 整理回信；林离素材包把玩家称呼放在首行，规范末尾 `—— 林离`。不强制时间/天气起首，不追加回信邀请。 |
 | `letters.dailyLimitBypass`              | 布尔值                                                                      | `false`                    | `true` 时跳过每日 3 封和 5 分钟等待，适合本地测试；不改变游戏中仍可写信的协议返回。                           |
 
 #### Persona、Harness 和记忆

@@ -4,7 +4,7 @@ import { mkdtemp, readFile, writeFile, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { runProcess, ModelProviderError, safeErrorCode } from './model-adapter.js';
-import { THIRD_PARTY_ROOT, sha256, SOUL_COMMIT } from './persona-bundle.js';
+import { THIRD_PARTY_ROOT, sha256, SOUL_COMMIT, effectiveAsset } from './persona-bundle.js';
 import { LocalLetterDiagnostics } from './local-diagnostics.js';
 
 const SCRIPT_ASSETS = ['scripts/harness-4step.ps1', 'scripts/fusion-explicit.ps1', 'scripts/ds-call.ps1',
@@ -14,7 +14,7 @@ export class FusionHarness {
   constructor({ root = join(THIRD_PARTY_ROOT, 'OliviaSoul/v18-harness'), powershell = 'powershell.exe', timeoutMs = 15 * 60_000, maxRewrites = 1, runner = runProcess, diagnostics = {} } = {}) {
     this.root = resolve(root); this.powershell = powershell; this.timeoutMs = timeoutMs;
     if (![0, 1].includes(maxRewrites)) throw new TypeError('harness.maxRewrites 只能是 0 或 1');
-    this.maxRewrites = maxRewrites; this.runner = runner; this.provider = 'linli.fusion-v1'; this.version = '1.0.0-exp';
+    this.maxRewrites = maxRewrites; this.runner = runner; this.provider = 'linli.fusion-v1'; this.version = '1.1.0-exp';
     this.diagnostics = new LocalLetterDiagnostics(diagnostics);
   }
   wrap(base) {
@@ -73,7 +73,8 @@ export class FusionHarness {
     try {
       metadata.assets = [];
       for (const path of SCRIPT_ASSETS) metadata.assets.push({ id: path, sha256: sha256(await readFile(join(this.root, path))) });
-      const fields = await readFile(join(this.root, 'harness/00-栏目.md'), 'utf8');
+      const rawFields = await readFile(join(this.root, 'harness/00-栏目.md'), 'utf8');
+      const fields = input.personaId === 'linli.persona-bundle' ? effectiveAsset('fields', rawFields) : rawFields;
       await new Promise((accept, reject) => { server.once('error', reject); server.listen(0, '127.0.0.1', accept); });
       const filename = join(directory, 'input.json'); const output = join(directory, 'output.json');
       await writeFile(filename, JSON.stringify({ root: this.root,

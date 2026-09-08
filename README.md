@@ -6,7 +6,7 @@
 
 ## 项目状态
 
-截至当前，Phase 0–3 已完成；本实验分支新增 Persona/Harness 融合实现，等待离线与 DeepSeek Steam 实机验收。Phase 4-1 正在开发，首轮已打通音乐配置和媒体格式契约。项目仍是开发版，不是发行版。
+截至当前，Phase 0–3 已完成；本实验分支新增 Persona/Harness 融合实现，已完成离线与 DeepSeek 游戏回信验证，最新称呼格式修复待复验。Phase 4-1 正在开发，首轮已打通音乐配置和媒体格式契约。项目仍是开发版，不是发行版。
 
 ## 当前功能
 
@@ -14,7 +14,7 @@
 
 * [x] **信件规则与可靠处理**：遵循每日最多 3 封、默认每封延迟 5 分钟的原版规则；支持排队、状态流转、原子领取、过期任务恢复、失败重试和最大尝试次数。
 * [x] **可替换的回信生成链路**：支持仓库内 Olivia-lin 离线人格引擎、外部 OpenAI 兼容 API、本地 OpenAI 兼容模型，并可组合 Persona、Harness 与有限记忆；失败时可按配置回退。
-* [x] **Persona、Harness 与有限记忆**：已内置 Olivia-lin 人格/书信素材包、OliviaSoul v18 检查流程、融合 Harness 和 SQLite 单一历史来源；每封信记录实际实现、版本、素材哈希和阶段。融合链路仍待本实验分支 Steam 验收。
+* [x] **Persona、Harness 与有限记忆**：已内置 Olivia-lin 人格/书信素材包、OliviaSoul v18 检查流程、融合 Harness 和 SQLite 单一历史来源；每封信记录实际实现、版本、素材哈希和阶段。实验版按所选人格整理称呼与落款，篇幅和自然收尾由内容决定。
 * [x] **Steam 实机回信**：已在 Steam 客户端 `0.0.9.627` 中验收离线回信，以及 DeepSeek + Persona + OliviaSoul Harness 的真实回信。
 
 ### MIDI、曲库与媒体任务

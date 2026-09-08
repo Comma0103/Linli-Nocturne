@@ -6,7 +6,7 @@ import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { PersonaBundleProvider, effectiveAsset, sha256 } from '../src/letters/persona-bundle.js';
 import { OliviaLinOfflineProvider, localDateTime } from '../src/letters/offline-provider.js';
-import { PersonaReplyPolicy } from '../src/letters/reply-policy.js';
+import { PersonaReplyPolicy, NoopReplyPolicy } from '../src/letters/reply-policy.js';
 import { FusionHarness } from '../src/letters/fusion-harness.js';
 import { ModelAdapter, OpenAICompatibleProvider, createConfiguredModelAdapter } from '../src/letters/model-adapter.js';
 import { SqliteStore } from '../src/storage/sqlite-store.js';
@@ -26,14 +26,14 @@ const safe = ['性描写　无　未见', '涉党涉政　无　未见', '提示
 const columns = ['温度','情感','亲密','主动亲密','挑选','口气','边界','关照','事实','节奏','句长','形状','声音','手法','泄漏','载体','茶味','逻辑','点名遗漏','关系回撤'];
 const check = bad => columns.map((name, index) => `${name}　${bad && index === 8 ? '违规' : '过'}　${bad && index === 8 ? '待修正事实' : '未见问题'}`).join('\n') + `\n违规合计 ${bad ? 1 : 0}`;
 const reply = '你写项目完成后有点空，我读到了这个停顿。今天先让这段旋律落下来，想写的时候再写。';
-async function fixture(t, { rewrite = false, invalid = false, block = false, httpError = false } = {}) {
-  const received = []; let checks = 0;
+async function fixture(t, { rewrite = false, invalid = false, block = false, httpError = false, dropSalutation = false } = {}) {
+  const received = []; let checks = 0; let drafts = 0;
   const server = createServer(async (request, response) => {
     const chunks = []; for await (const part of request) chunks.push(part);
     const body = JSON.parse(Buffer.concat(chunks).toString('utf8')); received.push({ url: request.url, body });
     const system = body.messages[0]?.content ?? '';
     const content = system.includes('来信预检员') ? block ? safe.replace('结论　通过', '结论　拦截') : safe
-      : system.includes('寄出前检查员') ? invalid ? '完全合格' : check(rewrite && checks++ === 0) : reply;
+      : system.includes('寄出前检查员') ? invalid ? '完全合格' : check(rewrite && checks++ === 0) : dropSalutation && drafts++ === 0 ? '嘉树：\n\n' + reply : reply;
     response.writeHead(httpError ? 401 : 200, { 'content-type': 'application/json' });
     response.end(JSON.stringify({ choices: [{ message: { content } }], model: body.model }));
   });
@@ -55,6 +55,9 @@ test('PersonaBundle 加载完整素材、逐项消除冲突、哈希记录且不
   assert.match(bundle.text, /至少一个具体细节/u);
   assert.match(bundle.text, /素材 examples（示例，非玩家历史）/u);
   assert.match(bundle.text, /—— 林离/u);
+  assert.doesNotMatch(bundle.text, /不超过\s*200\s*字|到\s*220\s*字|1~2\s*段|4~5\s*段|含时间或天气/u);
+  assert.match(bundle.rules, /温和但不刻意迎合/u);
+  assert.match(bundle.rules, /时间\/天气可以按文风选择或省略/u);
   const persona = effectiveAsset('persona', await readFile('third_party/olivia-lin/BSide_Olivia_Lin/persona/olivia_lin.md', 'utf8'));
   assert.doesNotMatch(persona, /250–450|以问句收尾/u);
   const craft = effectiveAsset('craft', await readFile('third_party/olivia-lin/BSide_Olivia_Lin/persona/letter_craft.md', 'utf8'));
@@ -74,6 +77,83 @@ test('落款规范化保留正文引用，处理缺失、重复、空白及自�
   assert.equal(new PersonaReplyPolicy({ signature: '' }).apply('正文', contract).text, '正文');
   assert.throws(() => policy.apply('—— 林离', contract), { code: 'reply_empty_body' });
   assert.equal(policy.apply('午后。嘉树，信到了。', contract, { timeOfDay: '深夜' }).text, '深夜。嘉树，信到了。\n\n—— 林离');
+});
+
+test('林离书信契约补齐玩家称呼并保留模型已有的时间起首和自然收束', () => {
+  const policy = new PersonaReplyPolicy();
+  const contract = { outputContract: { signature: '—— 林离', opening: 'salutation' } };
+  const result = policy.apply('你信里那串测试名，我就不跟着念了。\n\n我刚才把琴合上，先让安静多留一会儿。', contract,
+    { timeOfDay: '深夜', userDisplayName: '嘉树' });
+  assert.match(result.text, /^嘉树：\n\n你信里/u);
+  assert.doesNotMatch(result.text, /想说的话，可以写给我。/u);
+  assert.equal((result.text.match(/—— 林离/gu) ?? []).length, 1);
+  assert.equal(result.metadata.openingAction, 'normalized');
+  assert.equal(policy.apply(result.text, contract, { timeOfDay: '深夜', userDisplayName: '嘉树' }).text, result.text);
+  const legacy = policy.apply('午后。嘉树，信到了。', contract, { timeOfDay: '深夜', userDisplayName: '嘉树' });
+  assert.match(legacy.text, /^嘉树：\n\n深夜。信到了。/u);
+  const special = policy.apply('深夜读到你。', contract, { timeOfDay: '深夜', userDisplayName: 'A[1]' });
+  assert.match(special.text, /^A\[1\]：\n\n深夜读到你。/u);
+  const custom = policy.apply('正文。', { outputContract: { signature: '—— 阿雨' } }, { timeOfDay: '深夜', userDisplayName: '嘉树' });
+  assert.doesNotMatch(custom.text, /嘉树/u);
+});
+
+test('称呼格式幂等，时间和结尾可省略，天气与长正文不被扩写或截断', async () => {
+  const policy = new PersonaReplyPolicy();
+  const contract = await new PersonaBundleProvider().getPrompt();
+  const context = { timeOfDay: '深夜', userDisplayName: '嘉树' };
+  for (const [input, expected] of [
+    ['嘉树，\n\n深夜，信到了。', '嘉树：\n\n深夜，信到了。'],
+    ['深夜。嘉树，信到了。', '嘉树：\n\n深夜。信到了。'],
+    ['嘉树:\n\n午后读到这封信。', '嘉树：\n\n深夜读到这封信。'],
+    ['窗外雨声很轻。', '嘉树：\n\n窗外雨声很轻。'],
+    ['你引用“嘉树，晚安”。', '嘉树：\n\n你引用“嘉树，晚安”。'],
+  ]) {
+    const result = policy.apply(input, contract, context);
+    assert.equal(result.text, expected + '\n\n—— 林离');
+    const again = policy.apply(result.text, contract, context);
+    assert.equal(again.text, result.text);
+    assert.equal(again.metadata.action, 'unchanged');
+  }
+  const long = '我会按这封信的内容慢慢说完。'.repeat(60);
+  assert.equal(policy.apply(long, contract, context).text, '嘉树：\n\n' + long + '\n\n—— 林离');
+  assert.equal(policy.apply('先让安静留一会儿。', contract, { timeOfDay: '深夜' }).text, '先让安静留一会儿。\n\n—— 林离');
+  assert.equal(new NoopReplyPolicy().apply(long, contract, context).text, long);
+  assert.throws(() => policy.apply('嘉树：\n\n—— 林离', contract, context), { code: 'reply_empty_body' });
+  const custom = { outputContract: { signature: '—— 阿雨{1}' } };
+  assert.equal(policy.apply('正文\n\n—— 阿雨{1}', custom, context).text, '正文\n\n—— 阿雨{1}');
+});
+
+test('在线 Harness 重写漏称呼时，网关和记忆保存同一修复正文且留痕', async t => {
+  const { endpoint, received } = await fixture(t, { rewrite: true, dropSalutation: true });
+  const root = await mkdtemp(join(tmpdir(), 'linli-format-gateway-'));
+  const config = JSON.parse(await readFile('config/user-config.example.json', 'utf8'));
+  config.user.displayName = '嘉树';
+  config.letters.dailyLimitBypass = true;
+  config.letters.fallbackEnabled = false;
+  config.letters.harness.enabled = true;
+  config.letters.memory.enabled = true;
+  config.letters.memory.provider = 'sqlite';
+  config.letters.baseModel.provider = 'external.openai-compatible';
+  config.letters.baseModel.external = { endpoint, model: 'deepseek-v4-pro', apiKey: 'fake-key' };
+  config.privacy.allowExternalModelRequests = true;
+  delete config.letters.harness.root;
+  const path = join(root, 'user.json'); await writeFile(path, JSON.stringify(config));
+  const app = createLocalApp({ dataRoot: join(root, 'data'), userConfigPath: path, port: 0, env: {} });
+  t.after(async () => { await app.stop(); await rm(root, { recursive: true, force: true }); });
+  const { serviceUrl } = await app.start();
+  const sent = await fetch(serviceUrl + '/letter/send', { method: 'POST', body: JSON.stringify({ body: '项目完成后，我想歇一歇。' }) }).then(r => r.json());
+  await app.letterWorker.runOnce();
+  const list = await fetch(serviceUrl + '/letter/send/list').then(r => r.json());
+  const saved = list.letters.find(item => item.id === sent.id);
+  assert.equal(saved.status, 'replied');
+  assert.equal(saved.reply, '嘉树：\n\n' + reply + '\n\n—— 林离');
+  assert.equal(received.length, 5, '格式整理不增加模型请求');
+  const trace = await fetch(serviceUrl + '/letter/execution/' + sent.id).then(r => r.json());
+  assert.equal(trace.attempts[0].metadata.outputPolicy.openingAction, 'normalized');
+  assert.equal(trace.attempts[0].metadata.outputPolicy.version, '1.1.0');
+  assert.equal(trace.attempts[0].metadata.execution.rewriteCount, 1);
+  const episode = app.store.listMemoryEpisodes('林离', 1)[0];
+  assert.ok(episode.content.endsWith('回信：' + saved.reply));
 });
 
 test('本地时间上下文按用户时区计算，并纠正模型猜错的起首时段', async () => {
@@ -138,6 +218,7 @@ for (const kind of ['external-api', 'local-model']) test(`真实 PowerShell 四�
   for (const call of received) {
     assert.equal(call.url, '/v1/chat/completions');
     assert.equal(call.body.model, base.model);
+    assert.doesNotMatch(call.body.messages[0].content, /不超过\s*200\s*字|到\s*220\s*字/u);
     assert.doesNotMatch(call.body.messages[0].content, /昨天听了雨/u);
     assert.match(call.body.messages[1].content, /昨天听了雨/u);
     assert.doesNotMatch(call.body.messages[1].content, /素材 craft|素材 examples/u);
@@ -200,7 +281,7 @@ test('真实网关保存离线人格回信与来源记录，不改游戏响应�
   const sent = await fetch(`${address.serviceUrl}/letter/send`, { method: 'POST', body: JSON.stringify({ body: '今天工作完成了，很开心。' }) }).then(r => r.json());
   await app.letterWorker.runOnce();
   const letter = app.letterService.detail(sent.id);
-  assert.equal(letter.status, 'replied'); assert.match(letter.reply, /嘉树/u); assert.ok(letter.reply.endsWith('—— 林离'));
+  assert.equal(letter.status, 'replied'); assert.match(letter.reply, /^嘉树：\n\n/u); assert.match(letter.reply, /嘉树/u); assert.ok(letter.reply.endsWith('—— 林离'));
   const trace = await fetch(`${address.serviceUrl}/letter/execution/${sent.id}`).then(r => r.json());
   assert.equal(trace.attempts[0].metadata.execution.provider, 'olivia-lin.offline');
   assert.equal(trace.attempts[0].metadata.persona.assets.length, 7);

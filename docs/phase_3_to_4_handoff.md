@@ -4,6 +4,8 @@
 >
 > 更新日期：2026-09-07。更新前核对的 `main` 提交：`615ff80`；本轮重新运行 `pnpm test`，84/84 通过。接手时仍须检查最新提交、工作区和测试，本文的快照不能代替现状检查。
 
+> 实验分支补充（2026-09-08）：`exp/phase3-persona-harness-fusion` 的新称呼规则、可选时间/天气、自然收尾及弹性篇幅见 [融合实验 §5.2](./phase3-exp-persona-harness-fusion.md#52-steam-调试增量书信格式兜底)。这些增量不等于 main 已合入；新格式仍需用户 Steam 复验。
+
 ## 1. 接手目标与第一步
 
 你正在接手 [Comma0103/Linli-Nocturne](https://github.com/Comma0103/Linli-Nocturne)。项目名称为 **Linli Nocturne（林离·余音）**，默认分支 `main`。代码和展示文案使用简体中文，不添加地域限制。

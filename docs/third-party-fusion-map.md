@@ -5,10 +5,10 @@
 | 能力 | 来源 | 项目落点 | 处理方式 |
 | --- | --- | --- | --- |
 | 人格、背景 | `1Dreamer666/olivia-lin` 的 `persona/olivia_lin.md`、`memories.md` | `PersonaBundleProvider` | 原文装配并记录提交和哈希；历史描述不变成地区访问限制 |
-| 书信结构、场景、样例 | `olivia-lin` 的 `letter_craft.md`、`samples/letters_from_her.md` | PersonaBundle 与离线引擎 | 采用具体细节、场景化回应和落款；冲突篇幅/固定问句按统一规则处理 |
+| 书信结构、场景、样例 | `olivia-lin` 的 `letter_craft.md`、`samples/letters_from_her.md` | PersonaBundle 与离线引擎 | 采用具体细节、场景化回应和落款；时间/天气与邀请不是必选项；篇幅按内容决定，不强加固定字数 |
 | 无模型生成 | `olivia-lin` 的 `skill/local_engine.py` | `OliviaLinOfflineProvider` | Python 薄桥接直接调用；不扫描上游配置、不读取上游记忆、不联网 |
 | 预检、草稿、检查、有限重写 | `yilangren/OliviaSoul` v18 的 `harness/01/03/04/05` | `fusion-explicit.ps1` 与 `FusionHarness` | 只使用显式传入的模型、Persona、规则和历史，不调用隐藏档案 |
-| 栏目和关系事实检查 | OliviaSoul v18 `harness/00-栏目.md`、`写法.md` | 融合 Harness | 保留关系证据检查；与项目称呼、记忆边界冲突的条款由项目规则覆盖 |
+| 栏目和关系事实检查 | OliviaSoul v18 `harness/00-栏目.md`、`写法.md` | 融合 Harness | 保留关系证据检查；融合输入去掉固定字数/段数上限，称呼与记忆边界使用项目规则；上游文件不变 |
 | 场景验收 | `olivia-lin/samples/eval_testcases.md` | 自动化和后续质量评测 | 用例作为输入和检查方向，不把示例答案塞进待测上下文 |
 | 动态历史 | 两者的分层/近期组织思路 | `SqliteMemoryProvider` | 只有项目 SQLite 是事实源；档案和缓存不能回写事实 |
 
