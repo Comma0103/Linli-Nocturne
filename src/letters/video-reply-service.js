@@ -49,6 +49,7 @@ export class VideoReplyService {
   listJobs(letterId) { return this.store.listVideoJobs(letterId); }
   getActive(letterId) { return this.store.getActiveVideo(letterId); }
   listActive() { return this.store.listActiveVideos(); }
+  getAsset(assetId) { return this.store.getVideoAsset(assetId); }
   mediaPath(assetId) { const video = this.store.getVideoAsset(assetId); return video?.active ? video.mediaPath : null; }
   delete(letterId) { return this.store.deleteActiveVideo(letterId, this.clock().toISOString()); }
 }

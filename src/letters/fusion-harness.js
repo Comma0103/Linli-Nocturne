@@ -8,13 +8,13 @@ import { THIRD_PARTY_ROOT, sha256, SOUL_COMMIT, effectiveAsset } from './persona
 import { LocalLetterDiagnostics } from './local-diagnostics.js';
 
 const SCRIPT_ASSETS = ['scripts/harness-4step.ps1', 'scripts/fusion-explicit.ps1', 'scripts/ds-call.ps1',
-  'harness/00-栏目.md', 'harness/01-预检.md', 'harness/03-中段生成.md', 'harness/04-尾端检查.md', 'harness/05-反馈重写.md'];
+  'harness/00-栏目.md', 'harness/01-预检.md', 'harness/01-初始化账本.md', 'harness/03-中段生成.md', 'harness/04-尾端检查.md', 'harness/05-反馈重写.md'];
 
 export class FusionHarness {
   constructor({ root = join(THIRD_PARTY_ROOT, 'OliviaSoul/v18-harness'), powershell = 'powershell.exe', timeoutMs = 15 * 60_000, maxRewrites = 1, runner = runProcess, diagnostics = {} } = {}) {
     this.root = resolve(root); this.powershell = powershell; this.timeoutMs = timeoutMs;
     if (![0, 1].includes(maxRewrites)) throw new TypeError('harness.maxRewrites 只能是 0 或 1');
-    this.maxRewrites = maxRewrites; this.runner = runner; this.provider = 'linli.fusion-v1'; this.version = '1.1.0-exp';
+    this.maxRewrites = maxRewrites; this.runner = runner; this.provider = 'linli.fusion-v1'; this.version = '1.2.0-exp';
     this.diagnostics = new LocalLetterDiagnostics(diagnostics);
   }
   wrap(base) {
@@ -53,7 +53,7 @@ export class FusionHarness {
         call = { id: stageId, sequence: calls.length + 1, provider: base.provider, module: base.moduleInfo, model: base.model ?? null, status: 'processing' };
         calls.push(call);
         input.onExecution?.(metadata);
-        const result = await base.generate({ ...input, persona: '', memory: '',
+        const result = await base.generate({ ...input, persona: '', memory: '', previousState: '', relationshipMemory: '',
           system: messages[0].content, prompt: messages[1].content });
         if (!result?.text?.trim()) throw new ModelProviderError('模型未返回正文', 'provider_empty_reply', base.provider);
         call.provider = result.provider ?? base.provider;
@@ -81,6 +81,8 @@ export class FusionHarness {
         endpoint: `http://127.0.0.1:${server.address().port}/chat/completions`, token, output,
         persona: input.persona || '使用所选基础模型的人格设置，不加载其它人格档案。',
         rules: input.rules || '采用所选人格的书信规则，素材与用户正文分开。', fields,
+        previousState: input.previousState || '', relationshipMemory: input.relationshipMemory || '',
+        initializeState: input.initializeState === true,
         context: JSON.stringify({ currentLetter: { sender: input.userDisplayName, recipient: input.recipient, body: input.prompt },
           history: input.memory || '', now: input.now, timeZone: input.timeZone, localDateTime: input.localDateTime,
           localHour: input.localHour, timeOfDay: input.timeOfDay }), maxRewrites: this.maxRewrites }), 'utf8');
@@ -93,7 +95,8 @@ export class FusionHarness {
       metadata.qualityChecks = result.qualityChecks;
       if (result.status !== 'completed' || !result.text?.trim()) throw new ModelProviderError('融合 Harness 未通过检查', safeErrorCode({ code: result.errorCode }), this.provider);
       await diagnostic.finish('completed');
-      return { provider: base.provider, text: result.text, metadata: { ...metadata, model: calls.at(-1)?.model ?? null } };
+      return { provider: base.provider, text: result.text, metadata: { ...metadata, model: calls.at(-1)?.model ?? null },
+        memoryUpdate: result.relationshipState ? { relationshipState: result.relationshipState, version: this.version } : undefined };
     } catch (error) {
       await diagnostic.finish('failed', safeErrorCode(error));
       throw Object.assign(new ModelProviderError('融合 Harness 处理失败，请查看本封执行记录', safeErrorCode(error), this.provider), { execution: metadata });

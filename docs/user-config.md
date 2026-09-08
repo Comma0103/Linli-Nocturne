@@ -26,7 +26,7 @@ README 只介绍通用启动流程。本页先解释所有配置属性，再按�
 | 属性               | 类型和允许值                                                 | 默认值          | 说明                                                                       |
 | ------------------ | ------------------------------------------------------------ | --------------- | -------------------------------------------------------------------------- |
 | `user.displayName` | 字符串                                                       | `""`            | 玩家名字，用于回信称呼和模型上下文。它不是游戏信件收件人；收件人仍是林离。 |
-| `user.profileId` | 字符串 | `"default"` | 本机多套用户/会话的记忆隔离键。 |
+| `user.profileId` | 字符串 | `"default"` | 稳定玩家 ID，用于信件、额度和记忆隔离；改称呼保留该 ID，创建新玩家才更换。 |
 | `user.language`    | 字符串，模板为 `"zh-CN"`                                     | `"zh-CN"`       | 界面语言预留字段。当前服务主要使用简体中文文案，暂不根据它切换整套界面。   |
 | `user.timeZone`    | IANA 时区字符串，例如 `Asia/Shanghai`、`America/Los_Angeles` | `Asia/Shanghai` | 信件和 MIDI 任务的自然日边界。填写本机实际使用的时区。                     |
 
@@ -68,10 +68,10 @@ README 只介绍通用启动流程。本页先解释所有配置属性，再按�
 | `letters.harness.person`            | 字符串                                             | `linli-local-user`                     | Harness 内部归档键，不是玩家显示名，也不是游戏收件人。                                          |
 | `letters.harness.diagnostics.enabled` | 布尔值                                          | `false`                                | 是否在本机保存每个 Harness 阶段的诊断正文；只建议调试时开启。                                  |
 | `letters.harness.diagnostics.directory` | 文件夹路径                                     | `../logs/letter-diagnostics`            | 诊断文件目录；相对路径以 `user-config.json` 所在目录解析。                                     |
-| `letters.memory.enabled`            | 布尔值                                             | `true`                                 | 是否保存有限的本地对话记忆。关闭时不写入记忆。                                                  |
-| `letters.memory.provider`           | 当前可用为 `sqlite`                                | `sqlite`                               | 开启记忆时选择 MemoryProvider。关闭记忆应使用 `enabled: false`。                                |
-| `letters.memory.maxEpisodes`        | 正整数                                             | `12`                                   | 最多保留多少条对话记忆。                                                                        |
-| `letters.memory.maxCharsPerEpisode` | 正整数                                             | `2000`                                 | 单条记忆最大字符数。                                                                            |
+| `letters.memory.enabled` | 布尔值 | `true` | 统一控制项目历史读取、上下文注入和记忆更新；关闭期间的往来仍可在信箱阅读，但不自动加入记忆。 |
+| `letters.memory.provider` | `olivia-soul.sqlite`、`sqlite` 或已注册 ID | `olivia-soul.sqlite` | 持续分层记忆或有限近期记忆，二选一；关闭使用 `enabled: false`。 |
+| `letters.memory.maxEpisodes` | 正整数 | `12` | 有限 sqlite 的近期条数；持续记忆仍保留完整成功往来，另维护这份兼容窗口，便于切回有限实现。 |
+| `letters.memory.maxCharsPerEpisode` | 正整数 | `2000` | 有限记忆及兼容窗口的单条长度，不裁剪信箱原文或长期历史。 |
 | `letters.memory.maxContextChars`    | 正整数                                             | `6000`                                 | 传给下一次回信的记忆上下文最大字符数。                                                          |
 
 ### `music`
@@ -180,13 +180,13 @@ API Key 只保存在本机的 `config/user-config.json`，不能提交或公开�
 
 #### 记忆和连续对话
 
-在信件配置中开启有限 SQLite 记忆：
+实验分支默认开启持续 SQLite 记忆：
 
 ```json
 "letters": {
   "memory": {
     "enabled": true,
-    "provider": "sqlite",
+    "provider": "olivia-soul.sqlite",
     "maxEpisodes": 12,
     "maxCharsPerEpisode": 2000,
     "maxContextChars": 6000
@@ -194,7 +194,31 @@ API Key 只保存在本机的 `config/user-config.json`，不能提交或公开�
 }
 ```
 
-记忆默认开启；仍会限制条数、单条大小和上下文大小。关闭时把 `enabled` 改为 `false`，不会继续写入新的记忆。
+成功往来自动落盘；最近 5 封使用原文，再前 5 封使用逐封摘要，更早的往来归入五段式回忆，并可按需查回旧信。摘要使用当前选择的外部/本地模型；无模型离线时保留往来，待启用模型后继续整理。开启 Fusion Harness 时，关系账本由其预检继承更新，随成功回信保存。
+
+模型首次处理超过五封的历史或有新信进入摘要层时，会产生额外的摘要请求；失败最多重试 3 次，不影响已收到的回信。总上下文仍受 `maxContextChars` 约束，超出部分不会全部送给模型。独立旧 `olivia-soul-v18` 自管记忆，不能同时开启项目记忆；需要统一记忆时选择 `linli.fusion-v1`。
+
+切换玩家、改称呼、查看/遗忘、重新纳入旧信和迁移数据均可用编号菜单完成。先停止本地服务，在仓库根目录运行：
+
+```powershell
+node scripts/manage-user-data.mjs
+```
+
+- **改名和换人**：改称呼保留历史；创建玩家生成独立 ID，切换后只读取该玩家的信件和记忆。向导在 `user.profiles` 保存名称索引。
+- **关闭和遗忘**：关闭 `enabled` 不再读取或新增记忆。遗忘保留可阅读的信件，并使关联摘要和账本失效；旧信只有通过“重新纳入”才会再次参与。
+- **旧数据升级**：已有有限记忆能证明的来源自动接续，其他旧信保留在信箱；需要补齐全部历史时，使用菜单的“将旧信重新纳入记忆”。
+- **换电脑**：旧电脑选“导出数据包”，复制 ZIP 到新电脑；新电脑下载同一版本项目，创建配置后选“导入数据包”。程序自动校验、备份原数据、恢复数据库和媒体路径；重新填写模型密钥、启动服务即可。
+
+数据包包含所有玩家的信件、摘要、账本、必要配置及数据目录内媒体；不包含密钥、诊断草稿、游戏资源或 Python/模型运行时。当前上限 256 MiB，外置自定义插件需在新机器另行安装。导入为整体替换，原目录保留为备份，不把两套数据库直接合并。
+
+自动化或高级使用可直接执行：
+
+```powershell
+node scripts/export-user-data.mjs --output linli-user-data.zip
+node scripts/import-user-data.mjs --input linli-user-data.zip
+```
+
+两条命令支持 `--data-root`、`--config`，默认与启动脚本使用相同的 `LINLI_DATA_ROOT`、`LINLI_USER_CONFIG` 或 `data/`、`config/user-config.json`。
 
 ### 演奏
 

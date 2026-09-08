@@ -20,7 +20,7 @@ export class LetterService {
     if (!personaProvider || typeof personaProvider.getPrompt !== 'function') throw new TypeError('personaProvider.getPrompt is required');
     this.personaProvider = personaProvider;
     this.userDisplayName = String(userDisplayName ?? '').trim();
-    this.conversationId = conversationId;
+    this.conversationId = String(conversationId ?? '').trim() || 'default';
     this.outputPolicy = outputPolicy;
     this.timeZone = timeZone;
     this.clock = clock;
@@ -36,7 +36,7 @@ export class LetterService {
     if (typeof body !== 'string' || !body.trim()) throw new TypeError('Letter body is required');
     const now = this.clock();
     const { startIso, endIso } = this.dayBoundary(now);
-    if (!this.limits.bypass && this.store.countToday(recipient, startIso, endIso) >= this.limits.dailyLimit) {
+    if (!this.limits.bypass && this.store.countToday(recipient, startIso, endIso, this.conversationId) >= this.limits.dailyLimit) {
       throw new LetterLimitError('Daily letter limit reached', 'daily_limit');
     }
     const letter = { id: randomUUID(), recipient, conversationId: this.conversationId, body: body.trim(), createdAt: now.toISOString(),
@@ -66,6 +66,7 @@ export class LetterService {
       const memoryContext = String(memory?.context ?? '').slice(0, this.limits.memoryContextMaxChars);
       trace.memory = { ...(this.memoryProvider.moduleInfo ?? { id: this.memoryProvider.provider ?? 'unknown', version: 'unknown' }),
         enabled: this.memoryProvider.enabled !== false, contextChars: memoryContext.length, maxChars: this.limits.memoryContextMaxChars,
+        revision: memory.revision, coveredThrough: memory.coveredThrough, truncated: memory.truncated, retrieval: memory.retrieval,
         sources: (memory?.episodes ?? []).map(item => ({ sourceLetterId: item.source_letter_id })) };
       // 选定人格缺失是配置错误，不得静默退成无人格回信。
       const persona = await this.personaProvider.getPrompt({ recipient: letter.recipient, letter });
@@ -76,7 +77,10 @@ export class LetterService {
       const temporalRule = `当前本地时间为 ${localTime.localDateTime}（${this.timeZone}），当前时段为“${localTime.timeOfDay}”。时间或天气适合时才写；如写当前时间须遵循这个本地时段，不得根据 UTC 时间自行猜测。`;
       const result = await this.modelAdapter.generateReply({ recipient: letter.recipient, userDisplayName: this.userDisplayName, prompt: letter.body,
         letterId: letter.id, attempt: letter.attempt_count,
-        memory: memoryContext, memoryEcho: memoryContext ? memory.memoryEcho : '', persona: String(persona?.text ?? ''), personaId: persona.provider,
+        memory: memoryContext, memoryEcho: memoryContext ? memory.memoryEcho : '',
+        previousState: memory.previousState ?? '', relationshipMemory: memory.relationshipMemory ?? '',
+        initializeState: memory.initializeState, memoryLastLetterId: memory.memoryLastLetterId,
+        persona: String(persona?.text ?? ''), personaId: persona.provider,
         rules: `${persona.rules ?? ''}\n${temporalRule}`, now: now.toISOString(), timeZone: this.timeZone,
         ...localTime,
         onExecution: execution => { trace.execution = execution; saveTrace(); } });
@@ -84,10 +88,18 @@ export class LetterService {
       const finalized = this.outputPolicy.apply(result.text, persona, { timeOfDay: localTime.timeOfDay, userDisplayName: this.userDisplayName });
       trace.outputPolicy = finalized.metadata;
       const at = this.clock().toISOString();
-      const memoryInput = { recipient: letter.recipient, conversationId: this.conversationId, letter, reply: finalized.text, createdAt: at };
+      const memoryInput = { recipient: letter.recipient, conversationId: this.conversationId, letter, reply: finalized.text, createdAt: at, generation: result, recalled: memory };
       // 默认 SQLite 记忆与正文、留痕在同一事务提交；第三方记忆失败有可见记录。
       const prepared = this.memoryProvider.prepare?.(memoryInput);
       const replied = this.store.finishLetterAttempt(letter, { text: finalized.text, at, metadata: executionTrace(trace), memory: prepared });
+      if (replied?.status === 'replied' && typeof this.memoryProvider.queueAfterReply === 'function') {
+        const refresh = this.store.getLetter(letter.id).memory_allowed
+          ? this.memoryProvider.queueAfterReply({ letter: replied, recipient: letter.recipient, conversationId: this.conversationId })
+          : { status: 'excluded' };
+        trace.memory = { ...(trace.memory ?? {}), refresh };
+        this.store.db.prepare('UPDATE letter_attempts SET metadata_json = ? WHERE letter_id = ? AND attempt = ?')
+          .run(JSON.stringify(executionTrace(trace)), letter.id, letter.attempt_count);
+      }
       if (!this.memoryProvider.prepare && replied?.status === 'replied') {
         try { await this.memoryProvider.remember(memoryInput); }
         catch (error) {
@@ -107,15 +119,15 @@ export class LetterService {
     return this.store.recoverStaleLetters(this.clock().toISOString(), leaseMs, this.limits.maxAttempts, this.limits.retryDelayMs);
   }
 
-  list() { return this.store.listLetters(); }
   remainingToday(recipient = '林离') {
     if (this.limits.bypass) return this.limits.dailyLimit;
     const now = this.clock();
     const { startIso, endIso } = this.dayBoundary(now);
-    return Math.max(0, this.limits.dailyLimit - this.store.countToday(recipient, startIso, endIso));
+    return Math.max(0, this.limits.dailyLimit - this.store.countToday(recipient, startIso, endIso, this.conversationId));
   }
   detail(id) { const row = this.store.getLetter(id); return row?.conversation_id === this.conversationId ? row : null; }
   execution(id) { return this.detail(id) ? { letterId: id, attempts: this.store.getLetterAttempts(id), provenance: this.store.getLetterAttempts(id).length ? 'recorded' : 'unknown' } : null; }
-  unreadCount() { return this.store.countUnread(); }
-  markRead(id) { return this.store.markRead(id, this.clock().toISOString()); }
+  list() { return this.store.listLetters(50, this.conversationId); }
+  unreadCount() { return this.store.countUnread(this.conversationId); }
+  markRead(id) { return this.detail(id) ? this.store.markRead(id, this.clock().toISOString()) : null; }
 }

@@ -6,7 +6,7 @@
 
 ## 项目状态
 
-截至当前，Phase 0–3 已完成；本实验分支新增 Persona/Harness 融合实现，已完成离线与 DeepSeek 游戏回信验证，最新称呼格式修复待复验。Phase 4-1 正在开发，首轮已打通音乐配置和媒体格式契约。项目仍是开发版，不是发行版。
+Phase 0–3 的基础功能已完成。本实验分支已接入持续记忆、关系账本与数据迁移，最新增量待 Steam 离线/在线复验；此前的回信实机记录不代表新版记忆已验收。Phase 4-1 正在开发。项目仍是开发版。
 
 ## 当前功能
 
@@ -14,7 +14,8 @@
 
 * [x] **信件规则与可靠处理**：遵循每日最多 3 封、默认每封延迟 5 分钟的原版规则；支持排队、状态流转、原子领取、过期任务恢复、失败重试和最大尝试次数。
 * [x] **可替换的回信生成链路**：支持仓库内 Olivia-lin 离线人格引擎、外部 OpenAI 兼容 API、本地 OpenAI 兼容模型，并可组合 Persona、Harness 与有限记忆；失败时可按配置回退。
-* [x] **Persona、Harness 与有限记忆**：已内置 Olivia-lin 人格/书信素材包、OliviaSoul v18 检查流程、融合 Harness 和 SQLite 单一历史来源；每封信记录实际实现、版本、素材哈希和阶段。实验版按所选人格整理称呼与落款，篇幅和自然收尾由内容决定。
+* [x] **Persona、Harness 与持续记忆**：内置 Olivia-lin 人格/书信素材包和 OliviaSoul v18 检查流程。可选的 SQLite 持续记忆保存完整往来、分层摘要和关系账本，并检索旧信；每封信记录实现、版本及来源。称呼和落款按人格整理，篇幅与收尾保持自然。
+* [x] **玩家档案与数据迁移**：按玩家隔离信件和记忆，可改名、切换、查看或清空；支持导出数据包和在另一台电脑导入。
 * [x] **Steam 实机回信**：已在 Steam 客户端 `0.0.9.627` 中验收离线回信，以及 DeepSeek + Persona + OliviaSoul Harness 的真实回信。
 
 ### MIDI、曲库与媒体任务
@@ -97,6 +98,16 @@ node scripts/apply-install.mjs "你的 Steam 游戏目录" "游戏目录外的�
 保持本地服务运行，启动已完成接入的 Steam 客户端，试用想使用的功能。
 
 当前可使用已经接入的信件、MIDI 上传、解析、生成、本地曲库和视频回信资产功能。上传曲目真正接管原生 WebPlayer 的播放/演奏仍受 `LINLI-PLAY-001` 影响。
+
+### 5. 管理记忆和迁移数据
+
+停止本地服务后，在仓库根目录运行：
+
+```powershell
+node scripts/manage-user-data.mjs
+```
+
+按编号切换玩家、查看/清空记忆，或导出、导入数据包。换电脑时，在新电脑导入同一个包，再填写模型密钥并启动服务。详见[记忆与数据迁移](./docs/user-config.md#记忆和连续对话)。
 
 ## 开发者用法
 
@@ -282,6 +293,12 @@ music.addToPlaylist(track);
 #### [x] Phase 3-8：真实模型 Steam 实机验收（DeepSeek + Persona + OliviaSoul Harness）（`b7cd5ef`）
 
 使用 DeepSeek 外部模型、已内置 Persona 和 OliviaSoul Harness，在 Steam 界面完成真实回信测试；已确认模型请求成功、Harness 实际运行、Persona 生效，以及游戏内显示以玩家名字“嘉树”开头的完整回信正文。设计与验收记录见 [Phase 3 Provider 与 OliviaSoul Harness](./docs/phase3-2-provider-and-harness.md)。
+
+#### [ ] Phase 3-EXP：融合流程与持续记忆复验
+
+实验分支已实现人格融合、分层长期记忆、关系账本、玩家隔离及数据迁移；最新增量待 Steam 离线/在线验收。
+
+设计与验收：[Persona 与 Harness 融合实验](./docs/phase3-exp-persona-harness-fusion.md)。
 
 ### Phase 4 — 完整音乐体验
 

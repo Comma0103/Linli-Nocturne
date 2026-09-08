@@ -7,6 +7,12 @@ data/
 logs/
 secrets/
 config/user-config.json
+config/user-config.json.before-import-*
+data.before-import-*/
+data.import-*/
+linli-user-data*.zip
+*.sqlite-wal
+*.sqlite-shm
 *.db
 *.sqlite
 *.soul

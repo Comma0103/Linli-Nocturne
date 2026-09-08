@@ -58,10 +58,13 @@ function Check-Bad([string]$check) {
 
 $result = @{ version = 'linli.fusion-v1'; stages = $events; qualityChecks = @(); rewriteCount = 0; status = 'failed' }
 try {
-    $map = @{ ctx = $inputData.context; rules = $inputData.rules; persona = $inputData.persona; fields = $inputData.fields; previousState = '无（只依据本次提供的有效历史初始化）'; relationshipMemory = '无' }
-    $safe = Stage 'precheck' '01-预检.md' $map
+    $map = @{ ctx = $inputData.context; rules = $inputData.rules; persona = $inputData.persona; fields = $inputData.fields; previousState = $inputData.previousState; relationshipMemory = $inputData.relationshipMemory }
+    if (-not $map.previousState) { $map.previousState = '无（只依据本次提供的有效历史初始化）' }
+    if (-not $map.relationshipMemory) { $map.relationshipMemory = '无' }
+    $precheckFile = if ($inputData.initializeState) { '01-初始化账本.md' } else { '01-预检.md' }
+    $safe = Stage 'precheck' $precheckFile $map
     if (-not (Valid-Safe $safe)) {
-        $safe = Stage 'precheck-format-repair' '01-预检.md' $map "`n请严格按规定字段和十三行格式重新输出。"
+        $safe = Stage 'precheck-format-repair' $precheckFile $map "`n请严格按规定字段和十三行格式重新输出。"
     }
     if (-not (Valid-Safe $safe)) { throw 'harness_precheck_invalid' }
     if ($safe -match '(?m)^结论　拦截\s*$') { throw 'provider_content_blocked' }
@@ -83,6 +86,7 @@ try {
         if ($recheckBad -gt 0) { throw 'harness_quality_failed' }
     }
     $result.text = $draft
+    $result.relationshipState = (($safe -split '\r?\n') | Where-Object { $_ -match '^(关系|关系依据|已承认情感|既有亲密|既有边界|亲密上限)　' }) -join "`n"
     $result.status = 'completed'
 } catch {
     $code = $_.Exception.Message

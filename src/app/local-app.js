@@ -1,4 +1,6 @@
 import { mkdir } from 'node:fs/promises';
+import { existsSync, readFileSync, writeFileSync, unlinkSync } from 'node:fs';
+import { randomUUID } from 'node:crypto';
 import { join } from 'node:path';
 import { SqliteStore } from '../storage/sqlite-store.js';
 import { LetterService } from '../letters/letter-service.js';
@@ -31,6 +33,8 @@ function envOptions(env) {
 }
 
 export function createLocalApp({ dataRoot = 'data', settingsPath = 'config/module-settings.json', userConfigPath = null, host = '127.0.0.1', port = 27149, env = process.env } = {}) {
+  const lockPath = join(dataRoot, 'service.lock');
+  const lockId = randomUUID();
   const store = new SqliteStore(join(dataRoot, 'linli.sqlite'));
   const registries = createDefaultModuleRegistries({ store });
   const userConfig = loadUserConfig(userConfigPath, { defaultSettings: DEFAULT_MODULE_SETTINGS, runtimeRoot: join(dataRoot, 'harness-runtime') });
@@ -72,6 +76,14 @@ export function createLocalApp({ dataRoot = 'data', settingsPath = 'config/modul
       await mkdir(dataRoot, { recursive: true });
       await new Promise((resolve, reject) => { server.once('error', reject); server.listen(port, host, resolve); });
       address = server.address();
+      if (existsSync(lockPath)) {
+        const owner = JSON.parse(readFileSync(lockPath, 'utf8'));
+        let active = true;
+        try { process.kill(owner.pid, 0); } catch (error) { if (error.code === 'ESRCH') active = false; }
+        if (active) throw new Error('此数据目录已有运行中的服务。');
+        unlinkSync(lockPath);
+      }
+      writeFileSync(lockPath, JSON.stringify({ pid: process.pid, id: lockId }), { flag: 'wx' });
       letterWorker.start();
       return { host, port: address.port, serviceUrl: `http://localhost:${address.port}` };
     },
@@ -79,6 +91,7 @@ export function createLocalApp({ dataRoot = 'data', settingsPath = 'config/modul
       await letterWorker.stop();
       if (server.listening) await new Promise(resolve => server.close(resolve));
       store.close();
+      if (existsSync(lockPath) && JSON.parse(readFileSync(lockPath, 'utf8')).id === lockId) unlinkSync(lockPath);
     },
   };
 }

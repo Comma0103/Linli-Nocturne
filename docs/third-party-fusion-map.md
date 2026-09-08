@@ -10,9 +10,11 @@
 | 预检、草稿、检查、有限重写 | `yilangren/OliviaSoul` v18 的 `harness/01/03/04/05` | `fusion-explicit.ps1` 与 `FusionHarness` | 只使用显式传入的模型、Persona、规则和历史，不调用隐藏档案 |
 | 栏目和关系事实检查 | OliviaSoul v18 `harness/00-栏目.md`、`写法.md` | 融合 Harness | 保留关系证据检查；融合输入去掉固定字数/段数上限，称呼与记忆边界使用项目规则；上游文件不变 |
 | 场景验收 | `olivia-lin/samples/eval_testcases.md` | 自动化和后续质量评测 | 用例作为输入和检查方向，不把示例答案塞进待测上下文 |
-| 动态历史 | 两者的分层/近期组织思路 | `SqliteMemoryProvider` | 只有项目 SQLite 是事实源；档案和缓存不能回写事实 |
+| 有限历史（保留选项） | 近期上下文与主题组织 | `SqliteMemoryProvider` | 保留有限往来和主题画像；与持续记忆可二选一 |
+| 持续记忆与关系（已实现） | OliviaSoul 的 memory-lib.ps1、01-初始化账本.md、01-预检.md | `OliviaSoulSqliteMemoryProvider`、Fusion | 直接加载逐封/滚动摘要提示词，保留 5/5/旧信分层及来源规则；账本显式继承，随成功回信原子提交 |
+| 原文证据（已实现） | OliviaSoul 的 history-retrieval.ps1 | olivia-soul-memory-retrieval.ps1 | 直接调用原版快照校验和 search/read/neighbors、去重及预算；仅从当前玩家 SQLite 生成临时快照 |
 
-没有直接接入的文件包括上游私有/隐式配置、独立 APPDATA 数据库、默认密码保护的软删除系统、手工备用启动器和真实用户档案。它们可作参考，但会破坏统一配置、隐私或可重建性，因此不属于本项目运行时依赖。
+不自动读取上游私有配置或 APPDATA 数据库；关系、历史和摘要统一保存在项目 SQLite。refresh-live-memory.ps1 的显式输入模式用于参考，实际摘要采用 memory-lib.ps1 更完整的规则，避免重复实现。手工备用启动器、密码软删除和磁盘 mem_cache 不直接接入；项目提供统一遗忘与可校验数据包迁移。详见[融合实验 §4.1](./phase3-exp-persona-harness-fusion.md#41-持续关系与长期记忆2026-09-08)。持续记忆已通过自动化，新版 Steam 质量仍待验收。
 
 每封信的执行记录保存实际 provider、模型、Harness、Persona 哈希、记忆来源、阶段和降级原因；不保存 API Key、请求头、完整 Prompt 或推理过程。旧信缺少这些字段时标记为未知。
 

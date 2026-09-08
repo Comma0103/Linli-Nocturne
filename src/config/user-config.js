@@ -41,7 +41,7 @@ export function loadUserConfig(filename, { defaultSettings, runtimeRoot = '', va
   return {
     user,
     userDisplayName: String(user.user?.displayName ?? '').trim(),
-    conversationId: String(user.user?.profileId ?? 'default'),
+    conversationId: String(user.user?.profileId ?? '').trim() || 'default',
     settings,
     options: {
       provider: { endpoint: selected.endpoint, apiKey: selected.apiKey ?? '', model: selected.model, systemPrompt: user.letters?.systemPrompt,

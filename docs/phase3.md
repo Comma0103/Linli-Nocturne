@@ -19,7 +19,7 @@ Phase 0、Phase 1 和 Phase 2 目前各有一份阶段总览文档。Phase 3 也
 | Phase 3-6 | 本页的总体验收边界和交接文档 | 已完成 |
 | Phase 3-7 | [Steam 游戏界面实机验收（离线 fallback）](./phase3-7-steam-acceptance.md) | 已完成 |
 | Phase 3-8 | [真实模型 Steam 实机验收](./phase3-2-provider-and-harness.md) | 已完成（`b7cd5ef`） |
-| Phase 3 实验 | [Persona 与 Harness 融合](./phase3-exp-persona-harness-fusion.md) | 设计中，仅实验分支，尚未实现 |
+| Phase 3 实验 | [Persona 与 Harness 融合](./phase3-exp-persona-harness-fusion.md) | 已实现融合、持续记忆和迁移；最新增量待 Steam 复验，仅实验分支 |
 
 ## 总体验收边界
 

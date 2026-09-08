@@ -125,7 +125,7 @@ export class OpenAICompatibleProvider extends FunctionProvider {
     const url = endpoint.replace(/\/$/u, '').endsWith('/chat/completions')
       ? endpoint.replace(/\/$/u, '')
       : `${endpoint.replace(/\/$/u, '')}${endpoint.replace(/\/$/u, '').endsWith('/v1') ? '/chat/completions' : '/v1/chat/completions'}`;
-    super({ provider, timeoutMs, generate: async ({ prompt = '', recipient = '林离', userDisplayName = '', memory = '', persona = '', system, now, timeZone, localDateTime, localHour, timeOfDay }) => {
+    super({ provider, timeoutMs, generate: async ({ prompt = '', recipient = '林离', userDisplayName = '', memory = '', previousState = '', persona = '', system, now, timeZone, localDateTime, localHour, timeOfDay }) => {
       const systemText = system ?? systemWithPersona(systemPrompt, persona);
       const payload = await requestJson(fetchImpl, url, {
         method: 'POST',
@@ -133,6 +133,7 @@ export class OpenAICompatibleProvider extends FunctionProvider {
         body: JSON.stringify({ model, messages: [
           ...(systemText ? [{ role: 'system', content: systemText }] : []),
           { role: 'user', content: JSON.stringify({ currentLetter: { sender: userDisplayName, recipient, body: prompt }, history: memory,
+            ...(previousState ? { relationshipState: previousState } : {}),
             ...(now ? { now, timeZone, localDateTime, localHour, timeOfDay } : {}) }) },
         ] }),
       }, timeoutMs, provider);
@@ -228,7 +229,7 @@ export class ModelAdapter {
   async generateReply(input) {
     const result = await this.provider.generate(input);
     if (!result || typeof result.text !== 'string' || !result.text.trim()) throw new ModelProviderError('Model provider returned an invalid reply', 'invalid_provider_reply', result?.provider ?? 'unknown');
-    return { text: result.text.trim(), provider: result.provider ?? 'unknown', metadata: result.metadata ?? {} };
+    return { text: result.text.trim(), provider: result.provider ?? 'unknown', metadata: result.metadata ?? {}, memoryUpdate: result.memoryUpdate };
   }
 }
 

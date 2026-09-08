@@ -44,6 +44,10 @@ export function validateModuleSettings(input, registries = {}) {
   if (!input || typeof input !== 'object' || input.version !== 1) throw new Error('Unsupported module settings version');
   assertNoSecrets(input);
   assertRegistrySelection(input, registries);
+  const harness = registries.harness?.list().find(module => module.id === input.letters?.harness);
+  if (harness?.memoryOwnership === 'self-managed' && input.letters?.memory && input.letters.memory !== 'disabled') {
+    throw new Error('所选 Harness 自管记忆，不能同时开启项目记忆，避免两套历史同时注入。');
+  }
   return input;
 }
 

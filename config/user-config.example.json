@@ -31,7 +31,7 @@
     "dailyLimitBypass": false,
     "memory": {
       "enabled": true,
-      "provider": "sqlite",
+      "provider": "olivia-soul.sqlite",
       "maxEpisodes": 12,
       "maxCharsPerEpisode": 2000,
       "maxContextChars": 6000

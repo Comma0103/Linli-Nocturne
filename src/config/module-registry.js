@@ -5,10 +5,10 @@ export class ModuleRegistry {
     this.modules = new Map();
   }
 
-  register({ id, version = '0.0.0', create, label = id, description = '' } = {}) {
+  register({ id, version = '0.0.0', create, label = id, description = '', memoryOwnership } = {}) {
     if (!id || typeof create !== 'function') throw new TypeError(`${this.kind} module id and create are required`);
     if (this.modules.has(id)) throw new Error(`${this.kind} module already registered: ${id}`);
-    this.modules.set(id, Object.freeze({ id, version, label, description, create }));
+    this.modules.set(id, Object.freeze({ id, version, label, description, create, ...(memoryOwnership ? { memoryOwnership } : {}) }));
     return this;
   }
 
@@ -23,6 +23,6 @@ export class ModuleRegistry {
   }
 
   list() {
-    return [...this.modules.values()].map(({ id, version, label, description }) => ({ id, version, label, description }));
+    return [...this.modules.values()].map(({ create, ...metadata }) => metadata);
   }
 }

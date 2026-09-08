@@ -6,7 +6,11 @@ export function resolveModuleSelections(settings, { registries, store = null, op
   validateModuleSettings(settings, registries);
   const letters = settings.letters ?? {};
   const modelConfig = { fallback: letters.fallback !== false };
-  if (registries.provider?.has(letters.provider)) modelConfig.provider = registries.provider.resolve(letters.provider, options.provider ?? options.external ?? options.local ?? {});
+  let baseProvider = null;
+  if (registries.provider?.has(letters.provider)) {
+    baseProvider = registries.provider.resolve(letters.provider, options.provider ?? options.external ?? options.local ?? {});
+    modelConfig.provider = baseProvider;
+  }
   if (letters.harness) {
     const selectedHarness = registries.harness.resolve(letters.harness, options.harness ?? {});
     if (selectedHarness?.wrap) {
@@ -26,6 +30,7 @@ export function resolveModuleSelections(settings, { registries, store = null, op
   modelAdapter.configuration = { provider: letters.provider, harness: letters.harness ?? null, persona: letters.persona ?? 'default', memory: letters.memory ?? 'disabled', fallback: letters.fallback !== false };
   const memoryOptions = { ...(options.memory ?? {}) };
   if (store) memoryOptions.store = store;
+  memoryOptions.modelProvider ??= baseProvider;
   const memoryProvider = registries.memory.resolve(letters.memory ?? 'disabled', memoryOptions);
   const personaProvider = registries.persona.resolve(letters.persona ?? 'default', options.persona ?? {});
   const outputPolicy = registries.outputPolicy?.resolve(letters.outputPolicy ?? 'persona-contract', options.outputPolicy ?? {});

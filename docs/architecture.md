@@ -6,8 +6,8 @@ Game Client -> Local Gateway -> Domain Services -> Stores and Renderers
 - PatchManager：版本识别、备份、补丁、校验、回滚。
 - LocalGateway：兼容游戏前端的登录、信件、音乐、歌单和媒体接口。
 - LetterService：额度、延迟、状态领取、生成、检查、重试和记忆。
-- MemoryProvider：可选的有限对话记忆接口；默认 `NoopMemoryProvider`，内置 `SqliteMemoryProvider`，通过条数、单条字符数和上下文字符数限制保存范围。
-- LetterWorker：后台调度、processing 租约恢复和进程内 tick 互斥；保留手动处理接口用于诊断。
+- MemoryProvider：可替换的历史与关系输入；保留关闭、有限 `sqlite` 和实验版 `olivia-soul.sqlite`。模板默认开启持续记忆：完整成功往来保存在 letters，逐封摘要/滚动回忆/关系账本保存在 memory_summaries 和 memory_states；提示词预算不等于历史保留长度。
+- LetterWorker：后台处理信件和待更新摘要，分别互斥、续租和恢复；同一玩家串行生成回信。摘要调用在回信事务外进行，失败退避并最多尝试 3 次，不撤回已经成功的回信。
 - ModelAdapter：外部 API、可插拔 Harness、本地模型、离线人格引擎；OliviaSoul v18 通过适配器接入，其他 Harness 也可替换。
 - MusicService：MIDI 上传、解析、任务编排、曲库和歌单。
 - RenderPipeline：AudioRenderer、VideoRenderer、Future3DRenderer。
@@ -20,7 +20,11 @@ Game Client -> Local Gateway -> Domain Services -> Stores and Renderers
 - LocalApp 启动入口：把模块设置、SQLite、LetterWorker、兼容网关和媒体服务装配成一个开发版本地服务；默认离线 fallback，不把凭据写入设置文件。
 
 关键实体：
-Letter、MemoryEpisode、MidiAsset、RenderJob、PlaylistItem、ClientBaseline、ModelProfile。
+Letter、MemoryEpisode、MemorySummary、MemoryState、MidiAsset、RenderJob、PlaylistItem、ClientBaseline、ModelProfile。
+
+持续记忆复用 OliviaSoul 的最近 5 封原文、前 5 封逐封摘要和更早五段式回忆。原文检索直接调用上游 history-retrieval.ps1，输入仅来自所选 profile 的有效 SQLite 快照。预检账本与回复在同一成功事务提交；memory_epoch 使清空前的在途结果失效，revision 防止旧摘要覆盖新状态。无模型离线只保存和读取，不生成语义摘要；后来使用已允许的模型时后台续作。
+
+`user.profileId` 是稳定隔离键，改 displayName 不更换历史；当前 conversation_id 承载该 ID。信件与附件网关均按当前玩家过滤。迁移使用 SQLite backup API 获取包含 WAL 的一致快照，ZIP 带版本/大小/SHA-256 清单；导入验证、备份、重定位并失效旧进程租约。SQLite 已经落盘，无需额外 save/load。
 
 Phase 3 信件可靠性约定：Letter 状态为 `pending`、`processing`、`replied`、`failed`；SQLite 事务原子领取并记录尝试次数，失败按重试策略回到 `pending` 或进入 `failed`。信件和 MIDI 共用显式 IANA 时区日界线，默认 `Asia/Shanghai`，数据库仍保存 UTC ISO 时间。
 
