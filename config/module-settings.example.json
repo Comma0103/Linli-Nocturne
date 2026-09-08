@@ -4,7 +4,7 @@
     "provider": "offline-fallback",
     "harness": null,
     "persona": "default",
-    "memory": "disabled",
+    "memory": "sqlite",
     "fallback": true
   },
   "music": {

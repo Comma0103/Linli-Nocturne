@@ -91,6 +91,12 @@ const adapter = createConfiguredModelAdapter({
 
 因此，Phase 3-8 已通过，Phase 3 的信件代码链路和 Steam 用户路径完成。该验收不代表视频自动生成、最终 GUI 设置页、普通用户安装器或发行版已经完成。
 
+### 2026-09-08：融合实验分支在线复验
+
+在 `exp/phase3-persona-harness-fusion` 分支，用户再次使用 Steam 客户端 `0.0.9.627` 完成在线回信。执行记录确认配置为 DeepSeek `deepseek-v4-pro`、`linli.persona-bundle`、`linli.fusion-v1` 和 SQLite 持续记忆，未启用 fallback；Harness 的 `precheck`、`draft`、`check` 三个阶段均成功，回信正文在游戏内完整显示并以“—— 林离”收尾。本次同时完成了离线复验，未修改真实游戏目录。
+
+这次复验覆盖实验分支新增的 Persona 组合、持续记忆和执行留痕；它与 2026-09-07 的历史验收分别记录，不能把实验分支结果写成 main 已合入。
+
 ## 本轮完成边界
 
 本轮完成“连接和复用 provider”以及一次真实 Steam 模型验收。人格质量沿用 OliviaSoul 的 Harness 规则；其他模型、Persona 和 Harness 仍可通过统一接口和模块设置替换。

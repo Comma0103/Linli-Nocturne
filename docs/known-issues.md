@@ -1,12 +1,16 @@
 # 已知问题
 
+## 实验分支持续记忆的验收边界
+
+`exp/phase3-persona-harness-fusion` 已实现分层摘要、关系账本、原文检索和数据迁移，并完成 Steam 离线/DeepSeek 在线回信复验。无模型离线可以保存/读取已有历史，语义摘要和关系推断仍需要模型。迁移包当前上限 256 MiB，密钥与外部运行时不随包搬迁。具体实施和验收项见[融合实验 §4.1](./phase3-exp-persona-harness-fusion.md#41-持续关系与长期记忆2026-09-08)。
+
 ## Phase 3-7：Steam 游戏界面实机验收已通过
 
 本地服务入口、信件 Worker、provider 选择和兼容网关已经有自动化测试。2026-09-07 用户在 0.0.9.627 客户端中重新打开 test 和 test2，确认两封信都显示了文字回信正文，Phase 3-7 实机验收通过。此前的数字状态兼容问题已修复。
 
 ## Phase 3-8：DeepSeek + Persona + OliviaSoul Harness 真实模型验收已通过
 
-2026-09-07 用户在 Steam 0.0.9.627 中完成真实模型回信测试。模型请求、OliviaSoul Harness 多步流程、Persona 和游戏内完整文字显示均已确认；回信正确使用 `user.displayName` 配置的“嘉树”。本次没有修改游戏目录。
+2026-09-08 用户在 Steam 0.0.9.627 中完成真实模型回信测试。DeepSeek 请求、OliviaSoul Harness 的 `precheck`、`draft`、`check` 阶段、Persona、持续记忆和游戏内完整文字显示均已确认；回信正确使用 `user.displayName` 配置的“嘉树”，没有使用 fallback。本次没有修改游戏目录。
 
 本项已记录为通过，Phase 3 可以进入后续阶段。未来更换其他模型、Persona 或 Harness 时，仍应通过统一模块接口进行配置和验收。
 

@@ -1,5 +1,7 @@
 # Phase 3 第 4 轮：信件记忆和连续对话
 
+> 本文保留最初有限记忆里程碑。下文“默认关闭”和只保留近期窗口属于历史设计。实验分支模板已默认开启 `olivia-soul.sqlite`，新增分层长期记忆、关系账本和自动迁移；实现、验收及 Steam 复验见[融合实验 §4.1](./phase3-exp-persona-harness-fusion.md#41-持续关系与长期记忆2026-09-08)。这些改动仍只在实验分支。
+
 ## 本轮定位
 
 本轮让回信 provider 可以参考之前的有限对话，同时把记忆做成可替换模块。默认核心流程不依赖某个数据库、模型或第三方 Harness；视频回信和 Phase 4 的 `LINLI-PLAY-001` 不在本轮实现。模块选择现在由统一设置模型和可读配置向导承载，最终 App 图形设置界面仍属于后续设置/发行阶段。
@@ -14,7 +16,7 @@
 
 ## 设计
 
-- `MemoryProvider` 是项目自己的稳定契约。`NoopMemoryProvider` 保持关闭状态，`SqliteMemoryProvider` 提供本地 bounded memory；未来可增加 OliviaSoul memory、向量库或其他远程实现。
+- `MemoryProvider` 是项目自己的稳定契约。默认使用 `SqliteMemoryProvider` 提供本地 bounded memory，也可显式选择 `NoopMemoryProvider` 或未来的其他实现。
 - `SqliteStore` 增加 `memory_episodes` 表，每条记录关联 `source_letter_id`，通过唯一约束保证同一封信不会重复写入；插入后按收信人裁剪最旧记录。
 - 记忆上下文以统一纯文本传给 `ModelAdapter.generateReply()` 的 `memory` 字段。外部 OpenAI provider 和 OliviaSoul Harness 只负责把它转换为各自输入格式，领域服务不读取第三方记忆文件。
 - 记忆 provider 的异常只记录为可诊断状态并跳过本轮记忆；回信正文和信件状态仍以 LetterService/SQLite 为准。

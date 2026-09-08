@@ -1,8 +1,18 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  ExternalApiProvider, FallbackLetterProvider, LocalModelProvider, ModelAdapter, ModelProviderChain,
+  ExternalApiProvider, FallbackLetterProvider, LocalModelProvider, ModelAdapter, ModelProviderChain, OpenAICompatibleProvider,
 } from '../src/letters/model-adapter.js';
+
+test('OpenAI 兼容 provider 传入本地时间上下文，而不是只传 UTC', async () => {
+  let payload;
+  const provider = new OpenAICompatibleProvider({ endpoint: 'http://example.test/v1', model: 'deepseek-v4-pro', apiKey: 'test',
+    fetchImpl: async (_url, init) => { payload = JSON.parse(init.body); return new Response(JSON.stringify({ choices: [{ message: { content: '回信' } }] }), { status: 200 }); } });
+  await provider.generate({ prompt: '你好', now: '2026-09-07T14:24:00Z', timeZone: 'Asia/Shanghai', localDateTime: '2026-09-07T22:24:00', localHour: 22, timeOfDay: '深夜' });
+  const context = JSON.parse(payload.messages.at(-1).content);
+  assert.equal(context.timeZone, 'Asia/Shanghai'); assert.equal(context.localDateTime, '2026-09-07T22:24:00');
+  assert.equal(context.localHour, 22); assert.equal(context.timeOfDay, '深夜');
+});
 
 test('provider chain uses external, local and fallback through one generate contract', async () => {
   const calls = [];

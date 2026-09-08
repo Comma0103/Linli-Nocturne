@@ -3,8 +3,9 @@
 #   powershell -NoProfile -File .cursor/skills/fit-letters/scripts/harness-4step.ps1 -Person X -N 33 -Root "..."
 
 param(
-    [Parameter(Mandatory = $true)][string]$Person,
-    [Parameter(Mandatory = $true)][int]$N,
+    [string]$Person,
+    [int]$N,
+    [string]$ExplicitInput = "",
     [string]$Root = "",
     [string]$RulesFile = "",
     [string]$HarnessDir = "",
@@ -25,6 +26,11 @@ param(
 )
 
 $ErrorActionPreference = "Stop"
+if ($ExplicitInput) {
+    & (Join-Path $PSScriptRoot "fusion-explicit.ps1") -InputFile $ExplicitInput
+    return
+}
+if (-not $Person -or $N -lt 1) { throw "Person and N are required" }
 if ([string]::IsNullOrWhiteSpace($Root)) { $Root = (Get-Location).Path }
 . (Join-Path $PSScriptRoot "memory-lib.ps1")
 Initialize-Ds -Root $Root

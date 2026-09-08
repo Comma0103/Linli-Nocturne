@@ -19,7 +19,7 @@ node scripts/configure-modules.mjs config/module-settings.json
 - `letters.provider`：离线 fallback、外部 OpenAI 兼容 API 或本地 OpenAI 兼容模型。
 - `letters.harness`：可选的 OliviaSoul v18 或其他已注册 Harness。
 - `letters.persona`：默认人格、静态人格或外部人格文件。仓库已内置 `olivia-lin` 的公开人格资料，也可以指向用户自己的外部文件。
-- `letters.memory`：关闭记忆或使用 SQLite 记忆。
+- `letters.memory`：`disabled` 关闭、`sqlite` 有限近期记忆、`olivia-soul.sqlite` 持续摘要与关系账本。实验模板默认选择后者；独立旧 Harness 不可与项目记忆同时开启。
 - `music.renderer`：内置音频 Renderer 或其他已注册 Renderer。
 - `music.playbackAdapter`：Olivia Lin 原生播放器适配器或其他播放器适配器。
 - `music.encoder`：媒体编码器实现。
@@ -38,7 +38,7 @@ baseModel（offline / external / local）
         ↓
 Persona（人格和书信技艺）
         ↓
-Harness（预检、记忆组装、检查和重写）
+Harness（消费显式记忆、预检、检查和重写）
         ↓
 统一回信结果
 ```
@@ -65,7 +65,7 @@ node scripts/start-local-service.mjs
 
 仓库已经内置 `third_party/olivia-lin` 的 Persona 资产和 `third_party/OliviaSoul/v18-harness` 的开发版 Harness，不需要用户再下载这两个仓库。可复制 `config/user-config.example.json` 到 `config/user-config.json` 作为起点；后者已被 Git 忽略。
 
-默认使用离线 fallback，服务地址为 `http://localhost:27149`。如果选择外部 OpenAI 兼容 provider，可用环境变量配置地址、模型和密钥，例如：
+有 user-config 时以它为准，实验模板默认选择 Olivia-lin 离线人格引擎；没有私有配置时仍兼容原来的离线 fallback。服务地址为 `http://localhost:27149`。仅使用 module-settings 的开发者可通过环境变量配置外部 provider：
 
 ```powershell
 $env:LINLI_MODEL_ENDPOINT = 'https://api.deepseek.com'
@@ -74,6 +74,8 @@ $env:DEEPSEEK_API_KEY = '<只在本机安全环境中设置，不要写入仓库
 node scripts/start-local-service.mjs
 ```
 
-也可以使用 `LINLI_MODEL_API_KEY` 代替 `DEEPSEEK_API_KEY`。密钥不要粘贴到聊天、设置 JSON、日志或提交记录中。外部 provider 不可用时，设置中的 `letters.fallback` 可以让流程回到离线实现；是否自动 fallback 仍取决于所选 provider 的能力和错误策略。
+也可以使用 `LINLI_MODEL_API_KEY` 代替 `DEEPSEEK_API_KEY`。密钥只写本机私有配置或环境变量，不放入公开模块设置、日志或提交。外部 provider 不可用时，`letters.fallback` 可按所选实现的错误策略降级。
 
-启动脚本创建的 SQLite、媒体和日志都位于 `LINLI_DATA_ROOT` 指定的项目外运行目录（默认 `data/`），不会写入 Steam 游戏资源目录。
+SQLite 和媒体保存在 `LINLI_DATA_ROOT` 指定目录，默认仓库内 Git 忽略的 `data/`；诊断日志由独立配置决定。开发时应从仓库根目录启动，不能把 Steam 资源目录作为数据目录。
+
+使用私有配置时，模块向导入口是 `node scripts/configure-modules.mjs --user-config config/user-config.json`。玩家、记忆状态和数据包由 `node scripts/manage-user-data.mjs` 提供编号菜单；两者共享现有配置，无需另建账户或 save/load 系统。

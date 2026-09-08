@@ -3,7 +3,7 @@ import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from '
 
 export const DEFAULT_MODULE_SETTINGS = Object.freeze({
   version: 1,
-  letters: Object.freeze({ provider: 'offline-fallback', harness: null, persona: 'default', memory: 'disabled', fallback: true }),
+  letters: Object.freeze({ provider: 'offline-fallback', harness: null, persona: 'default', memory: 'sqlite', outputPolicy: 'persona-contract', fallback: true }),
   music: Object.freeze({ renderer: 'builtin.audio', playbackAdapter: 'olivia-lin.native', encoder: 'builtin.audio-only-mp4' }),
   media: Object.freeze({ renderer: 'builtin.audio', videoImporter: 'builtin.ffprobe.mp4' }),
   threeD: Object.freeze({ renderer: null }),
@@ -27,6 +27,7 @@ function assertRegistrySelection(settings, registries = {}) {
     ['harness', settings.letters?.harness, registries.harness],
     ['persona', settings.letters?.persona, registries.persona],
     ['memory', settings.letters?.memory, registries.memory],
+    ['outputPolicy', settings.letters?.outputPolicy, registries.outputPolicy],
     ['renderer', settings.music?.renderer, registries.renderer],
     ['playbackAdapter', settings.music?.playbackAdapter, registries.playback],
     ['encoder', settings.music?.encoder, registries.encoder],
@@ -43,6 +44,10 @@ export function validateModuleSettings(input, registries = {}) {
   if (!input || typeof input !== 'object' || input.version !== 1) throw new Error('Unsupported module settings version');
   assertNoSecrets(input);
   assertRegistrySelection(input, registries);
+  const harness = registries.harness?.list().find(module => module.id === input.letters?.harness);
+  if (harness?.memoryOwnership === 'self-managed' && input.letters?.memory && input.letters.memory !== 'disabled') {
+    throw new Error('所选 Harness 自管记忆，不能同时开启项目记忆，避免两套历史同时注入。');
+  }
   return input;
 }
 

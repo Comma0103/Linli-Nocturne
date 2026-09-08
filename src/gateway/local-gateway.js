@@ -69,22 +69,32 @@ export function createLocalGateway({ letterService, musicService = null, midiJob
       }
       if (videoReplyService && request.method === 'GET' && url.pathname === '/letters/videos') {
         response.writeHead(200, { 'content-type': 'text/html; charset=utf-8' });
-        return response.end(videoPage(videoReplyService.listActive(), letterService.list(), origin));
+        return response.end(videoPage(videoReplyService.listActive().filter(video => letterService.detail(video.letterId)), letterService.list(), origin));
       }
       const videoUpload = url.pathname.match(/^\/letter\/video\/upload\/([^/]+)$/u);
       if (videoReplyService && request.method === 'PUT' && videoUpload) {
+        if (!letterService.detail(decodeURIComponent(videoUpload[1]))) return sendJson(response, 404, { error: 'letter_not_found' });
         const chunks = []; let size = 0;
         for await (const chunk of request) { size += chunk.length; if (size > videoReplyService.maxBytes) { const error = new Error('video_too_large'); error.code = 'video_too_large'; throw error; } chunks.push(chunk); }
         const result = await videoReplyService.importBuffer({ letterId: decodeURIComponent(videoUpload[1]), buffer: Buffer.concat(chunks), fileName: request.headers['x-file-name'] ?? 'reply.mp4' });
         return sendJson(response, 200, { job: publicVideoJob(result) });
       }
       const videoJob = url.pathname.match(/^\/letter\/video\/status\/([^/]+)$/u);
-      if (videoReplyService && request.method === 'GET' && videoJob) return sendJson(response, 200, { job: publicVideoJob(videoReplyService.getJob(decodeURIComponent(videoJob[1]))) });
-      if (videoReplyService && request.method === 'GET' && url.pathname === '/letter/video/list') return sendJson(response, 200, { jobs: videoReplyService.listJobs(url.searchParams.get('letterId') ?? '') .map(publicVideoJob) });
+      if (videoReplyService && request.method === 'GET' && videoJob) {
+        const job = videoReplyService.getJob(decodeURIComponent(videoJob[1]));
+        if (!job || !letterService.detail(job.letterId)) return sendJson(response, 404, { error: 'video_not_found' });
+        return sendJson(response, 200, { job: publicVideoJob(job) });
+      }
+      if (videoReplyService && request.method === 'GET' && url.pathname === '/letter/video/list') return sendJson(response, 200, { jobs: videoReplyService.listJobs(url.searchParams.get('letterId') ?? '').filter(job => letterService.detail(job.letterId)).map(publicVideoJob) });
       const videoDelete = url.pathname.match(/^\/letter\/video\/delete\/([^/]+)$/u);
-      if (videoReplyService && request.method === 'POST' && videoDelete) return sendJson(response, 200, { deleted: videoReplyService.delete(decodeURIComponent(videoDelete[1])) });
+      if (videoReplyService && request.method === 'POST' && videoDelete) {
+        if (!letterService.detail(decodeURIComponent(videoDelete[1]))) return sendJson(response, 404, { error: 'letter_not_found' });
+        return sendJson(response, 200, { deleted: videoReplyService.delete(decodeURIComponent(videoDelete[1])) });
+      }
       const videoMedia = url.pathname.match(/^\/letter\/video\/media\/([^/]+?)(?:\.mp4)?$/u);
       if (videoReplyService && videoMedia && (request.method === 'GET' || request.method === 'HEAD')) {
+        const asset = videoReplyService.getAsset(decodeURIComponent(videoMedia[1]));
+        if (!asset || !letterService.detail(asset.letterId)) return sendJson(response, 404, { error: 'video_not_found' });
         const video = videoReplyService.mediaPath(decodeURIComponent(videoMedia[1]));
         if (!video) return sendJson(response, 404, { error: 'video_not_found' });
         let bytes;
@@ -199,6 +209,11 @@ export function createLocalGateway({ letterService, musicService = null, midiJob
         return sendJson(response, 200, compatResponse({ ...body, deleted }));
       }
       if (request.method === 'POST' && url.pathname === '/letter/send') return sendJson(response, 200, letterService.send(await readJson(request)));
+      const execution = url.pathname.match(/^\/letter\/execution\/([^/]+)$/u);
+      if (request.method === 'GET' && execution) {
+        const result = letterService.execution(decodeURIComponent(execution[1]));
+        return sendJson(response, result ? 200 : 404, result ?? { error: 'letter_not_found' });
+      }
       if (request.method === 'GET' && url.pathname === '/letter/send/list') return sendJson(response, 200, { letters: letterService.list() });
       if (request.method === 'GET' && url.pathname === '/letter/send/unread_count') return sendJson(response, 200, { count: letterService.unreadCount() });
       const detail = url.pathname.match(/^\/letter\/send\/detail\/([^/]+)$/);
