@@ -335,7 +335,9 @@ music.addToPlaylist(track);
 
 #### [ ] Phase 4-2：曲库、歌单和 App 选择入口
 
-把用户曲目稳定接入曲库和歌单，并允许用户选择具体播放器、渲染器或 fallback。
+把用户曲目稳定接入曲库和歌单，并允许用户选择具体播放器、渲染器或媒体编码器。
+
+设计与验收：[Phase 4-2 曲库、歌单和模块选择入口](./docs/phase4-2-library-playlist-and-module-entry.md)。
 
 #### [ ] Phase 4-3：`LINLI-PLAY-001` 原生证据调查
 

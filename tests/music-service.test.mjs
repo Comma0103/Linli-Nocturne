@@ -1,5 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { mkdtempSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { SqliteStore } from '../src/storage/sqlite-store.js';
 import { MusicService } from '../src/music/music-service.js';
 
@@ -34,4 +37,19 @@ test('music service accepts a replaceable AudioRenderer', () => {
   assert.equal(track.audio.toString(), 'fake-audio');
   assert.equal(track.manifest.renderer, 'fake');
   store.close();
+});
+
+test('playlist survives service restart without duplicating the item', () => {
+  const root = mkdtempSync(join(tmpdir(), 'linli-playlist-'));
+  const filename = join(root, 'linli.sqlite');
+  const firstStore = new SqliteStore(filename);
+  const first = new MusicService({ store: firstStore });
+  const item = first.addCompatPlaylistItem({ itemType: 3, itemId: 'persisted-song', name: '持久曲目' });
+  assert.equal(item.itemId, 'persisted-song');
+  assert.equal(first.addCompatPlaylistItem({ itemType: 3, itemId: 'persisted-song', name: '重复曲目' }).name, '持久曲目');
+  firstStore.close();
+  const secondStore = new SqliteStore(filename);
+  const second = new MusicService({ store: secondStore });
+  assert.deepEqual(second.compatPlaylist().map(({ itemId, name }) => ({ itemId, name })), [{ itemId: 'persisted-song', name: '持久曲目' }]);
+  secondStore.close();
 });
