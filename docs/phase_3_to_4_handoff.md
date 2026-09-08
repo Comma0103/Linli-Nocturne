@@ -2,11 +2,11 @@
 
 > 将本文完整交给新任务即可开始开发，无需旧聊天记录。本文是当前唯一交接入口，在原文件上持续更新，不另建重复的长期状态文档。
 >
-> 实验分支更新日期：2026-09-08，`pnpm test` 120/120 通过。原 main 交接快照为 2026-09-07 的 `615ff80`、84 项测试；不要把历史快照当作本实验现状。接手时仍须核对分支、提交、工作区和测试。
+> 当前 `main` 更新日期：2026-09-09，`pnpm test` 120/120 通过。Phase 3 融合已通过 `phase3-letter-fusion-v1.0.0` 合入；原交接快照 `615ff80` 仅作历史参考。接手时仍须核对分支、提交、工作区和测试。
 
-> 实验分支补充（2026-09-08）：`exp/phase3-persona-harness-fusion` 的新称呼规则、可选时间/天气、自然收尾及弹性篇幅见 [融合实验 §5.2](./phase3-exp-persona-harness-fusion.md#52-steam-调试增量书信格式兜底)。这些增量不等于 main 已合入；用户已完成对应 Steam 离线/在线复验。
+> Phase 3 融合补充（2026-09-08）：新称呼规则、可选时间/天气、自然收尾及弹性篇幅见 [融合实验 §5.2](./phase3-exp-persona-harness-fusion.md#52-steam-调试增量书信格式兜底)。用户已完成对应 Steam 离线/在线复验，成果已合入 `main`。
 
-> 持续记忆增量（2026-09-08，仅实验分支）：`olivia-soul.sqlite` 已接入 OliviaSoul 分层摘要、关系账本、原文检索和自动迁移，详见[融合实验 §4.1](./phase3-exp-persona-harness-fusion.md#41-持续关系与长期记忆2026-09-08)。摘要复用上游完整提示词；检索直接运行上游脚本；SQLite 是唯一持久来源。新模板默认开启，现有私有配置未自动切换；可用 manage-user-data.mjs 管理玩家和数据包。用户已完成离线与 DeepSeek 在线 Steam 复验；本实验分支可交接给 Phase 4，不能据此推送或合并 main，也不改变 Phase 4 的开发边界。
+> 持续记忆增量（2026-09-08）：`olivia-soul.sqlite` 已接入 OliviaSoul 分层摘要、关系账本、原文检索和自动迁移，详见[融合实验 §4.1](./phase3-exp-persona-harness-fusion.md#41-持续关系与长期记忆2026-09-08)。摘要复用上游完整提示词；检索直接运行上游脚本；SQLite 是唯一持久来源。新模板默认开启，现有私有配置未自动切换；可用 manage-user-data.mjs 管理玩家和数据包。用户已完成离线与 DeepSeek 在线 Steam 复验，成果已随 `phase3-letter-fusion-v1.0.0` 合入 `main`，不改变 Phase 4 的开发边界。
 
 ## 1. 接手目标与第一步
 
@@ -53,7 +53,7 @@
 
 - 默认每日 3 封、每封延迟 5 分钟；`letters.dailyLimitBypass` 默认关闭，开启后跳过次数和等待限制，并向游戏报告仍可写信。
 - 领域状态为 `pending/processing/replied/failed`；有 SQLite 原子领取、有限重试、最大尝试次数、Worker 和过期 processing 租约恢复。
-- 外部、本地 OpenAI 兼容模型和无模型离线引擎/fallback 已接入；Persona、Harness、Memory 独立组合。本实验模板默认开启持续 SQLite 记忆，有限 sqlite 与关闭选项保留。完整往来与提示词长度分别管理；关闭期间和被遗忘的内容不自动重新纳入。
+- 外部、本地 OpenAI 兼容模型和无模型离线引擎/fallback 已接入；Persona、Harness、Memory 独立组合。当前模板默认开启持续 SQLite 记忆，有限 sqlite 与关闭选项保留。完整往来与提示词长度分别管理；关闭期间和被遗忘的内容不自动重新纳入。
 - 视频回信已有 MP4 资产导入、检查、保存、播放、替换、删除及状态处理；这不是视频自动生成，也不是 3D 回信。
 - Steam 信件兼容层的数字状态、写信额度、玩家称呼、失败重寄和 Harness 路径问题已修复，有对应回归测试，不要重新制造这些问题。
 

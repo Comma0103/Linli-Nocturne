@@ -4,7 +4,7 @@
 
 README 只介绍通用启动流程。本页先解释所有配置属性，再按信件、预设曲库和上传曲子等功能给出配置示例。配置保存后必须重启本地服务。
 
-实验分支新增 `olivia-lin.offline`、`linli.persona-bundle`、`linli.fusion-v1` 和 `persona-contract`；这些资产已随仓库提供，不需要另行下载。
+当前主分支提供 `olivia-lin.offline`、`linli.persona-bundle`、`linli.fusion-v1` 和 `persona-contract`；这些资产已随仓库提供，不需要另行下载。
 
 ## 一、所有属性
 
@@ -180,7 +180,7 @@ API Key 只保存在本机的 `config/user-config.json`，不能提交或公开�
 
 #### 记忆和连续对话
 
-实验分支默认开启持续 SQLite 记忆：
+当前模板默认开启持续 SQLite 记忆：
 
 ```json
 "letters": {

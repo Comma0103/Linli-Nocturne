@@ -1,12 +1,12 @@
 # Linli Nocturne（林离·余音）
 
-> 《BSide: Olivia Lin》的本地功能复原与扩展项目。
+> *Musica noctis, memoria cordis.*（夜之音乐，心之记忆）
 
 林离·余音致力于在原服务停止后，恢复信件、回信、MIDI 演奏、本地音乐、视频回信，并为未来的 3D 手指同步演奏保留可扩展的技术路径。
 
 ## 项目状态
 
-Phase 0–3 的基础功能已完成。本实验分支的持续记忆、关系账本与数据迁移已通过 Steam 离线及 DeepSeek 在线回信复验；Phase 4-1 正在开发。项目仍是开发版。
+Phase 0–3 的基础功能已完成，持续记忆、关系账本和数据迁移已通过 Steam 离线及 DeepSeek 在线回信复验，并已合入 `main`（`phase3-letter-fusion-v1.0.0`）。Phase 4-1 正在开发。项目仍是开发版。
 
 ## 当前功能
 
@@ -42,9 +42,36 @@ Phase 0–3 的基础功能已完成。本实验分支的持续记忆、关系�
 
 ## 安装
 
-### 当前开发版
+### 环境要求
 
-环境要求：Windows 10/11、Node.js 22 及以上（当前使用 Node.js 24）、pnpm 9 及以上；使用仓库内离线人格引擎还需要 Python 3。后续游戏接入阶段还需要安装《BSide: Olivia Lin》本体。
+Node.js 22 及以上、pnpm 9 及以上：
+
+**macOS / Linux**
+
+```bash
+curl -fsSL https://fnm.vercel.app/install | bash
+fnm use --install-if-missing 22
+npm install -g pnpm@9
+```
+
+**Windows（PowerShell）**
+
+```powershell
+winget install Schniz.fnm
+fnm env --use-on-cd | Out-String | Invoke-Expression
+fnm use --install-if-missing 22
+npm install -g pnpm@9
+```
+
+使用仓库内离线人格引擎还需要 Python 3：
+
+```text
+macOS：brew install python
+Windows：winget install Python.Python.3.11
+Linux（Debian/Ubuntu）：sudo apt install python3
+```
+
+在 Windows 10/11、macOS 或 Linux 上均可运行本地服务；接入游戏还需要安装《BSide: Olivia Lin》本体。
 
 ```powershell
 git clone https://github.com/Comma0103/Linli-Nocturne.git
@@ -294,9 +321,9 @@ music.addToPlaylist(track);
 
 使用 DeepSeek 外部模型、已内置 Persona 和 OliviaSoul Harness，在 Steam 界面完成真实回信测试；已确认模型请求成功、Harness 实际运行、Persona 生效，以及游戏内显示以玩家名字“嘉树”开头的完整回信正文。设计与验收记录见 [Phase 3 Provider 与 OliviaSoul Harness](./docs/phase3-2-provider-and-harness.md)。
 
-#### [x] Phase 3-EXP：融合流程与持续记忆复验（`8fb4eee`）
+#### [x] Phase 3-EXP：融合流程与持续记忆复验（`8fb4eee`、`ffbc555`）
 
-实验分支已实现人格融合、分层长期记忆、关系账本、玩家隔离及数据迁移，并由用户在 Steam 中完成离线和 DeepSeek 在线回信复验。
+已实现人格融合、分层长期记忆、关系账本、玩家隔离及数据迁移，并由用户在 Steam 中完成离线和 DeepSeek 在线回信复验；功能已合入 `main`。
 
 设计与验收：[Persona 与 Harness 融合实验](./docs/phase3-exp-persona-harness-fusion.md)。
 
