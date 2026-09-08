@@ -17,6 +17,7 @@
 ## LINLI-PLAY-001：本地上传曲目无法接管原生 WebPlayer
 
 - **状态**：Phase 4 音乐体验的跨层阻塞；Phase 2 接入基础不受其阻塞，暂缓继续猜测式试错
+- **2026-09-09 进展**：已开始 [Phase 4-3 只读调查](./phase4-3-native-webplayer-evidence.md)，核对原版备份与当前样本，并复查两层播放命令和历史日志；尚未定位原生中断分支。
 - **首次确认**：2026-09-06
 - **影响**：曲库中的上传 MIDI 可以上传、生成并显示，但点击“演奏”后桌面不进入演奏，也没有本地曲目声音。
 - **对照结果**：同一客户端、同一网关、同一时间，预设曲目可以正常进入演奏并产生 `webPlayerControl` 时间事件。
@@ -46,7 +47,7 @@
 - 对象中包含 `.mp4` 的 `http://localhost:27149/...` 地址和三组正确 TOD 键；
 - 随后没有任何新的本地媒体加载事件。
 
-同期 `work/runtime/gateway-capture.log` 只有网关启动行，没有收到任何 `/toy/midi/media/` 请求。预设曲目播放时则会产生正常的 `webPlayerControl` 时间事件。
+同期 `work/runtime/gateway-capture.log` 只有网关启动行，没有记录 `/toy/midi/media/` 请求；尚不能仅凭该文件证明所有请求均被完整捕获。预设曲目播放时则会产生正常的 `webPlayerControl` 时间事件。
 
 ### 暂停原因
 

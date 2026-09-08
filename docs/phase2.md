@@ -2,6 +2,8 @@
 
 > 本页保留历史开发记录。当前准确的完成矩阵、证据边界、遗留问题和 Phase 3 接手 Prompt 统一以 [`phase_2_to_3_handoff.md`](./phase_2_to_3_handoff.md) 为准；历史记录中的“下一步”可能早于当前实现，不应直接照抄执行。
 
+> 2026-09-09 补充：本地上传曲目的最新调查以 [Phase 4-3](./phase4-3-native-webplayer-evidence.md) 为准。下文 mixed content 等记录是当时的局部发现；后续调整后仍未解决切歌，不能将其当作当前 `LINLI-PLAY-001` 根因已经确定。
+
 ## 已完成与已开始
 
 ## 当前执行计划（2026-09-06）

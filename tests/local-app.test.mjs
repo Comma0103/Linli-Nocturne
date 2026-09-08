@@ -19,6 +19,43 @@ test('开发版本地服务入口可以启动 Worker 和兼容网关', async () 
   } finally { await app.stop(); }
 });
 
+test('真实启动入口可加入歌单，自动填时间，重复加入和重启后移除都正确', async () => {
+  const root = mkdtempSync(join(tmpdir(), 'linli-app-playlist-'));
+  const options = { dataRoot: root, settingsPath: join(root, 'missing.json'), port: 0, env: {} };
+  let app = createLocalApp(options);
+  let base;
+  const request = async (path, body) => {
+    const response = await fetch(base + path, {
+      method: body ? 'POST' : 'GET', headers: { 'content-type': 'application/json' },
+      body: body ? JSON.stringify(body) : undefined,
+    });
+    assert.equal(response.status, 200);
+    return (await response.json()).data;
+  };
+  let createdAt;
+  await app.start();
+  base = `http://127.0.0.1:${app.server.address().port}`;
+  try {
+    const item = { itemType: 3, itemId: 'app-playlist-song', name: '本地验收曲目', videoUrl: base + '/synthetic.wav', duration: 2 };
+    const added = await request('/toy/addToPlaylist', item);
+    createdAt = added.createdAt;
+    assert.ok(Number.isFinite(Date.parse(createdAt)));
+    assert.equal(added.videoUrl, item.videoUrl);
+    assert.equal((await request('/toy/addToPlaylist', item)).createdAt, createdAt);
+    assert.equal((await request('/toy/searchPlaylist')).list.length, 1);
+  } finally { await app.stop(); }
+  app = createLocalApp(options);
+  await app.start();
+  base = `http://127.0.0.1:${app.server.address().port}`;
+  try {
+    const page = await request('/toy/searchPlaylist');
+    assert.equal(page.list.length, 1);
+    assert.equal(page.list[0].createdAt, createdAt);
+    assert.equal((await request('/toy/delFromPlaylist', { item_type: 3, item_id: 'app-playlist-song' })).deleted, true);
+    assert.equal((await request('/toy/searchPlaylist')).list.length, 0);
+  } finally { await app.stop(); }
+});
+
 test('用户配置把基础模型、Persona 和 Harness 分开选择', async () => {
   const root = mkdtempSync(join(tmpdir(), 'linli-user-config-'));
   const filename = join(root, 'user-config.json');

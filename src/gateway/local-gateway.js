@@ -162,7 +162,7 @@ export function createLocalGateway({ letterService, musicService = null, midiJob
           mediaLogger?.({ method: request.method, pathname: url.pathname, range: request.headers.range ?? null, status: 404, contentType: null, bytes: 0 });
           return sendJson(response, 404, { error: 'media_not_found' });
         }
-        const contentType = midiJobService.mediaContentType ?? 'audio/wav';
+        const contentType = midiJobService.mediaFormat(midiJobService.get(media[1])).contentType;
         const range = request.headers.range;
         let status = 200;
         let body = bytes;

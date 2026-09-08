@@ -1,5 +1,5 @@
 // Client 0.0.9.627 uses numeric MIDI states; domain/storage states stay textual.
-const CLIENT_STATES = Object.freeze({ pending: 1, running: 2, finished: 3, canceled: 4, failed: 5 });
+const CLIENT_STATES = Object.freeze({ queued: 1, processing: 2, pending: 1, running: 2, finished: 3, canceled: 4, failed: 5 });
 
 export function clientMidiJob(job) {
   if (!job) return { state: CLIENT_STATES.failed, error: 'job_not_found' };

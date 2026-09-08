@@ -204,6 +204,8 @@ music.addToPlaylist(track);
 - [Phase 3 → Phase 4 交接文档](./docs/phase_3_to_4_handoff.md)
 - [Phase 4 完整音乐体验总览](./docs/phase4.md)
 - [Phase 4-1 音乐设置与媒体契约设计和验收](./docs/phase4-1-music-settings-and-media.md)
+- [Phase 4-2 曲库、歌单和模块选择入口](./docs/phase4-2-library-playlist-and-module-entry.md)
+- [Phase 4-3 原生 WebPlayer 证据调查](./docs/phase4-3-native-webplayer-evidence.md)
 - [Phase 6-1 视频回信与即兴创作设计和验收](./docs/phase6-1-video-reply-and-improvisation.md)
 - [第三方项目引用与复用说明](./docs/third-party-credits.md)
 - [模块设置与实现选择](./docs/module-settings.md)
@@ -329,6 +331,8 @@ music.addToPlaylist(track);
 
 ### Phase 4 — 完整音乐体验
 
+Phase 4 的 7 个子阶段按依赖关系交叉推进，不是严格串行：4-1 提供任务和媒体基础，4-2 可在接口稳定后并行完善曲库入口，4-3 可独立进行原生 WebPlayer 只读证据调查；4-4、4-6 和 4-7 仍要等待各自前置验收。每个 checkbox 只在该子阶段整体验收通过后勾选，局部开发完成不代表前置阶段已完成。
+
 #### [ ] Phase 4-1：用户 MIDI 预览和媒体任务
 
 完成上传曲目的预览、本地音频媒体生成、任务生命周期（排队、处理中、轮询、取消、失败恢复和重启恢复）以及本地媒体播放。
@@ -342,6 +346,8 @@ music.addToPlaylist(track);
 #### [ ] Phase 4-3：`LINLI-PLAY-001` 原生证据调查
 
 在获得原生 WebPlayer 只读反汇编、CEF 媒体事件或完整媒体请求后，定位本地曲目无法接管播放的问题。
+
+已开始只读核查；样本、证据与后续步骤见 [Phase 4-3 原生 WebPlayer 证据调查](./docs/phase4-3-native-webplayer-evidence.md)，尚未定位原生中断分支。
 
 #### [ ] Phase 4-4：上传曲目 Steam 播放/演奏验收
 

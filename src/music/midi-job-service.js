@@ -79,9 +79,16 @@ export class MidiJobService {
     try { return decodeURIComponent(new URL(raw, 'http://localhost').pathname.split('/').pop()); } catch { return raw; }
   }
 
-  playbackUrl(jobId) {
+  mediaFormat(job) {
+    const legacyExtension = (job?.mediaPath ?? job?.info?.audioUrl ?? job?.info?.videoUrls?.[0] ?? '').match(/\.(wav|mp4)(?:[?#].*)?$/u)?.[1];
+    const extension = job?.info?.mediaExtension ?? legacyExtension ?? this.mediaExtension;
+    const contentType = job?.info?.mediaContentType ?? ({ wav: 'audio/wav', mp4: 'video/mp4' }[extension] ?? 'application/octet-stream');
+    return { extension, contentType };
+  }
+
+  playbackUrl(job) {
     return this.playbackBaseUrl
-      ? `${this.playbackBaseUrl.replace(/\/$/u, '')}/toy/midi/media/${jobId}.${this.mediaExtension}`
+      ? `${this.playbackBaseUrl.replace(/\/$/u, '')}/toy/midi/media/${job.jobId}.${this.mediaFormat(job).extension}`
       : '';
   }
 
@@ -130,7 +137,8 @@ export class MidiJobService {
       }
       this.media.set(jobId, mediaBytes);
       return this.transition(job, 'finished', RenderJobStatus.PRODUCED, { progress: 1, mediaPath, errorCode: null, error: null,
-        info: { videoUrls: [mediaUrl], audioUrl: mediaUrl, duration: rendered.duration, timingManifest: rendered.timingManifest, midi } });
+        info: { videoUrls: [mediaUrl], audioUrl: mediaUrl, duration: rendered.duration, timingManifest: rendered.timingManifest, midi,
+          mediaExtension: this.mediaExtension, mediaContentType: this.mediaContentType, encoderId: this.mediaEncoder?.id ?? null } });
     } catch (error) {
       if (tempPath) { try { unlinkSync(tempPath); } catch {} }
       if (controller.signal.aborted || this.get(jobId)?.state === 'canceled') return this.get(jobId);
@@ -165,7 +173,7 @@ export class MidiJobService {
     if (!job) return null;
     const renderJob = job.info?.renderJob ?? null;
     const info = job.info ? { ...job.info } : {};
-    const mediaUrl = job.state === 'finished' ? this.playbackUrl(job.jobId) : '';
+    const mediaUrl = job.state === 'finished' ? this.playbackUrl(job) : '';
     if (mediaUrl) { info.audioUrl = mediaUrl; info.videoUrls = [mediaUrl]; }
     return { ...job, status: renderJob?.status ?? (job.state === 'finished' ? RenderJobStatus.PRODUCED : job.state === 'canceled' ? RenderJobStatus.CANCELLED : job.state), progress: renderJob?.progress ?? (job.state === 'finished' ? 1 : 0), attempt: renderJob?.attempt ?? 0, errorCode: renderJob?.errorCode ?? job.errorCode ?? null, info };
   }
@@ -181,7 +189,7 @@ export class MidiJobService {
     const all = this.store ? this.store.listFinishedMidiJobs(limit, offset).map(job => this.normalizePersistedJob(job)) : [...this.jobs.values()].filter(job => job.state === 'finished').sort((a, b) => b.createdAt.localeCompare(a.createdAt)).slice(offset, offset + limit); const total = this.store ? this.store.countFinishedMidiJobs() : [...this.jobs.values()].filter(job => job.state === 'finished').length;
     return { list: all, hasMore: offset + all.length < total, nextCursor: offset + all.length, total };
   }
-  listUserSongs({ pageSize = 20, cursor = 0 } = {}) { const page = this.listFinished({ pageSize, cursor }); return { ...page, list: page.list.map(job => this.playbackAdapter.toUserSong({ job, mediaUrl: this.playbackUrl(job.jobId) || job.info?.videoUrls?.[0] || job.info?.audioUrl || '' })) }; }
+  listUserSongs({ pageSize = 20, cursor = 0 } = {}) { const page = this.listFinished({ pageSize, cursor }); return { ...page, list: page.list.map(job => this.playbackAdapter.toUserSong({ job, mediaUrl: this.playbackUrl(job) || job.info?.videoUrls?.[0] || job.info?.audioUrl || '' })) }; }
   batch(ids = []) { return { list: ids.map(id => this.get(id)).filter(Boolean) }; }
   dailyUsage() {
     const { startIso, endIso } = this.dayBoundary(this.clock()); const generatedToday = this.store ? this.store.countFinishedMidiJobsBetween(startIso, endIso) : [...this.jobs.values()].filter(job => job.state === 'finished' && job.createdAt >= startIso && job.createdAt < endIso).length;

@@ -7,6 +7,7 @@ import { LetterService } from '../letters/letter-service.js';
 import { LetterWorker } from '../letters/letter-worker.js';
 import { VideoReplyService } from '../letters/video-reply-service.js';
 import { MidiJobService } from '../music/midi-job-service.js';
+import { MusicService } from '../music/music-service.js';
 import { createLocalGateway } from '../gateway/local-gateway.js';
 import { createDefaultModuleRegistries } from '../config/default-module-registries.js';
 import { ModuleSettingsStore } from '../config/module-settings.js';
@@ -67,7 +68,7 @@ export function createLocalApp({ dataRoot = 'data', settingsPath = 'config/modul
     mediaExtension: runtime.music.mediaEncoder?.extension,
     mediaContentType: runtime.music.mediaEncoder?.contentType,
   });
-  const musicService = { compatPlaylist: () => store.compatPlaylist(), addCompatPlaylistItem: item => store.addCompatPlaylistItem(item), removeCompatPlaylistItem: (itemType, itemId) => store.deleteCompatPlaylistItem(itemType, itemId) };
+  const musicService = new MusicService({ store, audioRenderer: runtime.music.renderer });
   const server = createLocalGateway({ letterService, musicService, midiJobService, videoReplyService });
   let address;
   return {
