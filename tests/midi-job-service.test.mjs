@@ -12,14 +12,23 @@ const midi = Uint8Array.from([
   0x00,0x90,0x3c,0x64, 0x40,0x80,0x3c,0x40, 0x00,0xff,0x2f,0x00
 ]);
 
-test('MIDI jobs survive service recreation through SQLite metadata and media files', () => {
+async function settled(service, job) {
+  const result = await service.processJob(job.jobId);
+  assert.ok(['finished', 'failed', 'canceled'].includes(result.state));
+  return result;
+}
+
+test('MIDI jobs survive service recreation through SQLite metadata and media files', async () => {
   const store = new SqliteStore();
   const mediaRoot = mkdtempSync(join(tmpdir(), 'Linli MIDI Media With Spaces-'));
   const first = new MidiJobService({ store, mediaRoot });
   const upload = first.createUpload({ filename: 'persist.mid', uploadUrl: 'http://127.0.0.1:27149' });
   first.receiveUpload(upload.key, midi);
-  const job = first.generate({ midiUrl: upload.url, filename: 'persist.mid', mediaBaseUrl: 'http://127.0.0.1:27149' });
+  const job = await settled(first, first.generate({ midiUrl: upload.url, filename: 'persist.mid', mediaBaseUrl: 'http://127.0.0.1:27149' }));
   assert.equal(job.status, 'produced');
+  assert.equal(job.inputSize, midi.length);
+  assert.match(job.inputSha256, /^[0-9a-f]{64}$/u);
+  assert.ok(job.inputPath);
   assert.equal(job.info.renderJob.rendererId, 'builtin.audio');
   const second = new MidiJobService({ store, mediaRoot, playbackBaseUrl: 'http://localhost:27149' });
   assert.equal(second.get(job.jobId).state, 'finished');
@@ -45,7 +54,41 @@ test('MIDI jobs survive service recreation through SQLite metadata and media fil
   store.close();
 });
 
-test('MIDI job service accepts replaceable renderer and playback adapter', () => {
+test('MIDI generation is queued and cancellation prevents publication', async () => {
+  const store = new SqliteStore();
+  const mediaRoot = mkdtempSync(join(tmpdir(), 'Linli MIDI Cancel-'));
+  let resolveRender;
+  const renderer = { id: 'slow.renderer', version: '1.0.0', render: (_bytes, { signal }) => new Promise(resolve => {
+    resolveRender = () => resolve({ wav: Buffer.from('slow'), duration: 1, timingManifest: {} });
+    signal.addEventListener('abort', () => {}, { once: true });
+  }) };
+  const service = new MidiJobService({ store, mediaRoot, renderer });
+  const upload = service.createUpload({ filename: 'cancel.mid', uploadUrl: 'http://localhost:27149' });
+  service.receiveUpload(upload.key, midi);
+  const queued = service.generate({ midiUrl: upload.url });
+  assert.equal(queued.state, 'queued');
+  await new Promise(resolve => setImmediate(resolve));
+  const canceled = service.cancel(queued.jobId);
+  assert.equal(canceled.state, 'canceled');
+  resolveRender();
+  const result = await service.processJob(queued.jobId);
+  assert.equal(result.state, 'canceled');
+  assert.equal(service.mediaBytes(queued.jobId), null);
+  store.close();
+});
+
+test('service restart marks queued jobs with missing input as failed', () => {
+  const store = new SqliteStore();
+  const jobId = 'missing-input';
+  const renderJob = { id: jobId, kind: 'audio', inputAssetIds: ['missing.mid'], rendererId: 'builtin.audio', rendererVersion: '0.1.0', status: 'queued', progress: 0, attempt: 0, errorCode: null, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() };
+  store.insertMidiJob({ jobId, state: 'queued', filename: 'missing.mid', createdAt: renderJob.createdAt, inputPath: join(tmpdir(), 'does-not-exist.mid'), inputSha256: '0'.repeat(64), inputSize: 1, inputFilename: 'missing.mid', info: { renderJob } });
+  const service = new MidiJobService({ store, mediaRoot: mkdtempSync(join(tmpdir(), 'Linli MIDI Recovery-')) });
+  assert.equal(service.get(jobId).state, 'failed');
+  assert.equal(service.get(jobId).errorCode, 'midi_input_invalid_or_missing');
+  store.close();
+});
+
+test('MIDI job service accepts replaceable renderer and playback adapter', async () => {
   const store = new SqliteStore();
   let renderCalls = 0;
   const service = new MidiJobService({
@@ -55,20 +98,20 @@ test('MIDI job service accepts replaceable renderer and playback adapter', () =>
   });
   const upload = service.createUpload({ filename: 'custom.mid', uploadUrl: 'http://localhost:27149' });
   service.receiveUpload(upload.key, midi);
-  const job = service.generate({ midiUrl: upload.url, filename: 'custom.mid', mediaBaseUrl: 'http://localhost:27149' });
+  const job = await settled(service, service.generate({ midiUrl: upload.url, filename: 'custom.mid', mediaBaseUrl: 'http://localhost:27149' }));
   assert.equal(renderCalls, 1);
   assert.equal(job.info.renderJob.rendererId, 'fake.renderer');
   assert.equal(service.listUserSongs().list[0].renderer, 'fake.renderer');
   store.close();
 });
 
-test('MIDI user songs can expose an HTTPS playback origin independently of the API origin', () => {
+test('MIDI user songs can expose an HTTPS playback origin independently of the API origin', async () => {
   const store = new SqliteStore();
   const mediaRoot = mkdtempSync(join(tmpdir(), 'Linli MIDI HTTPS Media-'));
   const service = new MidiJobService({ store, mediaRoot, playbackBaseUrl: 'https://localhost:27150' });
   const upload = service.createUpload({ filename: 'https.mid', uploadUrl: 'http://127.0.0.1:27149' });
   service.receiveUpload(upload.key, midi);
-  const job = service.generate({ midiUrl: upload.url, filename: 'https.mid', mediaBaseUrl: 'http://127.0.0.1:27149' });
+  const job = await settled(service, service.generate({ midiUrl: upload.url, filename: 'https.mid', mediaBaseUrl: 'http://127.0.0.1:27149' }));
   const song = service.listUserSongs().list[0];
   assert.match(song.videoUrl, new RegExp(`^https://localhost:27150/toy/midi/media/${job.jobId}\\.wav$`));
   assert.equal(song.audioUrl, song.videoUrl);
@@ -77,20 +120,20 @@ test('MIDI user songs can expose an HTTPS playback origin independently of the A
   store.close();
 });
 
-test('MIDI job service follows the selected encoder media contract', () => {
+test('MIDI job service follows the selected encoder media contract', async () => {
   const store = new SqliteStore();
   const encoder = Object.assign(() => Buffer.from('encoded-mp4'), { extension: 'mp4', contentType: 'video/mp4' });
   const service = new MidiJobService({ store, mediaEncoder: encoder, playbackBaseUrl: 'https://localhost:27150' });
   const upload = service.createUpload({ filename: 'encoded.mid', uploadUrl: 'http://localhost:27149' });
   service.receiveUpload(upload.key, midi);
-  const job = service.generate({ midiUrl: upload.url, mediaBaseUrl: 'http://localhost:27149' });
+  const job = await settled(service, service.generate({ midiUrl: upload.url, mediaBaseUrl: 'http://localhost:27149' }));
   assert.match(job.info.audioUrl, /\.mp4$/u);
   assert.equal(service.mediaExtension, 'mp4');
   assert.equal(service.mediaContentType, 'video/mp4');
   store.close();
 });
 
-test('MIDI user-song pagination filters failed jobs before applying the cursor', () => {
+test('MIDI user-song pagination filters failed jobs before applying the cursor', async () => {
   const store = new SqliteStore();
   const service = new MidiJobService({ store });
   const valid = Uint8Array.from([
@@ -101,12 +144,12 @@ test('MIDI user-song pagination filters failed jobs before applying the cursor',
   const create = (filename, bytes = valid) => {
     const upload = service.createUpload({ filename, uploadUrl: 'http://localhost:27149' });
     service.receiveUpload(upload.key, bytes);
-    return service.generate({ midiUrl: upload.url, filename, mediaBaseUrl: 'http://localhost:27149' });
+    return settled(service, service.generate({ midiUrl: upload.url, filename, mediaBaseUrl: 'http://localhost:27149' }));
   };
-  create('one.mid');
-  create('broken.mid', Uint8Array.from([1, 2, 3]));
-  create('two.mid');
-  create('three.mid');
+  await create('one.mid');
+  await create('broken.mid', Uint8Array.from([1, 2, 3]));
+  await create('two.mid');
+  await create('three.mid');
 
   const first = service.listUserSongs({ pageSize: 2, cursor: 0 });
   assert.equal(first.list.length, 2);

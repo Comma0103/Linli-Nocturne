@@ -80,7 +80,11 @@ export class SqliteStore {
         created_at TEXT NOT NULL,
         error TEXT,
         info_json TEXT NOT NULL,
-        media_path TEXT
+        media_path TEXT,
+        input_path TEXT,
+        input_sha256 TEXT,
+        input_size INTEGER,
+        input_filename TEXT
       );
       CREATE INDEX IF NOT EXISTS idx_midi_jobs_created_at ON midi_jobs(created_at DESC);
       CREATE TABLE IF NOT EXISTS video_jobs (
@@ -128,6 +132,10 @@ export class SqliteStore {
     const stateColumns = new Set(this.db.prepare('PRAGMA table_info(memory_states)').all().map(column => column.name));
     for (const [name, type] of [['metadata_json', "TEXT NOT NULL DEFAULT '{}'"], ['attempt_count', 'INTEGER NOT NULL DEFAULT 0'], ['next_attempt_at', 'TEXT'], ['memory_epoch', 'INTEGER NOT NULL DEFAULT 0']]) {
       if (!stateColumns.has(name)) this.db.exec('ALTER TABLE memory_states ADD COLUMN ' + name + ' ' + type);
+    }
+    const midiColumns = new Set(this.db.prepare('PRAGMA table_info(midi_jobs)').all().map(column => column.name));
+    for (const [name, type] of [['input_path', 'TEXT'], ['input_sha256', 'TEXT'], ['input_size', 'INTEGER'], ['input_filename', 'TEXT']]) {
+      if (!midiColumns.has(name)) this.db.exec('ALTER TABLE midi_jobs ADD COLUMN ' + name + ' ' + type);
     }
   }
 
@@ -379,8 +387,9 @@ export class SqliteStore {
   deletePlaylistItem(id) { return this.db.prepare('DELETE FROM playlist_items WHERE id = ?').run(id).changes > 0; }
 
   insertMidiJob(job) {
-    this.db.prepare(`INSERT INTO midi_jobs (job_id, state, filename, created_at, error, info_json, media_path)
-      VALUES (?, ?, ?, ?, ?, ?, ?)`).run(job.jobId, job.state, job.filename, job.createdAt, job.error ?? null, JSON.stringify(job.info ?? {}), job.mediaPath ?? null);
+    this.db.prepare(`INSERT INTO midi_jobs (job_id, state, filename, created_at, error, info_json, media_path, input_path, input_sha256, input_size, input_filename)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`).run(job.jobId, job.state, job.filename, job.createdAt, job.error ?? null, JSON.stringify(job.info ?? {}), job.mediaPath ?? null,
+      job.inputPath ?? null, job.inputSha256 ?? null, job.inputSize ?? null, job.inputFilename ?? job.filename ?? null);
     return this.getMidiJob(job.jobId);
   }
 
@@ -392,7 +401,8 @@ export class SqliteStore {
     return { jobId: job.job_id, state: job.state, filename: job.filename, createdAt: job.created_at, error: job.error,
       status: renderJob?.status ?? (job.state === 'finished' ? 'produced' : job.state === 'canceled' ? 'cancelled' : job.state),
       progress: renderJob?.progress ?? (job.state === 'finished' ? 1 : 0), attempt: renderJob?.attempt ?? 0,
-      errorCode: renderJob?.errorCode ?? null, info, mediaPath: job.media_path };
+      errorCode: renderJob?.errorCode ?? null, info, mediaPath: job.media_path,
+      inputPath: job.input_path, inputSha256: job.input_sha256, inputSize: job.input_size, inputFilename: job.input_filename };
   }
 
   listMidiJobs(limit = 20, offset = 0) {
@@ -415,9 +425,13 @@ export class SqliteStore {
   }
 
   updateMidiJob(job) {
-    this.db.prepare('UPDATE midi_jobs SET state = ?, error = ?, info_json = ?, media_path = ? WHERE job_id = ?')
-      .run(job.state, job.error ?? null, JSON.stringify(job.info ?? {}), job.mediaPath ?? null, job.jobId);
+    this.db.prepare('UPDATE midi_jobs SET state = ?, error = ?, info_json = ?, media_path = ?, input_path = ?, input_sha256 = ?, input_size = ?, input_filename = ? WHERE job_id = ?')
+      .run(job.state, job.error ?? null, JSON.stringify(job.info ?? {}), job.mediaPath ?? null, job.inputPath ?? null, job.inputSha256 ?? null, job.inputSize ?? null, job.inputFilename ?? job.filename ?? null, job.jobId);
     return this.getMidiJob(job.jobId);
+  }
+
+  listRecoverableMidiJobs() {
+    return this.db.prepare("SELECT * FROM midi_jobs WHERE state IN ('queued', 'processing') ORDER BY created_at").all().map(job => this.getMidiJob(job.job_id));
   }
 
   deleteMidiJob(jobId) { return this.db.prepare('DELETE FROM midi_jobs WHERE job_id = ?').run(jobId).changes > 0; }

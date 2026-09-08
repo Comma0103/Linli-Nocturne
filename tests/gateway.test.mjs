@@ -90,6 +90,14 @@ for (const naming of ['snake_case', 'camelCase']) test(`MIDI client contract: up
     assert.ok(envelope.data);
     return envelope.data;
   };
+  const waitResult = async jobId => {
+    for (let attempt = 0; attempt < 20; attempt += 1) {
+      const result = await clientRequest(`/toy/midi/getGenerateResult?${field('jobId')}=${jobId}`);
+      if ([3, 4, 5].includes(result.state)) return result;
+      await new Promise(resolve => setTimeout(resolve, 0));
+    }
+    throw new Error('MIDI job did not reach a terminal state');
+  };
   const upload = await clientRequest('/toy/genObjectUploadUrl', { filename: 'test.mid', type: 12 });
   assert.ok(upload.key);
   const preflight = await fetch(upload.url, { method: 'OPTIONS', headers: {
@@ -101,7 +109,9 @@ for (const naming of ['snake_case', 'camelCase']) test(`MIDI client contract: up
   const uploaded = await fetch(upload.url, { method: 'PUT', headers: { origin, ...upload.headers }, body: midi });
   assert.equal(uploaded.status, 200);
   // The real upload callback returns the storage key, then snake-cases midiUrl.
-  const job = await clientRequest('/toy/midi/generate', { [field('midiUrl')]: upload.key, filename: 'test.mid' });
+  const queued = await clientRequest('/toy/midi/generate', { [field('midiUrl')]: upload.key, filename: 'test.mid' });
+  assert.ok([1, 2, 3, 5].includes(queued.state));
+  const job = await waitResult(queued.jobId);
   assert.equal(job.state, 3); // De.Finished in the original client.
   assert.equal(midiService.get(job.jobId).state, 'finished');
   assert.equal(job.status, 'produced');
@@ -130,7 +140,8 @@ for (const naming of ['snake_case', 'camelCase']) test(`MIDI client contract: up
 
   const invalidUpload = await clientRequest('/toy/genObjectUploadUrl', { filename: 'broken.mid' });
   await fetch(invalidUpload.url, { method: 'PUT', body: 'invalid MIDI' });
-  const failed = await clientRequest('/toy/midi/generate', { [field('midiUrl')]: invalidUpload.url });
+  const failedQueued = await clientRequest('/toy/midi/generate', { [field('midiUrl')]: invalidUpload.url });
+  const failed = await waitResult(failedQueued.jobId);
   assert.equal(failed.state, 5);
   const page = await clientRequest(`/toy/midi/listJobs?${field('pageSize')}=1&cursor=0`);
   assert.equal(page.list.length, 1);
@@ -170,7 +181,9 @@ test('MIDI gateway serves encoded media with the encoder MIME type and extension
   const base = `http://127.0.0.1:${server.address().port}`;
   const upload = await (await fetch(`${base}/toy/genObjectUploadUrl`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ filename: 'encoded.mid' }) })).json();
   await fetch(upload.data.url, { method: 'PUT', body: midi });
-  const generated = await (await fetch(`${base}/toy/midi/generate`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ midiUrl: upload.data.key }) })).json();
+  const queued = await (await fetch(`${base}/toy/midi/generate`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ midiUrl: upload.data.key }) })).json();
+  await new Promise(resolve => setTimeout(resolve, 10));
+  const generated = await (await fetch(`${base}/toy/midi/getGenerateResult?jobId=${queued.data.jobId}`)).json();
   assert.match(generated.data.info.audioUrl, /\.mp4$/u);
   const media = await fetch(generated.data.info.audioUrl);
   assert.equal(media.headers.get('content-type'), 'video/mp4');
