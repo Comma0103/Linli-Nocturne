@@ -113,7 +113,10 @@ export class MidiJobService {
   async processJob(jobId, { mediaBaseUrl = '' } = {}) {
     if (this.active.has(jobId) && this.active.get(jobId)?.promise) return this.active.get(jobId).promise;
     const controller = new AbortController();
-    const promise = this.runJob(jobId, { mediaBaseUrl, controller }).finally(() => this.active.delete(jobId));
+    const promise = this.runJob(jobId, { mediaBaseUrl, controller }).finally(() => {
+      this.inputs.delete(jobId);
+      this.active.delete(jobId);
+    });
     this.active.set(jobId, { controller, promise });
     return promise;
   }

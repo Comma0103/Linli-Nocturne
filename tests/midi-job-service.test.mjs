@@ -30,6 +30,7 @@ test('MIDI jobs survive service recreation through SQLite metadata and media fil
   assert.equal(job.inputSize, midi.length);
   assert.match(job.inputSha256, /^[0-9a-f]{64}$/u);
   assert.ok(job.inputPath);
+  assert.equal(first.inputs.has(job.jobId), false, '终态任务释放内存中的输入副本');
   assert.equal(job.info.renderJob.rendererId, 'builtin.audio');
   const second = new MidiJobService({ store, mediaRoot, playbackBaseUrl: 'http://localhost:27149' });
   assert.equal(second.get(job.jobId).state, 'finished');
