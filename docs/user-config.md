@@ -81,7 +81,7 @@ README 只介绍通用启动流程。本页先解释所有配置属性，再按�
 | 属性                    | 类型和允许值                                 | 默认值                   | 说明                                                                                                    |
 | ----------------------- | -------------------------------------------- | ------------------------ | ------------------------------------------------------------------------------------------------------- |
 | `music.renderer`        | 当前默认可用为 `builtin.audio`               | `builtin.audio`          | 把 MIDI 渲染为本地音频的 Renderer。                                                                     |
-| `music.playbackAdapter` | `olivia-lin.native` 或 `generic`             | `olivia-lin.native`      | 把已生成曲目转换为游戏曲库字段的适配器。原生 WebPlayer 是否真正接管上传曲目仍受 `LINLI-PLAY-001` 影响。 |
+| `music.playbackAdapter` | `olivia-lin.native` 或 `generic`             | `olivia-lin.native`      | 把已生成曲目转换为播放器所需字段。`olivia-lin.native` 已通过 Steam 0.0.9.627 上传曲目演奏验收；`generic` 用于通用媒体读取，不提供原生游戏接管契约。 |
 | `music.encoder`         | `builtin.audio-only-mp4`，或空字符串关闭编码 | `builtin.audio-only-mp4` | MP4 编码器会生成 `.mp4` 和 `video/mp4`；关闭编码时保留 WAV，使用 `.wav` 和 `audio/wav`。                |
 | `music.nativeUgcRoot`   | 文件夹路径或空字符串                         | 自动从 Olivia 日志发现 | 原生播放器要求的游戏 `songStoragePath`。留空时读取 `%APPDATA%/miHoYo/Olivia-steam/logs/Olivia.log`；填写后按该路径创建歌曲目录并写入媒体。 |
 
@@ -111,6 +111,125 @@ README 只介绍通用启动流程。本页先解释所有配置属性，再按�
 
 ### 信件
 
+#### 信件模式套装速查
+
+信件配置由基础模型、Persona、Harness 和记忆四个插槽组成。下面列出当前常用的完整组合；`composition` 只是说明文字，不负责切换实现。
+
+| 套装 | 基础模型 | Persona | Harness | 记忆 | 用途 |
+| --- | --- | --- | --- | --- | --- |
+| 1. 最简单离线回信 | `offline-fallback` | 无 | 关闭 | 关闭 | 只验证服务和游戏链路，回信最简单 |
+| 2. 离线人格回信 | `olivia-lin.offline` | `linli.persona-bundle` | 关闭 | `sqlite` 或 `olivia-soul.sqlite` | 无需 API Key 的离线使用 |
+| 3. DeepSeek 直连 | `external.openai-compatible` | `linli.persona-bundle` | 关闭 | `sqlite` 或 `olivia-soul.sqlite` | DeepSeek 直接生成回信 |
+| 4. DeepSeek + Persona + Fusion Harness | `external.openai-compatible` | `linli.persona-bundle` | `linli.fusion-v1` | 推荐 `olivia-soul.sqlite` | 当前推荐的完整统一流程 |
+| 5. DeepSeek + Persona + OliviaSoul v18 | `external.openai-compatible` | 通常为 `file` | `olivia-soul-v18` | 必须关闭项目记忆 | 旧版独立流程，Harness 自己管理记忆 |
+| 6. 本地模型直连 | `local.openai-compatible` | `linli.persona-bundle` | 关闭 | `sqlite` 或 `olivia-soul.sqlite` | 使用本机 OpenAI 兼容模型 |
+| 7. 本地模型 + Fusion Harness | `local.openai-compatible` | `linli.persona-bundle` | `linli.fusion-v1` | 推荐 `olivia-soul.sqlite` | 本地模型的完整统一流程 |
+
+其中，Persona 负责林离的人格和写信风格，Harness 负责预检、生成、检查和必要重写，Memory 负责连续对话。`fallbackEnabled` 是失败时是否允许降级的开关，不是另一套模式。`olivia-soul-v18` 自带记忆管理，不能和项目的 `sqlite` 或 `olivia-soul.sqlite` 同时开启。
+
+#### 七套最小配置
+
+下面只列出每套需要切换的 `letters` 字段；外部模型还必须填写自己的 API Key，并保持 `privacy.allowExternalModelRequests` 为 `true`。未列出的通用字段可以沿用模板。
+
+**1. 最简单离线回信**
+
+```json
+"letters": {
+  "baseModel": { "provider": "offline-fallback" },
+  "persona": { "providerId": "default" },
+  "harness": { "enabled": false },
+  "memory": { "enabled": false },
+  "fallbackEnabled": false
+}
+```
+
+**2. 离线人格回信**
+
+```json
+"letters": {
+  "baseModel": { "provider": "olivia-lin.offline" },
+  "persona": { "providerId": "linli.persona-bundle" },
+  "harness": { "enabled": false },
+  "memory": { "enabled": true, "provider": "olivia-soul.sqlite" },
+  "fallbackEnabled": true
+}
+```
+
+**3. DeepSeek 直连**
+
+```json
+"letters": {
+  "baseModel": {
+    "provider": "external.openai-compatible",
+    "external": { "endpoint": "https://api.deepseek.com", "model": "你的模型名称", "apiKey": "你的 API Key" }
+  },
+  "persona": { "providerId": "linli.persona-bundle" },
+  "harness": { "enabled": false },
+  "memory": { "enabled": true, "provider": "olivia-soul.sqlite" },
+  "fallbackEnabled": true
+}
+```
+
+**4. DeepSeek + Persona + Fusion Harness（推荐）**
+
+```json
+"letters": {
+  "baseModel": {
+    "provider": "external.openai-compatible",
+    "external": { "endpoint": "https://api.deepseek.com", "model": "你的模型名称", "apiKey": "你的 API Key" }
+  },
+  "persona": { "providerId": "linli.persona-bundle" },
+  "harness": { "enabled": true, "providerId": "linli.fusion-v1", "root": "../third_party/OliviaSoul/v18-harness", "person": "linli-local-user" },
+  "memory": { "enabled": true, "provider": "olivia-soul.sqlite" },
+  "fallbackEnabled": true
+}
+```
+
+**5. DeepSeek + Persona + OliviaSoul v18（旧版独立流程）**
+
+```json
+"letters": {
+  "baseModel": {
+    "provider": "external.openai-compatible",
+    "external": { "endpoint": "https://api.deepseek.com", "model": "你的模型名称", "apiKey": "你的 API Key" }
+  },
+  "persona": { "providerId": "file", "file": "../third_party/olivia-lin/BSide_Olivia_Lin/persona/olivia_lin.md" },
+  "harness": { "enabled": true, "providerId": "olivia-soul-v18", "root": "../third_party/OliviaSoul/v18-harness", "person": "linli-local-user" },
+  "memory": { "enabled": false },
+  "fallbackEnabled": true
+}
+```
+
+**6. 本地模型直连**
+
+```json
+"letters": {
+  "baseModel": {
+    "provider": "local.openai-compatible",
+    "local": { "endpoint": "http://127.0.0.1:1234/v1", "model": "你的本地模型名称", "apiKey": "" }
+  },
+  "persona": { "providerId": "linli.persona-bundle" },
+  "harness": { "enabled": false },
+  "memory": { "enabled": true, "provider": "olivia-soul.sqlite" },
+  "fallbackEnabled": true
+}
+```
+
+**7. 本地模型 + Fusion Harness**
+
+```json
+"letters": {
+  "baseModel": {
+    "provider": "local.openai-compatible",
+    "local": { "endpoint": "http://127.0.0.1:1234/v1", "model": "你的本地模型名称", "apiKey": "" }
+  },
+  "persona": { "providerId": "linli.persona-bundle" },
+  "harness": { "enabled": true, "providerId": "linli.fusion-v1", "root": "../third_party/OliviaSoul/v18-harness", "person": "linli-local-user" },
+  "memory": { "enabled": true, "provider": "olivia-soul.sqlite" },
+  "fallbackEnabled": true
+}
+```
+
 #### 先使用离线信件确认服务
 
 模板默认就是离线模式，不需要 API Key。只填写自己的名字和时区即可：
@@ -132,7 +251,7 @@ README 只介绍通用启动流程。本页先解释所有配置属性，再按�
 
 本地测试时可以把 `letters.dailyLimitBypass` 临时改为 `true`，跳过每日 3 封和每封 5 分钟等待。
 
-#### DeepSeek + Persona + OliviaSoul Harness
+#### DeepSeek + Persona + OliviaSoul v18（旧版独立流程）
 
 把 `letters` 中对应字段改为自己的模型信息：
 
@@ -235,13 +354,19 @@ node scripts/import-user-data.mjs --input linli-user-data.zip
 }
 ```
 
-这会让本地服务使用内置音频 Renderer、原版曲库字段适配器和音频 MP4 编码器。官方预设曲目和上传曲目的 Steam 演奏都已经在 0.0.9.627 中验收。
+这些设置用于上传 MIDI 的渲染、曲库字段适配和音频 MP4 编码，不会重新生成官方预设曲目。官方预设曲目和上传曲目的 Steam 演奏都已经在 0.0.9.627 中验收。
+
+预设曲目的“试听”读取游戏已下载的本地缓存，需保持服务运行、缓存所在磁盘可用；目前支持 `<nameKey>_TOD1200/1730/2000_NI_L.mp4` 命名，优先使用 TOD1730。缺失或采用其他命名的缓存仍可能无法试听。三类预设曲库样本和上传 MIDI 均已复验，试听使用独立音频播放器，底部演奏栏不显示试听进度。
 
 #### 上传自己的 MIDI 曲子
 
-上传曲子沿用上面的 `music` 配置。默认编码器会生成可通过本地网关读取的 MP4；如果只想保留 WAV，可以把编码器设为空字符串：
+上传曲子沿用上面的 `music` 配置。默认编码器会生成可通过本地网关读取的音频 MP4。
 
 使用原版 Olivia Lin 播放器时，服务还会把生成的媒体按 `<songStoragePath>/<歌曲 ID>/<文件名>` 写入游戏本地目录。服务会从游戏日志自动发现 `songStoragePath`；如果日志尚未生成，先启动一次游戏，或填写 `music.nativeUgcRoot`。目录不存在时会自动创建；没有权限时任务仍会保留，但结果中的 `nativePlayback` 会显示错误原因，请关闭游戏并检查目录权限后重试。这个过程不会修改 DLL 或其他游戏资源。
+
+生成完成后，可在“我的上传”试听或演奏，也可加入右侧歌单后演奏；重复加入只保留一项，移出歌单不会删除上传曲目。当前音频 MP4 进入演奏时是黑屏和声音，人物、手指与琴键同步画面属于 Phase 5。
+
+如果只想通过通用播放器读取 WAV，可以改为以下配置；这组配置不作为 Steam 原生演奏的验收组合：
 
 ```json
 "music": {
@@ -251,7 +376,7 @@ node scripts/import-user-data.mjs --input linli-user-data.zip
 }
 ```
 
-服务会保存上传任务、解析结果、媒体和曲库元数据。修改配置后重启服务，已有任务会从 SQLite 和媒体目录恢复读取；这仍属于本地预览和媒体任务路径，不等于 Steam 原生演奏接管。
+服务会保存上传任务、解析结果、媒体和曲库元数据。修改配置后重启服务，已有任务会从 SQLite 和媒体目录恢复读取。模块选择也可通过 `node scripts/configure-modules.mjs --user-config config/user-config.json` 的终端向导完成；当前没有游戏内 Renderer/Encoder 选择页。
 
 更换编码器后，已经生成的文件保留原格式；新生成的媒体使用新设置。例如从 MP4 改成 WAV 后，旧曲目仍按 MP4 读取，不会自动重新生成。
 
