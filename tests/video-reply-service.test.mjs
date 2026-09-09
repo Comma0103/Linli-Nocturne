@@ -78,7 +78,12 @@ test('视频回信网关提供导入、播放和删除接口', async () => {
     assert.equal(upload.status, 200);
     const list = await fetch(`${base}/toy/letter/list`);
     const item = (await list.json()).data.list[0];
+    assert.equal(item.replyType, 2);
     assert.match(item.replyVideoUrl, /\/letter\/video\/media\//u);
+    const detail = await fetch(`${base}/toy/letter/detail?letterId=${letter.id}`);
+    const detailItem = (await detail.json()).data;
+    assert.equal(detailItem.replyType, 2);
+    assert.match(detailItem.replyVideoUrl, /\/letter\/video\/media\//u);
     const media = await fetch(item.replyVideoUrl);
     assert.equal(media.status, 200);
     assert.equal(media.headers.get('content-type'), 'video/mp4');

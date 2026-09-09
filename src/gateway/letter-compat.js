@@ -1,6 +1,10 @@
 // 0.0.9.627 的前端使用严格数字比较；协议证据见 docs/frontend-audit.md。
 // 这些枚举只属于游戏兼容边界，领域服务和 SQLite 继续使用字符串状态。
 const CLIENT_LETTER_STATUS = Object.freeze({ pending: 1, processing: 3, replied: 4, failed: 5 });
+// The 0.0.9.627 frontend maps TEXT (1) to a text reply and every other
+// non-zero reply type to its video player. Imported MP4 replies use the first
+// non-text enum so the list view also marks them as playable before detail load.
+const CLIENT_REPLY_TYPE = Object.freeze({ none: 0, text: 1, video: 2 });
 
 function toSeconds(value) {
   const parsed = Date.parse(value ?? '');
@@ -19,7 +23,7 @@ export function clientLetter(letter, videoReplyService = null, mediaOrigin = '')
     material: null,
     letterStatus,
     auditStatus: 2, // 本地接受的信件；模型失败不是审核拒绝。
-    replyType: replied ? 1 : 0,
+    replyType: video ? CLIENT_REPLY_TYPE.video : replied ? CLIENT_REPLY_TYPE.text : CLIENT_REPLY_TYPE.none,
     replyText: replied ? letter.reply : null,
     replyVideoUrl: video ? `${mediaOrigin}/letter/video/media/${video.assetId}.mp4` : null,
     isRead: replied ? (letter.read_at ? 1 : 0) : 1,

@@ -11,7 +11,7 @@
 - 视频导入使用 RenderJob 的 queued → validating → rendering → produced → published/failed 状态；界面显示“处理中、可播放、失败”。SQLite 保存任务和每封信当前生效资产的关联，领域服务不保存网关绝对地址。
 - 同一封信同时只允许一个导入任务。替换期间旧视频继续可读，成功后事务切换关联；失败保留旧视频。替换/删除只解除当前关联，旧文件保留为备份，管理接口不公开旧资产。备份恢复需要同时保存 SQLite 和媒体目录；自动清理历史文件留待统一备份工具。
 - 服务异常退出的导入可在超时后恢复为失败，再重新上传；迟到的旧任务不能覆盖新任务或删除后的关联。文字回信不受影响。
-- 新增本地 `/letter/video/…` 管理接口、GET/HEAD/单段 Range 媒体读取和 `/letters/videos` 页面。只向游戏兼容响应附加 `replyVideoUrl`，保持既有 `replyType`，不猜测原生视频类型枚举。游戏显示契约及实机验收在 Phase 3-6 单独确认。
+- 新增本地 `/letter/video/…` 管理接口、GET/HEAD/单段 Range 媒体读取和 `/letters/videos` 页面。游戏兼容响应在存在当前视频资产时返回 `replyType: 2` 和 `replyVideoUrl`；原版前端把 `replyType: 1` 识别为文字、其他非零回信类型交给视频回信组件。没有视频资产的文字回信继续返回 `replyType: 1`。游戏显示契约及实机验收仍需 Phase 3-6 单独确认。
 
 主要接口：`PUT /letter/video/upload/:letterId` 导入或替换，`GET /letter/video/status/:jobId` 查询状态，`GET /letter/video/list?letterId=...` 查看任务，`GET|HEAD /letter/video/media/:assetId.mp4` 播放/读取，`POST /letter/video/delete/:letterId` 删除当前关联，`GET /letters/videos` 打开本地管理页。
 
