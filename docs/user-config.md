@@ -19,7 +19,7 @@ README 只介绍通用启动流程。本页先解释所有配置属性，再按�
 | `media`   | 对象                 | 模板中的媒体设置 | 视频回信导入检查器选择。                                               |
 | `threeD`  | 对象                 | 模板中的 3D 设置 | 未来 3D 演奏模块的预留位置，目前没有可用的默认 3D Renderer。           |
 | `game`    | 对象                 | 模板中的游戏信息 | 当前主要用于记录目标游戏信息；本地服务不会用它替代启动参数或环境变量。 |
-| `privacy` | 对象                 | 模板中的隐私选项 | 外部模型请求需要明确允许；外部媒体来源仍未接入。                     |
+| `privacy` | 对象                 | 模板中的隐私选项 | 外部模型请求默认允许，也可显式关闭；外部媒体来源仍未接入。           |
 
 ### `user`
 
@@ -83,6 +83,7 @@ README 只介绍通用启动流程。本页先解释所有配置属性，再按�
 | `music.renderer`        | 当前默认可用为 `builtin.audio`               | `builtin.audio`          | 把 MIDI 渲染为本地音频的 Renderer。                                                                     |
 | `music.playbackAdapter` | `olivia-lin.native` 或 `generic`             | `olivia-lin.native`      | 把已生成曲目转换为游戏曲库字段的适配器。原生 WebPlayer 是否真正接管上传曲目仍受 `LINLI-PLAY-001` 影响。 |
 | `music.encoder`         | `builtin.audio-only-mp4`，或空字符串关闭编码 | `builtin.audio-only-mp4` | MP4 编码器会生成 `.mp4` 和 `video/mp4`；关闭编码时保留 WAV，使用 `.wav` 和 `audio/wav`。                |
+| `music.nativeUgcRoot`   | 文件夹路径或空字符串                         | 自动从 Olivia 日志发现 | 原生播放器要求的游戏 `songStoragePath`。留空时读取 `%APPDATA%/miHoYo/Olivia-steam/logs/Olivia.log`；填写后按该路径创建歌曲目录并写入媒体。 |
 
 ### `media`
 
@@ -103,7 +104,7 @@ README 只介绍通用启动流程。本页先解释所有配置属性，再按�
 | ------------------------------------ | ------------ | ------------------------ | ---------------------------------------------------------------------------------------------- |
 | `game.serviceUrl`                    | URL 字符串   | `http://localhost:27149` | 模板中的目标服务记录。当前服务地址由 `LINLI_HOST`、`LINLI_PORT` 或启动器默认值决定。           |
 | `game.clientVersion`                 | 版本字符串   | `0.0.9.627`              | 模板中的目标客户端记录。安装计划会单独检查游戏版本，不由此字段放行未知版本。                   |
-| `privacy.allowExternalModelRequests` | 布尔值       | `false`                  | 选择 `external.openai-compatible` 时必须改为 `true`，否则服务不会启动；来信和启用的记忆可能发送给该服务。 |
+| `privacy.allowExternalModelRequests` | 布尔值       | `true`                   | 默认允许来信和启用的记忆发送给所选外部模型；改为 `false` 后选择 `external.openai-compatible` 会阻止服务启动。 |
 | `privacy.allowExternalMediaSources`  | 布尔值       | `false`                  | 外部音乐来源预留字段；当前没有外部来源适配器，不会自动开启下载或绕过访问控制。                 |
 
 ## 二、按功能配置
@@ -234,11 +235,13 @@ node scripts/import-user-data.mjs --input linli-user-data.zip
 }
 ```
 
-这会让本地服务使用内置音频 Renderer、原版曲库字段适配器和音频 MP4 编码器。官方预设曲目的 Steam 演奏已经单独验收；上传曲目真正接管原生 WebPlayer 仍未完成，不要把这个配置示例理解为该问题已经解决。
+这会让本地服务使用内置音频 Renderer、原版曲库字段适配器和音频 MP4 编码器。官方预设曲目和上传曲目的 Steam 演奏都已经在 0.0.9.627 中验收。
 
 #### 上传自己的 MIDI 曲子
 
 上传曲子沿用上面的 `music` 配置。默认编码器会生成可通过本地网关读取的 MP4；如果只想保留 WAV，可以把编码器设为空字符串：
+
+使用原版 Olivia Lin 播放器时，服务还会把生成的媒体按 `<songStoragePath>/<歌曲 ID>/<文件名>` 写入游戏本地目录。服务会从游戏日志自动发现 `songStoragePath`；如果日志尚未生成，先启动一次游戏，或填写 `music.nativeUgcRoot`。目录不存在时会自动创建；没有权限时任务仍会保留，但结果中的 `nativePlayback` 会显示错误原因，请关闭游戏并检查目录权限后重试。这个过程不会修改 DLL 或其他游戏资源。
 
 ```json
 "music": {

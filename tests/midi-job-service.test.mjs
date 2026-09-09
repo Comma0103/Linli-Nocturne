@@ -5,6 +5,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { SqliteStore } from '../src/storage/sqlite-store.js';
 import { MidiJobService } from '../src/music/midi-job-service.js';
+import { NativeUgcMediaStore } from '../src/music/native-ugc-media.js';
 
 const midi = Uint8Array.from([
   0x4d,0x54,0x68,0x64, 0,0,0,6, 0,0, 0,1, 0x01,0x00,
@@ -39,9 +40,9 @@ test('MIDI jobs survive service recreation through SQLite metadata and media fil
     audioUrl: 'http://localhost:27149/toy/midi/media/' + job.jobId + '.wav',
     videoUrl: 'http://localhost:27149/toy/midi/media/' + job.jobId + '.wav',
     videoByTodView: [
-      { url: 'http://localhost:27149/toy/midi/media/' + job.jobId + '.wav', tod: 'TOD1200', view: 'NI', coverUrl: '', duration: Math.round(second.get(job.jobId).info.duration) },
+      { url: 'http://localhost:27149/toy/midi/media/' + job.jobId + '.wav', tod: 'TOD12', view: 'NI', coverUrl: '', duration: Math.round(second.get(job.jobId).info.duration) },
       { url: 'http://localhost:27149/toy/midi/media/' + job.jobId + '.wav', tod: 'TOD1730', view: 'NI', coverUrl: '', duration: Math.round(second.get(job.jobId).info.duration) },
-      { url: 'http://localhost:27149/toy/midi/media/' + job.jobId + '.wav', tod: 'TOD2000', view: 'NI', coverUrl: '', duration: Math.round(second.get(job.jobId).info.duration) },
+      { url: 'http://localhost:27149/toy/midi/media/' + job.jobId + '.wav', tod: 'TOD20', view: 'NI', coverUrl: '', duration: Math.round(second.get(job.jobId).info.duration) },
     ],
     nameKey: job.jobId, performanceType: 'Solo', duration: second.get(job.jobId).info.duration, source: 'linli-nocturne',
   });
@@ -74,6 +75,24 @@ test('MIDI generation is queued and cancellation prevents publication', async ()
   const result = await service.processJob(queued.jobId);
   assert.equal(result.state, 'canceled');
   assert.equal(service.mediaBytes(queued.jobId), null);
+  store.close();
+});
+
+test('原生播放器媒体会按歌曲 ID 写入 UGC 目录并在删除时清理', async () => {
+  const store = new SqliteStore();
+  const mediaRoot = mkdtempSync(join(tmpdir(), 'Linli MIDI Native Media-'));
+  const nativeRoot = mkdtempSync(join(tmpdir(), 'Linli Native UGC-'));
+  const service = new MidiJobService({ store, mediaRoot, nativeUgcMediaStore: new NativeUgcMediaStore({ root: nativeRoot }) });
+  const upload = service.createUpload({ filename: 'native.mid', uploadUrl: 'http://localhost:27149' });
+  service.receiveUpload(upload.key, midi);
+  const job = await settled(service, service.generate({ midiUrl: upload.url }));
+  const nativePath = join(nativeRoot, job.jobId, `${job.jobId}.wav`);
+  assert.equal(job.info.nativePlayback.status, 'ready');
+  assert.equal(job.info.nativePlayback.path, nativePath);
+  assert.ok((await import('node:fs')).existsSync(nativePath));
+  assert.equal(service.delete(job.jobId), true);
+  assert.equal((await import('node:fs')).existsSync(nativePath), false);
+  await new Promise(resolve => setImmediate(resolve));
   store.close();
 });
 

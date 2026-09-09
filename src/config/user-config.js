@@ -12,7 +12,8 @@ export function loadUserConfig(filename, { defaultSettings, runtimeRoot = '', va
   const fromConfig = value => value && !isAbsolute(value) ? resolve(dirname(filename), value) : value;
   const base = letters.baseModel ?? {};
   const provider = base.provider ?? 'offline-fallback';
-  if (validateAccess && provider === 'external.openai-compatible' && user.privacy?.allowExternalModelRequests === false) throw new Error('请先在 privacy.allowExternalModelRequests 中允许外部模型请求');
+  const allowExternalModelRequests = user.privacy?.allowExternalModelRequests ?? true;
+  if (validateAccess && provider === 'external.openai-compatible' && allowExternalModelRequests === false) throw new Error('请先在 privacy.allowExternalModelRequests 中允许外部模型请求');
   settings.letters = {
     ...settings.letters,
     provider,
@@ -44,6 +45,8 @@ export function loadUserConfig(filename, { defaultSettings, runtimeRoot = '', va
     conversationId: String(user.user?.profileId ?? '').trim() || 'default',
     settings,
     options: {
+      nativeUgcRoot: typeof user.music?.nativeUgcRoot === 'string' && user.music.nativeUgcRoot.trim()
+        ? fromConfig(user.music.nativeUgcRoot.trim()) : '',
       provider: { endpoint: selected.endpoint, apiKey: selected.apiKey ?? '', model: selected.model, systemPrompt: user.letters?.systemPrompt,
         timeoutMs: selected.timeoutMs, python: /[/\\]/u.test(base.offline?.python ?? '') ? fromConfig(base.offline.python) : base.offline?.python || 'python' },
       external: { endpoint: external.endpoint, apiKey: external.apiKey ?? '', model: external.model, systemPrompt: user.letters?.systemPrompt },

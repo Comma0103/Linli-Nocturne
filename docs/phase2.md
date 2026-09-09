@@ -2,7 +2,7 @@
 
 > 本页保留历史开发记录。当前准确的完成矩阵、证据边界、遗留问题和 Phase 3 接手 Prompt 统一以 [`phase_2_to_3_handoff.md`](./phase_2_to_3_handoff.md) 为准；历史记录中的“下一步”可能早于当前实现，不应直接照抄执行。
 
-> 2026-09-09 补充：本地上传曲目的最新调查以 [Phase 4-3](./phase4-3-native-webplayer-evidence.md) 为准。下文 mixed content 等记录是当时的局部发现；后续调整后仍未解决切歌，不能将其当作当前 `LINLI-PLAY-001` 根因已经确定。
+> 2026-09-09 补充：本地上传曲目的最新调查以 [Phase 4-3](./phase4-3-native-webplayer-evidence.md) 为准。下文 mixed content 等记录是历史局部发现；当前修复已转入服务侧，剩余是 Steam 实机验收。
 
 ## 已完成与已开始
 
@@ -46,9 +46,9 @@ P2-1 的完成标准是：失败任务不影响用户曲目分页；SQLite 重�
 - 已确认上传曲目演奏失败的直接原因：CEF 控制台报告从 HTTPS 游戏页面请求 `http://127.0.0.1` 媒体时发生 mixed content 拦截。当前运行时将用户曲目的 `videoUrl`、`audioUrl` 和 `videoByTodView` 改为可信的 `http://localhost` 回环地址，并补齐每个 TOD 条目的 `duration` 字段；API 仍保持原有 `127.0.0.1` HTTP 兼容地址。HTTPS 媒体端点保留为可选部署方式，不作为当前客户端默认路径。
 - 回环媒体请求路径确认后，日志进一步确认原生 `play` 命令已发出但 WAV 没有产生 `timeupdate`；官方页面使用 `<video>` 播放器，因此本地音频现在会封装成音频轨 MP4（不添加画面轨），并以 `video/mp4` 返回，避免把“能发出播放命令”误判为“播放器已开始播放”。
 - 原生桥接还要求 `VideoTodViewItem.duration` 为整数秒；本地任务保留小数时长用于音频和任务记录，但发送到原生层时会转换为整数，并在媒体服务端记录实际请求字节数，便于区分证书、网络和播放器解码问题。
-- 原装 0.0.9.627 日志显示官方曲库使用的 TOD 键是字面量 `TOD1200 / TOD1730 / TOD2000`；用户曲目已按这组实际时段键生成。媒体 GET 目前会记录方法、Range、状态、Content-Type 和字节数，先用于确认原生是否真正发起请求，再决定是否补充 Range/HEAD 协议。
+- 历史记录曾误用 `TOD1200 / TOD1730 / TOD2000`；Phase 4-3 只读反汇编已更正为原生字面量 `TOD12 / TOD1730 / TOD20`。媒体 GET 仍记录方法、Range、状态、Content-Type 和字节数。
 - 根据实测“上传曲目 play 命令已到达，但旧曲目继续 timeupdate”的诊断，已为本地媒体增加官方风格的 `.mp4` URL 别名，并实现 `HEAD 200`、单段 `Range` 的 `206 Partial Content`、`Content-Range` 和 `Accept-Ranges`；旧的无后缀 URL 仍兼容。该改动只覆盖媒体协议层，尚未宣称原生 WebPlayer 已完成切歌。
-- 最后一次定向实测确认：客户端读取了 `TOD1200 / TOD1730 / TOD2000` 和 `.mp4` 地址，原生桥也收到完整 `play` 对象，但网关完全没有收到媒体请求，预设曲目仍可正常播放。该问题登记为 [`LINLI-PLAY-001`](./known-issues.md)，暂缓继续猜测式修改，后续需要原生 WebPlayer 的只读反汇编或更细粒度加载回调。
+- 历史定向实测确认客户端读取了错误 TOD 和 `.mp4` 地址，原生桥收到完整 `play` 对象但网关没有媒体请求。后续 Phase 4-3 已通过只读反汇编定位本地 UGC 文件存在性契约，并完成服务侧修复；当前只剩 Steam 实机验收。
 - 已修正用户曲目分页边界：分页现在先筛选 `finished` 任务，再应用游标，失败任务不会挤占页面容量，也不会污染 `total` 和 `hasMore`；新增 SQLite 分页回归测试覆盖失败任务夹在成功任务之间的情况。
 - 已补齐历史 MIDI 任务的恢复边界：服务重启后会从 SQLite 重新规范化 RenderJob 状态，并按当前网关的可信播放地址重建批量查询中的媒体 URL，避免沿用上一次运行时的旧地址；新增重启后 `batchGetResult` 回归测试。
 - 已增加只读安装计划 `scripts/plan-install.mjs`：统一输出版本、基线、外置备份目录、前端/DLL 目标、回滚步骤和阻塞原因；计划本身不会创建备份或写入游戏目录，只有 `pristine` 状态且备份目录位于游戏目录之外时才允许后续执行器接手。

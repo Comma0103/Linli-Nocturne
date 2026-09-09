@@ -14,6 +14,7 @@ import { ModuleSettingsStore } from '../config/module-settings.js';
 import { resolveModuleSelections } from '../config/module-runtime.js';
 import { DEFAULT_MODULE_SETTINGS } from '../config/module-settings.js';
 import { loadUserConfig } from '../config/user-config.js';
+import { discoverNativeUgcRoot, NativeUgcMediaStore } from '../music/native-ugc-media.js';
 
 function envOptions(env) {
   const modelOptions = {
@@ -67,6 +68,10 @@ export function createLocalApp({ dataRoot = 'data', settingsPath = 'config/modul
     timeZone: userConfig?.timeZone ?? env.LINLI_TIME_ZONE ?? 'Asia/Shanghai',
     mediaExtension: runtime.music.mediaEncoder?.extension,
     mediaContentType: runtime.music.mediaEncoder?.contentType,
+    nativeUgcMediaStore: new NativeUgcMediaStore({ root: discoverNativeUgcRoot({
+      explicitRoot: userConfig?.options.nativeUgcRoot || env.LINLI_NATIVE_UGC_ROOT,
+      env,
+    }) }),
   });
   const musicService = new MusicService({ store, audioRenderer: runtime.music.renderer });
   const server = createLocalGateway({ letterService, musicService, midiJobService, videoReplyService });
@@ -90,6 +95,7 @@ export function createLocalApp({ dataRoot = 'data', settingsPath = 'config/modul
     },
     async stop() {
       await letterWorker.stop();
+      await midiJobService.drain();
       if (server.listening) await new Promise(resolve => server.close(resolve));
       store.close();
       if (existsSync(lockPath) && JSON.parse(readFileSync(lockPath, 'utf8')).id === lockId) unlinkSync(lockPath);

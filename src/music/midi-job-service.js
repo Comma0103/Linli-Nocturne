@@ -15,7 +15,7 @@ function renderJobFor(jobId, filename, renderer, clock) {
 }
 
 export class MidiJobService {
-  constructor({ clock = () => new Date(), timeZone = DEFAULT_TIME_ZONE, store = null, mediaRoot = null, playbackBaseUrl = '', mediaEncoder = null, mediaExtension = null, mediaContentType = null, renderer = new BuiltinAudioRenderer(), playbackAdapter = new OliviaLinPlaybackAdapter() } = {}) {
+  constructor({ clock = () => new Date(), timeZone = DEFAULT_TIME_ZONE, store = null, mediaRoot = null, playbackBaseUrl = '', mediaEncoder = null, mediaExtension = null, mediaContentType = null, nativeUgcMediaStore = null, renderer = new BuiltinAudioRenderer(), playbackAdapter = new OliviaLinPlaybackAdapter() } = {}) {
     this.clock = clock;
     this.dayBoundary = createDayBoundary(timeZone);
     this.store = store;
@@ -23,6 +23,7 @@ export class MidiJobService {
     this.inputRoot = mediaRoot ? join(mediaRoot, 'inputs') : null;
     this.playbackBaseUrl = playbackBaseUrl;
     this.mediaEncoder = mediaEncoder;
+    this.nativeUgcMediaStore = nativeUgcMediaStore;
     if (!renderer || typeof renderer.render !== 'function' || !renderer.id || !renderer.version) throw new TypeError('renderer.id, version and render are required');
     if (!playbackAdapter || typeof playbackAdapter.toUserSong !== 'function') throw new TypeError('playbackAdapter.toUserSong is required');
     this.renderer = renderer;
@@ -36,6 +37,7 @@ export class MidiJobService {
     this.jobs = new Map();
     this.media = new Map();
     this.active = new Map();
+    this.scheduled = new Set();
     if (this.store) this.recover();
   }
 
@@ -70,7 +72,11 @@ export class MidiJobService {
     this.jobs.set(jobId, job);
     this.inputs.set(jobId, Buffer.from(upload.buffer));
     this.store?.insertMidiJob(job);
-    setImmediate(() => { void this.processJob(jobId, { mediaBaseUrl }); });
+    let scheduled;
+    scheduled = new Promise(resolve => setImmediate(async () => {
+      try { await this.processJob(jobId, { mediaBaseUrl }); } finally { this.scheduled.delete(scheduled); resolve(); }
+    }));
+    this.scheduled.add(scheduled);
     return job;
   }
 
@@ -136,9 +142,14 @@ export class MidiJobService {
         tempPath = null;
       }
       this.media.set(jobId, mediaBytes);
+      const nativeFilename = `${jobId}.${this.mediaExtension}`;
+      const nativePlayback = this.nativeUgcMediaStore
+        ? this.nativeUgcMediaStore.materialize({ songId: jobId, filename: nativeFilename, bytes: Buffer.from(mediaBytes) })
+        : { status: 'disabled', code: 'native_ugc_not_configured' };
       return this.transition(job, 'finished', RenderJobStatus.PRODUCED, { progress: 1, mediaPath, errorCode: null, error: null,
         info: { videoUrls: [mediaUrl], audioUrl: mediaUrl, duration: rendered.duration, timingManifest: rendered.timingManifest, midi,
-          mediaExtension: this.mediaExtension, mediaContentType: this.mediaContentType, encoderId: this.mediaEncoder?.id ?? null } });
+          mediaExtension: this.mediaExtension, mediaContentType: this.mediaContentType, encoderId: this.mediaEncoder?.id ?? null,
+          nativePlayback: { ...nativePlayback, filename: nativeFilename } } });
     } catch (error) {
       if (tempPath) { try { unlinkSync(tempPath); } catch {} }
       if (controller.signal.aborted || this.get(jobId)?.state === 'canceled') return this.get(jobId);
@@ -203,11 +214,19 @@ export class MidiJobService {
   }
   delete(jobId) {
     const id = String(jobId); const job = this.get(id); this.media.delete(id); this.inputs.delete(id); this.jobs.delete(id); this.active.get(id)?.controller.abort();
-    if (job?.mediaPath) { try { unlinkSync(job.mediaPath); } catch {} } if (job?.inputPath) { try { unlinkSync(job.inputPath); } catch {} }
+    if (job?.mediaPath) { try { unlinkSync(job.mediaPath); } catch {} }
+    if (job?.info?.nativePlayback?.path) { try { unlinkSync(job.info.nativePlayback.path); } catch {} }
+    if (job?.inputPath) { try { unlinkSync(job.inputPath); } catch {} }
     return this.store ? this.store.deleteMidiJob(id) : Boolean(job);
   }
   mediaBytes(jobId) {
     const id = String(jobId); const inMemory = this.media.get(id); if (inMemory) return inMemory; const job = this.get(id); if (!job?.mediaPath) return null;
     try { const bytes = readFileSync(job.mediaPath); this.media.set(id, bytes); return bytes; } catch { return null; }
+  }
+
+  async drain() {
+    while (this.scheduled.size || this.active.size) {
+      await Promise.all([...this.scheduled, ...this.active.values()].map(entry => entry?.promise ?? entry));
+    }
   }
 }
