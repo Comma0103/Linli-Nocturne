@@ -346,7 +346,24 @@ export class SqliteStore {
 
   addCompatPlaylistItem(item) {
     const existing = this.db.prepare('SELECT * FROM playlist_items WHERE item_type = ? AND item_id = ?').get(item.itemType, item.itemId);
-    if (existing) return this.getCompatPlaylistItem(existing.id);
+    if (existing) {
+      const value = (incoming, fallback) => incoming == null || incoming === '' || (Array.isArray(incoming) && incoming.length === 0) ? fallback : incoming;
+      const name = existing.name && existing.name !== existing.item_id ? existing.name : value(item.name, existing.name ?? existing.item_id);
+      const nameKey = existing.name_key || value(item.nameKey, '');
+      const iconUrl = existing.icon_url || value(item.iconUrl ?? item.coverUrl, '');
+      const songId = existing.song_id || value(item.songId, '');
+      const performanceId = existing.performance_id || value(item.performanceId, '');
+      const duration = Number(existing.duration) > 0 ? existing.duration : (Number(item.duration) > 0 ? Number(item.duration) : 0);
+      const videoDuration = Number(existing.video_duration) > 0 ? existing.video_duration : (Number(item.videoDuration ?? item.duration) > 0 ? Number(item.videoDuration ?? item.duration) : duration);
+      const videoUrl = existing.video_url || value(item.videoUrl ?? item.mediaUrl, '');
+      const performanceType = existing.performance_type || value(item.performanceType, '');
+      const videoByTodView = existing.video_by_tod_view ? JSON.parse(existing.video_by_tod_view) : value(item.videoByTodView, null);
+      this.db.prepare(`UPDATE playlist_items SET title = ?, source_name = ?, name = ?, name_key = ?, icon_url = ?, song_id = ?, performance_id = ?, duration = ?, video_duration = ?, video_url = ?, performance_type = ?, video_by_tod_view = ? WHERE id = ?`).run(
+        name, existing.source_name || value(item.sourceName, 'compatibility'), name, nameKey, iconUrl, songId, performanceId, duration, videoDuration, videoUrl, performanceType,
+        videoByTodView == null ? null : JSON.stringify(videoByTodView), existing.id
+      );
+      return this.getCompatPlaylistItem(existing.id);
+    }
     const id = item.id ?? `${item.itemType}:${item.itemId}`;
     this.db.prepare(`INSERT INTO playlist_items
       (id, title, source_name, audio_path, manifest_json, created_at, item_type, item_id, name, name_key, icon_url, song_id, performance_id, duration, video_duration, video_url, performance_type, video_by_tod_view)
@@ -367,7 +384,11 @@ export class SqliteStore {
   compatPlaylist() { return this.db.prepare('SELECT * FROM playlist_items WHERE item_type IS NOT NULL ORDER BY created_at DESC').all().map(item => this.compatPlaylistPayload(item)); }
 
   compatPlaylistPayload(item) {
-    return { itemType: item.item_type, itemId: item.item_id, id: item.item_id, name: item.name ?? item.title, nameKey: item.name_key ?? '', createdAt: item.created_at,
+    const numericCreatedAt = Number(item.created_at);
+    const createdAt = Number.isFinite(numericCreatedAt) && numericCreatedAt > 0
+      ? Math.floor(numericCreatedAt)
+      : Math.floor((Date.parse(item.created_at) || 0) / 1000);
+    return { itemType: item.item_type, itemId: item.item_id, id: item.item_id, name: item.name ?? item.title, nameKey: item.name_key ?? '', createdAt,
       iconUrl: item.icon_url ?? '', coverUrl: item.icon_url ?? '', songId: item.song_id ?? '', performanceId: item.performance_id ?? '',
       duration: item.duration ?? 0, videoDuration: item.video_duration ?? item.duration ?? 0, videoUrl: item.video_url ?? '',
       performanceType: item.performance_type ?? '', videoByTodView: item.video_by_tod_view ? JSON.parse(item.video_by_tod_view) : undefined };

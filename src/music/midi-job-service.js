@@ -200,7 +200,12 @@ export class MidiJobService {
     const all = this.store ? this.store.listFinishedMidiJobs(limit, offset).map(job => this.normalizePersistedJob(job)) : [...this.jobs.values()].filter(job => job.state === 'finished').sort((a, b) => b.createdAt.localeCompare(a.createdAt)).slice(offset, offset + limit); const total = this.store ? this.store.countFinishedMidiJobs() : [...this.jobs.values()].filter(job => job.state === 'finished').length;
     return { list: all, hasMore: offset + all.length < total, nextCursor: offset + all.length, total };
   }
-  listUserSongs({ pageSize = 20, cursor = 0 } = {}) { const page = this.listFinished({ pageSize, cursor }); return { ...page, list: page.list.map(job => this.playbackAdapter.toUserSong({ job, mediaUrl: this.playbackUrl(job) || job.info?.videoUrls?.[0] || job.info?.audioUrl || '' })) }; }
+  userSong(jobId) {
+    const job = this.get(jobId);
+    if (!job || job.state !== 'finished') return null;
+    return this.playbackAdapter.toUserSong({ job, mediaUrl: this.playbackUrl(job) || job.info?.videoUrls?.[0] || job.info?.audioUrl || '' });
+  }
+  listUserSongs({ pageSize = 20, cursor = 0 } = {}) { const page = this.listFinished({ pageSize, cursor }); return { ...page, list: page.list.map(job => this.userSong(job.jobId)).filter(Boolean) }; }
   batch(ids = []) { return { list: ids.map(id => this.get(id)).filter(Boolean) }; }
   dailyUsage() {
     const { startIso, endIso } = this.dayBoundary(this.clock()); const generatedToday = this.store ? this.store.countFinishedMidiJobsBetween(startIso, endIso) : [...this.jobs.values()].filter(job => job.state === 'finished' && job.createdAt >= startIso && job.createdAt < endIso).length;

@@ -34,6 +34,7 @@ export const OFFLINE_MIDI_SUBMIT_PATCHES = Object.freeze([
   { id: 'offline-songlist-play-repair', from: 'Ct({cmd:"play",url:W,loop:!1,mute:!1})', to: 'Ct({cmd:"play",song:Le})', expected: 1, optional: true },
   { id: 'offline-songlist-toggle-repair', from: 'Ct({cmd:"play",url:K.videoUrl??K.audioUrl??"",loop:!1,mute:!1})', to: 'Ct({cmd:"play",song:K})', expected: 1, optional: true },
   { id: 'offline-songlist-toggle-repair-legacy', from: 'Ct({cmd:"play",url:K.videoUrl??"",loop:!1,mute:!1})', to: 'Ct({cmd:"play",song:K})', expected: 1, optional: true },
+  { id: 'offline-preview-local-media', from: 'const i=h1(xs(At(t)?s:t)).map(a=>Qo(a)),', to: 'const i=h1(xs(At(t)?s:t)).map(a=>({...Qo(a),audioUrl:"__LINLI_SERVICE_URL__/toy/music/preview/"+encodeURIComponent(a.nameKey??"")})),', expected: 1, optional: true },
 ]);
 
 // These are narrow, version-specific substitutions audited against client
@@ -106,7 +107,14 @@ export function applyOfflineUserSongPatch(buffer) {
 }
 
 export function applyOfflineMidiFeaturePatch(buffer) {
-  return applyKnownPatchSet(buffer, [...OFFLINE_USER_SONG_PATCHES, ...OFFLINE_MIDI_SUBMIT_PATCHES], 'Offline MIDI feature patch');
+  return applyKnownPatchSet(buffer, [...OFFLINE_USER_SONG_PATCHES, ...OFFLINE_MIDI_SUBMIT_PATCHES.filter(patch => patch.id !== 'offline-preview-local-media')], 'Offline MIDI feature patch');
+}
+
+function applyOfflinePreviewPatch(source, serviceUrl) {
+  const patch = OFFLINE_MIDI_SUBMIT_PATCHES.find(item => item.id === 'offline-preview-local-media');
+  if (!patch || occurrenceCount(source, patch.from) !== 1) return source;
+  const previewServiceUrl = serviceUrl.replace('://127.0.0.1', '://localhost');
+  return source.replace(patch.from, patch.to.replace('__LINLI_SERVICE_URL__', previewServiceUrl));
 }
 
 export function inspectOfflineFeaturePatches(source) {
@@ -159,7 +167,10 @@ export function applyFrontendPatch(buffer, options) {
   for (const endpoint of plan.needsPatch) {
     source = source.replace(`"${endpoint}"`, `"${plan.serviceUrl}/toy${endpoint}"`).replace(`\\"${endpoint}\\"`, `\\"${plan.serviceUrl}/toy${endpoint}\\"`);
   }
-  if (plan.includeOfflineFeatures) source = applyOfflineFeaturePatches(source);
+  if (plan.includeOfflineFeatures) {
+    source = applyOfflineFeaturePatches(source);
+    source = applyOfflinePreviewPatch(source, plan.serviceUrl);
+  }
   const entries = { ...inspected.entries, [plan.mainPath]: strToU8(source) };
   return { ...plan, alreadyPatched: false, buffer: zipSync(entries, { level: 6 }) };
 }

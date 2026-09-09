@@ -1,5 +1,6 @@
 import { createServer } from 'node:http';
 import { readFile } from 'node:fs/promises';
+import { createReadStream, statSync } from 'node:fs';
 import { clientMidiJob, clientMidiPage, midiJobIds, midiPageParams } from './midi-compat.js';
 import { clientLetter } from './letter-compat.js';
 
@@ -26,13 +27,39 @@ function compatResponse(data) { return { code: 0, message: 'success', data }; }
 function htmlEscape(value) { return String(value).replace(/[&<>"']/gu, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[char])); }
 function publicVideoJob(job) { if (!job) return null; const { mediaPath, ...visible } = job; return visible; }
 
+function serveMediaFile(request, response, filePath, contentType) {
+  let size;
+  try { size = statSync(filePath).size; } catch { return false; }
+  const headers = { 'content-type': contentType, 'access-control-allow-origin': '*', 'accept-ranges': 'bytes' };
+  const range = request.headers.range;
+  let status = 200;
+  let start = 0;
+  let end = size - 1;
+  if (range) {
+    const match = /^bytes=(\d*)-(\d*)$/u.exec(range);
+    if (!match || (!match[1] && !match[2])) { response.writeHead(416, { ...headers, 'content-range': `bytes */${size}` }); response.end(); return true; }
+    if (match[1]) start = Number(match[1]);
+    if (match[2]) end = Number(match[2]);
+    else if (!match[1]) start = Math.max(0, size - Number(match[2]));
+    if (!Number.isSafeInteger(start) || !Number.isSafeInteger(end) || start < 0 || start >= size || end < start) { response.writeHead(416, { ...headers, 'content-range': `bytes */${size}` }); response.end(); return true; }
+    end = Math.min(end, size - 1);
+    status = 206;
+    headers['content-range'] = `bytes ${start}-${end}/${size}`;
+  }
+  headers['content-length'] = end - start + 1;
+  response.writeHead(status, headers);
+  if (request.method === 'HEAD') { response.end(); return true; }
+  createReadStream(filePath, { start, end }).pipe(response);
+  return true;
+}
+
 function videoPage(videos, letters, origin) {
   const rows = videos.map(video => `<article><h3>${htmlEscape(video.letterId)}</h3><p>${htmlEscape(video.fileName)} · ${Math.round(video.metadata.duration ?? 0)} 秒</p><video controls preload="metadata" src="${origin}/letter/video/media/${encodeURIComponent(video.assetId)}.mp4"></video><form method="post" action="/letter/video/delete/${encodeURIComponent(video.letterId)}"><button>删除当前视频</button></form></article>`).join('\n');
   const options = letters.filter(letter => letter.status === 'replied').map(letter => `<option value="${htmlEscape(letter.id)}">${htmlEscape(letter.id)} · ${htmlEscape(letter.body.slice(0, 30))}</option>`).join('');
   return `<!doctype html><meta charset="utf-8"><title>林离·余音：视频回信</title><style>body{font:16px sans-serif;max-width:900px;margin:2rem auto;padding:0 1rem}article{border:1px solid #ddd;border-radius:8px;padding:1rem;margin:1rem 0}video{display:block;max-width:100%;max-height:420px;margin:1rem 0}label{display:block;margin:.5rem 0}select,input,button{font:inherit;padding:.3rem}</style><h1>视频回信</h1><p>这里只管理已经完成文字回复的信件。导入 MP4 后可以预览、替换或删除。</p><form id="upload"><label>选择信件 <select name="letterId" required>${options || '<option value="">暂无已回复信件</option>'}</select></label><label>MP4 文件 <input name="file" type="file" accept="video/mp4,.mp4" required></label><button>导入或替换</button></form><p id="status"></p>${rows || '<p>还没有视频回信。</p>'}<script>document.querySelector('#upload').addEventListener('submit',async e=>{e.preventDefault();const f=e.target.file.files[0];const id=e.target.letterId.value.trim();const s=document.querySelector('#status');s.textContent='处理中…';const r=await fetch('/letter/video/upload/'+encodeURIComponent(id),{method:'PUT',headers:{'content-type':f.type||'video/mp4','x-file-name':f.name},body:f});const j=await r.json();s.textContent=r.ok?'导入成功，请刷新页面。':(j.message||j.error||'导入失败');if(r.ok)location.reload()});</script>`;
 }
 
-export function createLocalGateway({ letterService, musicService = null, midiJobService = null, videoReplyService = null, userProfile = {}, mediaLogger = null }) {
+export function createLocalGateway({ letterService, musicService = null, midiJobService = null, videoReplyService = null, nativeSongMediaStore = null, userProfile = {}, mediaLogger = null }) {
   return createServer(async (request, response) => {
     try {
       response.setHeader('access-control-allow-origin', request.headers.origin ?? '*');
@@ -155,6 +182,12 @@ export function createLocalGateway({ letterService, musicService = null, midiJob
       }
       if (midiJobService && request.method === 'POST' && url.pathname === '/toy/midi/importShareCode') return sendJson(response, 409, { code: 409, message: 'midi_share_code_not_supported' });
       if (midiJobService && request.method === 'GET' && url.pathname === '/toy/searchUserSongs') return sendJson(response, 200, compatResponse(midiJobService.listUserSongs(midiPageParams(url.searchParams))));
+      const nativePreview = url.pathname.match(/^\/toy\/music\/preview\/([^/]+)$/u);
+      if (nativeSongMediaStore && nativePreview && (request.method === 'GET' || request.method === 'HEAD')) {
+        const filePath = nativeSongMediaStore.previewPath(decodeURIComponent(nativePreview[1]));
+        if (!filePath || !serveMediaFile(request, response, filePath, 'video/mp4')) return sendJson(response, 404, { error: 'preview_not_found' });
+        return;
+      }
       const media = url.pathname.match(/^\/toy\/midi\/media\/([^/]+?)(?:\.(?:mp4|wav))?$/u);
       if (midiJobService && media && (request.method === 'GET' || request.method === 'HEAD')) {
         const bytes = midiJobService.mediaBytes(media[1]);
@@ -200,7 +233,15 @@ export function createLocalGateway({ letterService, musicService = null, midiJob
         const itemType = Number(body.itemType ?? body.item_type);
         const itemId = String(body.itemId ?? body.item_id ?? body.id ?? body.songId ?? body.song_id ?? body.performanceId ?? body.performance_id ?? '').trim();
         if (!Number.isInteger(itemType) || !itemId) return sendJson(response, 400, { code: 400, message: 'playlist_item_incomplete' });
-        return sendJson(response, 200, compatResponse(musicService.addCompatPlaylistItem({ ...body, itemType, itemId })));
+        const canonical = midiJobService?.userSong(itemId);
+        const item = canonical ? { ...canonical, ...body, itemType, itemId } : { ...body, itemType, itemId };
+        if (canonical) {
+          for (const field of ['name', 'nameKey', 'videoUrl', 'videoByTodView', 'duration', 'performanceType', 'source', 'coverUrl', 'iconUrl']) {
+            const value = item[field];
+            if (value == null || value === '' || (Array.isArray(value) && value.length === 0)) item[field] = canonical[field];
+          }
+        }
+        return sendJson(response, 200, compatResponse(musicService.addCompatPlaylistItem(item)));
       }
       if (request.method === 'POST' && url.pathname === '/toy/delFromPlaylist') {
         if (!musicService) return sendJson(response, 503, { code: 503, message: 'music_service_unavailable' });

@@ -38,6 +38,7 @@ test('frontend patch can opt into the audited MIDI routes', () => {
 test('frontend patch applies audited offline feature gates only when all signatures match', () => {
   const offlineSource = [...endpoints, ...midiEndpoints].map(endpoint => `fetch("${endpoint}")`).concat([
     ...OFFLINE_FEATURE_PATCHES.flatMap(patch => Array.from({ length: patch.expected }, () => patch.from)),
+    'const i=h1(xs(At(t)?s:t)).map(a=>Qo(a)),',
   ]).join(';');
   const fixtureWithOfflineGates = zipSync({ 'assets/main-offline.js': strToU8(offlineSource) });
   const result = applyFrontendPatch(fixtureWithOfflineGates, { serviceUrl: 'http://127.0.0.1:27149', includeMidi: true, includeOfflineFeatures: true });
@@ -45,6 +46,7 @@ test('frontend patch applies audited offline feature gates only when all signatu
   assert.match(source, /N3=!0,Ss=!0,wa=\(\{onComplete/);
   assert.doesNotMatch(source, /if\(t\.isOfflineMode\)throw new Ol\(e\)/);
   assert.doesNotMatch(source, /!o\(w\)&&o\(Ss\)\?/);
+  assert.match(source, /http:\/\/localhost:27149\/toy\/music\/preview\/\"\+encodeURIComponent\(a\.nameKey\?\?\""\)/);
 });
 
 test('known patched archive can re-enable offline user-song fetch and display', () => {

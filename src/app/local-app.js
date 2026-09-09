@@ -62,19 +62,20 @@ export function createLocalApp({ dataRoot = 'data', settingsPath = 'config/modul
   });
   const letterWorker = new LetterWorker({ letterService, intervalMs: Number(env.LINLI_WORKER_INTERVAL_MS) || 1_000 });
   const videoReplyService = new VideoReplyService({ store, mediaRoot: join(dataRoot, 'video-media'), importAdapter: runtime.media.videoImporter ?? registries.videoImporter.resolve('builtin.ffprobe.mp4', envOptions(env).videoImporter) });
+  const nativeSongMediaStore = new NativeUgcMediaStore({ root: discoverNativeUgcRoot({
+    explicitRoot: userConfig?.options.nativeUgcRoot || env.LINLI_NATIVE_UGC_ROOT,
+    env,
+  }) });
   const midiJobService = new MidiJobService({
     store, mediaRoot: join(dataRoot, 'midi-media'), renderer: runtime.music.renderer,
     playbackAdapter: runtime.music.playbackAdapter, mediaEncoder: runtime.music.mediaEncoder,
     timeZone: userConfig?.timeZone ?? env.LINLI_TIME_ZONE ?? 'Asia/Shanghai',
     mediaExtension: runtime.music.mediaEncoder?.extension,
     mediaContentType: runtime.music.mediaEncoder?.contentType,
-    nativeUgcMediaStore: new NativeUgcMediaStore({ root: discoverNativeUgcRoot({
-      explicitRoot: userConfig?.options.nativeUgcRoot || env.LINLI_NATIVE_UGC_ROOT,
-      env,
-    }) }),
+    nativeUgcMediaStore: nativeSongMediaStore,
   });
   const musicService = new MusicService({ store, audioRenderer: runtime.music.renderer });
-  const server = createLocalGateway({ letterService, musicService, midiJobService, videoReplyService });
+  const server = createLocalGateway({ letterService, musicService, midiJobService, videoReplyService, nativeSongMediaStore });
   let address;
   return {
     settings, store, letterService, letterWorker, videoReplyService, midiJobService, server,

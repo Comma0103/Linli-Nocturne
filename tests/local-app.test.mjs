@@ -7,6 +7,12 @@ import { createLocalApp } from '../src/app/local-app.js';
 import { DEFAULT_MODULE_SETTINGS } from '../src/config/module-settings.js';
 import { loadUserConfig } from '../src/config/user-config.js';
 
+const midi = Uint8Array.from([
+  0x4d, 0x54, 0x68, 0x64, 0, 0, 0, 6, 0, 0, 0, 1, 0x01, 0x00,
+  0x4d, 0x54, 0x72, 0x6b, 0, 0, 0, 12,
+  0x00, 0x90, 0x3c, 0x64, 0x40, 0x80, 0x3c, 0x40, 0x00, 0xff, 0x2f, 0x00,
+]);
+
 test('开发版本地服务入口可以启动 Worker 和兼容网关', async () => {
   const root = mkdtempSync(join(tmpdir(), 'linli-local-app-'));
   const app = createLocalApp({ dataRoot: root, settingsPath: join(root, 'missing-settings.json'), port: 0 });
@@ -39,7 +45,8 @@ test('真实启动入口可加入歌单，自动填时间，重复加入和重�
     const item = { itemType: 3, itemId: 'app-playlist-song', name: '本地验收曲目', videoUrl: base + '/synthetic.wav', duration: 2 };
     const added = await request('/toy/addToPlaylist', item);
     createdAt = added.createdAt;
-    assert.ok(Number.isFinite(Date.parse(createdAt)));
+    assert.ok(Number.isSafeInteger(createdAt));
+    assert.ok(createdAt > 0);
     assert.equal(added.videoUrl, item.videoUrl);
     assert.equal((await request('/toy/addToPlaylist', item)).createdAt, createdAt);
     assert.equal((await request('/toy/searchPlaylist')).list.length, 1);
@@ -53,6 +60,45 @@ test('真实启动入口可加入歌单，自动填时间，重复加入和重�
     assert.equal(page.list[0].createdAt, createdAt);
     assert.equal((await request('/toy/delFromPlaylist', { item_type: 3, item_id: 'app-playlist-song' })).deleted, true);
     assert.equal((await request('/toy/searchPlaylist')).list.length, 0);
+  } finally { await app.stop(); }
+});
+
+test('歌单只提交 itemType 和 itemId 时仍补齐本地 MIDI 的播放元数据', async () => {
+  const root = mkdtempSync(join(tmpdir(), 'linli-app-playlist-midi-'));
+  const app = createLocalApp({ dataRoot: root, settingsPath: join(root, 'missing.json'), port: 0, env: {} });
+  await app.start();
+  const base = `http://127.0.0.1:${app.server.address().port}`;
+  const request = async (path, body) => {
+    const response = await fetch(base + path, {
+      method: body ? 'POST' : 'GET', headers: { 'content-type': 'application/json' },
+      body: body ? JSON.stringify(body) : undefined,
+    });
+    assert.equal(response.status, 200);
+    return (await response.json()).data;
+  };
+  try {
+    const upload = app.midiJobService.createUpload({ filename: 'linli-performance-10s.mid', uploadUrl: base });
+    app.midiJobService.receiveUpload(upload.key, midi);
+    const job = app.midiJobService.generate({ midiUrl: upload.url, mediaBaseUrl: base });
+    await app.midiJobService.drain();
+    assert.equal(app.midiJobService.get(job.jobId).state, 'finished');
+
+    // Reproduce an older ID-only row before the game sends its real add request.
+    app.store.addCompatPlaylistItem({ itemType: 3, itemId: job.jobId, createdAt: new Date().toISOString() });
+    const added = await request('/toy/addToPlaylist', { itemType: 3, itemId: job.jobId });
+    assert.equal(added.name, 'linli-performance-10s.mid');
+    assert.equal(added.nameKey, job.jobId);
+    assert.match(added.videoUrl, new RegExp(`/toy/midi/media/${job.jobId}\\.(wav|mp4)$`, 'u'));
+    assert.equal(added.videoByTodView.length, 3);
+    assert.ok(added.duration > 0);
+    assert.ok(Number.isSafeInteger(added.createdAt));
+    assert.ok(added.createdAt > 0);
+
+    const playlist = await request('/toy/searchPlaylist');
+    assert.equal(playlist.list.length, 1);
+    assert.equal(playlist.list[0].name, 'linli-performance-10s.mid');
+    assert.equal(playlist.list[0].videoUrl, added.videoUrl);
+    assert.equal(playlist.list[0].createdAt, added.createdAt);
   } finally { await app.stop(); }
 });
 

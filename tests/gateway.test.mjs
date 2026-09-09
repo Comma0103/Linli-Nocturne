@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtempSync } from 'node:fs';
+import { mkdtempSync, mkdirSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { SqliteStore } from '../src/storage/sqlite-store.js';
@@ -9,12 +9,34 @@ import { LetterService } from '../src/letters/letter-service.js';
 import { createLocalGateway } from '../src/gateway/local-gateway.js';
 import { MidiJobService } from '../src/music/midi-job-service.js';
 import { renderMidiToWav } from '../src/music/audio-renderer.js';
+import { NativeUgcMediaStore } from '../src/music/native-ugc-media.js';
 
 const midi = Uint8Array.from([
   0x4d,0x54,0x68,0x64, 0,0,0,6, 0,0, 0,1, 0x01,0x00,
   0x4d,0x54,0x72,0x6b, 0,0,0,12,
   0x00,0x90,0x3c,0x64, 0x40,0x80,0x3c,0x40, 0x00,0xff,0x2f,0x00
 ]);
+
+test('local gateway serves cached preset preview media with range support', async () => {
+  const root = mkdtempSync(join(tmpdir(), 'linli-preview-gateway-'));
+  const nameKey = 'Solo_Test_Preview';
+  const directory = join(root, nameKey);
+  mkdirSync(directory, { recursive: true });
+  const bytes = Buffer.from('cached-preview-media');
+  writeFileSync(join(directory, `${nameKey}_TOD1730_NI_L.mp4`), bytes);
+  const store = new SqliteStore();
+  const server = createLocalGateway({
+    letterService: new LetterService({ store }),
+    nativeSongMediaStore: new NativeUgcMediaStore({ root }),
+  });
+  await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
+  const base = `http://127.0.0.1:${server.address().port}`;
+  const response = await fetch(`${base}/toy/music/preview/${nameKey}`, { headers: { range: 'bytes=0-5' } });
+  assert.equal(response.status, 206);
+  assert.equal(await response.text(), 'cached');
+  await new Promise(resolve => server.close(resolve));
+  store.close();
+});
 
 test('local gateway smoke test covers health, send, process and list', async () => {
   const store = new SqliteStore();

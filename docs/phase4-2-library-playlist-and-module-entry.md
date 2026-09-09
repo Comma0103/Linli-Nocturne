@@ -12,8 +12,10 @@
 
 - `/toy/searchUserSongs` 只返回已完成的 MIDI 任务，支持分页和原版曲目字段；失败、取消和处理中任务不会进入曲库。
 - `/toy/searchPlaylist`、`/toy/addToPlaylist` 和 `/toy/delFromPlaylist` 提供原版歌单读取、加入和移除；SQLite 是歌单事实源，重复加入按 `(itemType, itemId)` 幂等处理。
+- 原版客户端加入歌单时通常只提交 `itemType/itemId`；对于已完成的本地 MIDI，网关会通过现有曲目适配器补齐名称、媒体 URL、TOD 视图、时长和演奏类型，并把 `createdAt` 按原版要求返回 Unix 秒数。历史上只保存 ID 的歌单记录在再次加入时也会被补齐。
 - `config/user-config.json` 的 `music.renderer`、`music.playbackAdapter` 和 `music.encoder` 会在本地服务启动时经过注册表校验，并装配到 MIDI 任务服务。
 - `music.encoder` 的扩展名和 MIME 契约继续由编码器声明；曲库使用任务实际生成的媒体 URL，不自行猜测格式。
+- 离线预设曲目的试听通过本地服务读取游戏已下载的 `songStoragePath/<nameKey>/<nameKey>_TOD1730_NI_L.mp4`（支持 Range），不再依赖容易过期的远程鉴权 URL；原生演奏仍使用原有 `videoUrl/videoByTodView` 契约。
 
 ## 设计
 
@@ -30,14 +32,15 @@
 3. WAV/MP4 曲目在曲库和歌单中沿用任务声明的扩展名、媒体 URL 和 MIME 契约。
 4. `user-config.json` 能选择已注册 Renderer、PlaybackAdapter 和 Encoder；未知选择、敏感字段和无效配置会被拒绝。
 5. 模块选择变更在本地服务重启后生效，不影响信件模块和已完成的 Phase 3 链路。
-6. `pnpm test`、网关兼容测试和 `git diff --check` 通过；不把配置文件验收当作 Steam 实机播放验收。
+6. 预设试听能从本地曲库缓存读取并支持浏览器 Range 请求；缓存不存在时返回明确的 404，不暴露任意路径。
+7. `pnpm test`、网关兼容测试和 `git diff --check` 通过；不把配置文件验收当作 Steam 实机播放验收。
 
 ## 已有自动化证据与待验收项
 
 - 已有测试覆盖用户曲目分页、失败任务过滤、歌单增删、重启后的 SQLite 持久化、WAV/MP4 媒体契约和模块选择解析。
-- 2026-09-09 通过真实 `createLocalApp` 启动入口复现：不传 `createdAt` 加入歌单返回 HTTP 500。原因是启动器绕过了已有 `MusicService`；现直接复用该服务补齐时间与默认元数据，没有重复实现歌单逻辑。
-- 新测试通过真实 HTTP 验证加入、重复加入、服务重启后读取及 snake_case 移除；慢生成任务在完成前不进入曲库。另验证 WAV/MP4 双向切换编码器后，旧媒体的后缀、MIME 和字节不变，新媒体采用新设置，并兼容缺少格式元数据的旧记录。
-- 本次完整 `pnpm test` 为 **130/130 通过**，`git diff --check` 通过。MP4 切换测试使用合成编码器验证协议和存储行为；不把它当作真实视频解码或 Steam 播放证据。
+- 2026-09-09 通过真实 `createLocalApp` 启动入口复现并修复：原版客户端只提交 `itemType/itemId` 时，历史 ID 歌单会缺少名称、媒体元数据，且 ISO 时间会被原版按 Unix 秒解析为 `Invalid Date`。现复用已有 `MidiJobService` 曲目适配器和歌单存储逻辑补齐字段；已有完整名称的重复加入仍保持第一次保存的名称。
+- 新测试通过真实 HTTP 验证只提交 `itemType/itemId` 时的曲目补齐、历史 ID 记录回填、Unix 时间、重复加入、服务重启后读取及 snake_case 移除；慢生成任务在完成前不进入曲库。另验证 WAV/MP4 双向切换编码器后，旧媒体的后缀、MIME 和字节不变，新媒体采用新设置，并兼容缺少格式元数据的旧记录。
+- 本次完整 `pnpm test` 为 **133/133 通过**，`git diff --check` 通过。新增预设缓存试听路径解析和 HTTP Range 测试；MP4 切换测试使用合成编码器验证协议和存储行为，不把它当作真实视频解码或 Steam 播放证据。
 - Steam 中上传曲目接管原生 WebPlayer 已由 Phase 4-4 完成验收；本里程碑自身的客户端歌单增删和模块入口确认仍待用户记录，因此不提前勾选 Phase 4-2。
 
 ## 用户操作路径与验收记录

@@ -1,4 +1,4 @@
-import { existsSync, mkdirSync, readFileSync, renameSync, unlinkSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, readdirSync, renameSync, unlinkSync, writeFileSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { join, normalize, resolve, sep } from 'node:path';
 import { randomUUID } from 'node:crypto';
@@ -51,5 +51,17 @@ export class NativeUgcMediaStore {
       try { if (existsSync(temporary)) unlinkSync(temporary); } catch {}
       return { status: 'failed', code: 'native_ugc_write_failed', message: `无法写入游戏原生音乐目录：${error.message}。请关闭游戏并检查目录权限。` };
     }
+  }
+
+  previewPath(nameKey) {
+    if (!this.root || !/^[A-Za-z0-9_-]+$/u.test(String(nameKey ?? ''))) return null;
+    const directory = safeChild(this.root, String(nameKey));
+    if (!existsSync(directory)) return null;
+    let names;
+    try { names = readdirSync(directory); } catch { return null; }
+    const escapedKey = String(nameKey).replace(/[.*+?^${}()|[\]\\]/gu, '\\$&');
+    const expected = names.filter(name => new RegExp(`^${escapedKey}_TOD(?:1200|1730|2000)_NI_L\\.mp4$`, 'u').test(name));
+    const filename = expected.find(name => name.includes('_TOD1730_')) ?? expected[0];
+    return filename ? safeChild(directory, filename) : null;
   }
 }
