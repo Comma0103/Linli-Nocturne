@@ -20,7 +20,7 @@
 | 低 | `src/storage/sqlite-store.js:429-455,501-510` | MIDI/视频列表存在分页后的逐行再次查询（N+1 形态）。5,000 条 MIDI 记录、20 个 100 条页面的本地基准从约 35.1 ms 降到约 5.2 ms。 | 仅复用同一查询返回行做字段映射，保留排序、分页和字段格式。 | 已实施，`1552516`；MIDI、视频和网关回归通过。 |
 | 低 | `src/music/midi-job-service.js:36,73` | 已完成任务的 `inputs` 内存副本原来永久保留。 | 只在处理 Promise 结束时释放内部副本；上传键、磁盘输入、终态查询和删除语义不变。 | 已实施，`709d496`；增加终态释放断言。 |
 | 低 | `src/music/midi-job-service.js:38,144,227-230` | 磁盘媒体原来同时保留文件和 `media` Map 的完整 Buffer。 | 只有无磁盘模式继续使用内存媒体；磁盘模式改为按需读取，不改变媒体内容和 URL。 | 已实施，`7142019`；增加磁盘媒体不缓存断言。 |
-| 低 | `src/gateway/local-gateway.js:29-62,184-205` | 持久化 MIDI 媒体经过 `mediaBytes()` 时会为每次请求先读完整文件，Range 播放仍只需其中一段。 | 复用已有文件流和 Range/HEAD 处理；内存媒体继续沿用原有 Buffer 响应，媒体日志字段保持一致。 | 已实施，`ba49d34`；编码器切换、持久化重启、HEAD 和 Range 回归通过。 |
+| 低 | `src/gateway/local-gateway.js:29-62,184-205` | 持久化 MIDI 媒体经过 `mediaBytes()` 时会为每次请求先读完整文件，Range 播放仍只需其中一段。 | 复用已有文件流和 Range/HEAD 处理；内存媒体继续沿用原有 Buffer 响应，媒体日志字段保持一致；空持久化媒体保留原来的 200/0 字节和 416 Range 语义。 | 已实施，`ba49d34`、`05a52ee`；编码器切换、持久化重启、空媒体、HEAD 和 Range 回归通过。 |
 | 仅建议 | `src/music/midi-job-service.js:35,46` | `uploads` 仍可能保留 Buffer；上传键重试依赖它。 | 删除或淘汰会改变重复生成和上传重试语义；当前没有安全的生命周期契约或上限。 | 跳过，需先定义容量/保留策略。 |
 | 仅建议 | `src/gateway/local-gateway.js:19-23,110-112,161-163` | JSON、视频上传和 MIDI 上传都先收集完整请求体。 | 增加大小限制会改变可接受输入范围；视频导入还需要现有完整 Buffer 接口。 | 跳过，需产品层确认限制。 |
 | 仅建议 | `src/storage/data-transfer.js:50-60` | 数据迁移对路径字段逐行更新，数据量大时会增加迁移时间。 | 改事务或批量更新可能改变快照/回滚边界；无迁移规模测量。 | 跳过，保留当前安全流程。 |
@@ -31,7 +31,7 @@
 ## 验证记录
 
 - 基线：`pnpm test` 133/133，`node --test --test-concurrency=1` 133/133，`git diff --check` 通过。
-- 修改后：`pnpm test` 134/134，`node --test --test-concurrency=1` 134/134，`git diff --check` 通过。
+- 修改后：`pnpm test` 135/135，`node --test --test-concurrency=1` 135/135，`git diff --check` 通过。
 - 列表基准：同一进程 5,000 条 MIDI 记录、20 个 100 条页面，逐行再次查询约 35.1 ms；直接 hydrate 查询行约 5.2 ms。该结果只说明本地查询开销下降，不代表所有部署环境的端到端提速。
 - 代码改动按独立语义提交；审查文档更新单独提交，最终提交列表以交付时 `git log` 为准。
 - 未修改 HTTP 路由名称、请求字段、响应字段、状态码、SQLite schema、配置默认值、重试/取消/恢复语义或 Steam 补丁。
