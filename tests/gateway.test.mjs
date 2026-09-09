@@ -350,6 +350,27 @@ test('MIDI gateway preserves empty persisted media responses', async t => {
   await range.arrayBuffer();
 });
 
+test('video gateway preserves empty media responses', async t => {
+  const root = mkdtempSync(join(tmpdir(), 'linli-empty-video-media-'));
+  const filePath = join(root, 'empty.mp4');
+  writeFileSync(filePath, Buffer.alloc(0));
+  const server = createLocalGateway({
+    letterService: { detail: letterId => letterId === 'letter-1' ? { id: letterId } : null },
+    videoReplyService: { getAsset: assetId => ({ assetId, letterId: 'letter-1' }), mediaPath: () => filePath },
+  });
+  await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
+  t.after(async () => new Promise(resolve => server.close(resolve)));
+  const base = `http://127.0.0.1:${server.address().port}`;
+  const response = await fetch(`${base}/letter/video/media/asset-1.mp4`);
+  assert.equal(response.status, 200);
+  assert.equal(response.headers.get('content-length'), '0');
+  assert.equal((await response.arrayBuffer()).byteLength, 0);
+  const range = await fetch(`${base}/letter/video/media/asset-1.mp4`, { headers: { range: 'bytes=0-0' } });
+  assert.equal(range.status, 416);
+  assert.equal(range.headers.get('content-range'), 'bytes */0');
+  await range.arrayBuffer();
+});
+
 test('MIDI gateway serves encoded media with the encoder MIME type and extension', async t => {
   const store = new SqliteStore();
   const letters = new LetterService({ store, modelAdapter: new ModelAdapter(new FallbackLetterProvider()), limits: { bypass: true } });

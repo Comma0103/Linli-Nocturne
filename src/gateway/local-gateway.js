@@ -143,7 +143,7 @@ export function createLocalGateway({ letterService, musicService = null, midiJob
         if (!asset || !letterService.detail(asset.letterId)) return sendJson(response, 404, { error: 'video_not_found' });
         const video = videoReplyService.mediaPath(decodeURIComponent(videoMedia[1]));
         if (!video) return sendJson(response, 404, { error: 'video_not_found' });
-        if (!serveMediaFile(request, response, video, 'video/mp4')) return sendJson(response, 404, { error: 'video_not_found' });
+        if (!serveMediaFile(request, response, video, 'video/mp4', null, true)) return sendJson(response, 404, { error: 'video_not_found' });
         return;
       }
       if (request.method === 'GET' && url.pathname === '/toy/searchPlaylist') {
