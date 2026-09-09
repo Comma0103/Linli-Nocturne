@@ -139,5 +139,7 @@ test('用户配置的音乐选择、时区和编码器媒体契约进入本地�
   assert.equal(app.midiJobService.dayBoundary(new Date('2026-09-07T06:30:00.000Z')).startIso, '2026-09-06T07:00:00.000Z');
   assert.equal(app.midiJobService.mediaExtension, 'mp4');
   assert.equal(app.midiJobService.mediaContentType, 'video/mp4');
+  assert.equal(app.settings.letters.memory, 'sqlite');
+  assert.equal(app.letterService.memoryProvider.enabled, true);
   await app.stop();
 });

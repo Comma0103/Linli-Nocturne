@@ -11,6 +11,10 @@ export function loadUserConfig(filename, { defaultSettings, runtimeRoot = '', va
   const letters = user.letters ?? {};
   const fromConfig = value => value && !isAbsolute(value) ? resolve(dirname(filename), value) : value;
   const base = letters.baseModel ?? {};
+  const memory = letters.memory ?? {};
+  // Memory is on by default for a user config. An explicit false remains
+  // the opt-out, so existing users can still disable it deliberately.
+  const memoryEnabled = memory.enabled !== false;
   const provider = base.provider ?? 'offline-fallback';
   const allowExternalModelRequests = user.privacy?.allowExternalModelRequests ?? true;
   if (validateAccess && provider === 'external.openai-compatible' && allowExternalModelRequests === false) throw new Error('请先在 privacy.allowExternalModelRequests 中允许外部模型请求');
@@ -19,7 +23,7 @@ export function loadUserConfig(filename, { defaultSettings, runtimeRoot = '', va
     provider,
     harness: letters.harness?.enabled === false ? null : (letters.harness?.providerId ?? null),
     persona: letters.persona?.providerId ?? settings.letters.persona,
-    memory: letters.memory?.enabled ? (letters.memory.provider ?? 'sqlite') : 'disabled',
+    memory: memoryEnabled ? (memory.provider ?? settings.letters.memory ?? 'sqlite') : 'disabled',
     fallback: letters.fallbackEnabled !== false,
     outputPolicy: letters.outputPolicy?.providerId ?? 'persona-contract',
   };
@@ -57,7 +61,7 @@ export function loadUserConfig(filename, { defaultSettings, runtimeRoot = '', va
           secrets: [external.apiKey, local.apiKey].filter(Boolean) } },
       persona: { path: fromConfig(letters.persona?.file), text: letters.persona?.text ?? '', maxChars: letters.persona?.maxChars },
       outputPolicy: { signature: letters.outputPolicy?.signature },
-      memory: { enabled: Boolean(letters.memory?.enabled), maxEpisodes: letters.memory?.maxEpisodes, maxEpisodeChars: letters.memory?.maxCharsPerEpisode, maxContextChars: letters.memory?.maxContextChars },
+      memory: { enabled: memoryEnabled, maxEpisodes: memory.maxEpisodes, maxEpisodeChars: memory.maxCharsPerEpisode, maxContextChars: memory.maxContextChars },
     },
     timeZone: user.user?.timeZone,
     bypass: Boolean(letters.dailyLimitBypass),
