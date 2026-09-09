@@ -16,7 +16,7 @@
 | --- | --- | --- | --- | --- |
 | 低 | `src/letters/letter-service.js:129` | `execution()` 对同一个信件连续执行两次相同的 `getLetterAttempts()` 查询。 | 返回值不变；只保留一次查询结果。 | 已实施，`73b256f`；增加执行记录回归断言。 |
 | 低 | `src/letters/olivia-soul-sqlite-memory.js:45-66` | 长历史回忆使用 `indexOf()` 和 `sources.some()` 扫描旧信；旧信数量为 n 时最坏为 O(n²)。 | 仅改为索引循环和来源 ID 集合，保留排序、去重和上下文上限。 | 已实施，`a71886b`；增加 300 封历史边界测试。操作数由 O(n²) 降为 O(n)，未宣称实测提速。 |
-| 低 | `src/gateway/local-gateway.js:129-135` | 视频回信路由先把整个文件读入 Buffer，再做 Range/HEAD 响应，额外内存随文件大小增长。 | 复用已有 `serveMediaFile()`；保留 200/206/416、HEAD、Range、Content-Range、MIME 和 Content-Length。已导入视频不能是空文件。 | 已实施，`1beb4de`；增加视频 HEAD 回归断言。 |
+| 低 | `src/gateway/local-gateway.js:129-135` | 视频回信路由先把整个文件读入 Buffer，再做 Range/HEAD 响应，额外内存随文件大小增长。 | 复用已有 `serveMediaFile()`；保留 200/206/416、HEAD、Range、Content-Range、MIME 和 Content-Length，并保留旧空文件响应语义。 | 已实施，`1beb4de`、`9c6320c`；增加视频 HEAD 和空文件回归断言。 |
 | 低 | `src/storage/sqlite-store.js:429-455,501-510` | MIDI/视频列表存在分页后的逐行再次查询（N+1 形态）。5,000 条 MIDI 记录、20 个 100 条页面的本地基准从约 35.1 ms 降到约 5.2 ms。 | 仅复用同一查询返回行做字段映射，保留排序、分页和字段格式。 | 已实施，`1552516`；MIDI、视频和网关回归通过。 |
 | 低 | `src/music/midi-job-service.js:36,73` | 已完成任务的 `inputs` 内存副本原来永久保留。 | 只在处理 Promise 结束时释放内部副本；上传键、磁盘输入、终态查询和删除语义不变。 | 已实施，`709d496`；增加终态释放断言。 |
 | 低 | `src/music/midi-job-service.js:38,144,227-230` | 磁盘媒体原来同时保留文件和 `media` Map 的完整 Buffer。 | 只有无磁盘模式继续使用内存媒体；磁盘模式改为按需读取，不改变媒体内容和 URL。 | 已实施，`7142019`；增加磁盘媒体不缓存断言。 |
@@ -31,7 +31,7 @@
 ## 验证记录
 
 - 基线：`pnpm test` 133/133，`node --test --test-concurrency=1` 133/133，`git diff --check` 通过。
-- 修改后：`pnpm test` 135/135，`node --test --test-concurrency=1` 135/135，`git diff --check` 通过。
+- 修改后：`pnpm test` 136/136，`node --test --test-concurrency=1` 136/136，`git diff --check` 通过。
 - 列表基准：同一进程 5,000 条 MIDI 记录、20 个 100 条页面，逐行再次查询约 35.1 ms；直接 hydrate 查询行约 5.2 ms。该结果只说明本地查询开销下降，不代表所有部署环境的端到端提速。
 - 代码改动按独立语义提交；审查文档更新单独提交，最终提交列表以交付时 `git log` 为准。
 - 未修改 HTTP 路由名称、请求字段、响应字段、状态码、SQLite schema、配置默认值、重试/取消/恢复语义或 Steam 补丁。
