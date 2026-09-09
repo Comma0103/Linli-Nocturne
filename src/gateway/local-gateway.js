@@ -29,7 +29,11 @@ function publicVideoJob(job) { if (!job) return null; const { mediaPath, ...visi
 
 function serveMediaFile(request, response, filePath, contentType) {
   let size;
-  try { size = statSync(filePath).size; } catch { return false; }
+  try {
+    const stat = statSync(filePath);
+    if (!stat.isFile() || stat.size === 0) return false;
+    size = stat.size;
+  } catch { return false; }
   const headers = { 'content-type': contentType, 'access-control-allow-origin': '*', 'accept-ranges': 'bytes' };
   const range = request.headers.range;
   let status = 200;
@@ -38,9 +42,8 @@ function serveMediaFile(request, response, filePath, contentType) {
   if (range) {
     const match = /^bytes=(\d*)-(\d*)$/u.exec(range);
     if (!match || (!match[1] && !match[2])) { response.writeHead(416, { ...headers, 'content-range': `bytes */${size}` }); response.end(); return true; }
-    if (match[1]) start = Number(match[1]);
-    if (match[2]) end = Number(match[2]);
-    else if (!match[1]) start = Math.max(0, size - Number(match[2]));
+    start = match[1] ? Number(match[1]) : Math.max(0, size - Number(match[2]));
+    end = match[1] && match[2] ? Number(match[2]) : size - 1;
     if (!Number.isSafeInteger(start) || !Number.isSafeInteger(end) || start < 0 || start >= size || end < start) { response.writeHead(416, { ...headers, 'content-range': `bytes */${size}` }); response.end(); return true; }
     end = Math.min(end, size - 1);
     status = 206;
@@ -49,7 +52,10 @@ function serveMediaFile(request, response, filePath, contentType) {
   headers['content-length'] = end - start + 1;
   response.writeHead(status, headers);
   if (request.method === 'HEAD') { response.end(); return true; }
-  createReadStream(filePath, { start, end }).pipe(response);
+  const stream = createReadStream(filePath, { start, end });
+  stream.on('error', () => response.destroy());
+  response.on('close', () => stream.destroy());
+  stream.pipe(response);
   return true;
 }
 

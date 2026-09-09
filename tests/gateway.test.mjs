@@ -17,7 +17,7 @@ const midi = Uint8Array.from([
   0x00,0x90,0x3c,0x64, 0x40,0x80,0x3c,0x40, 0x00,0xff,0x2f,0x00
 ]);
 
-test('local gateway serves cached preset preview media with range support', async () => {
+test('local gateway serves cached preset preview media with range support', async (t) => {
   const root = mkdtempSync(join(tmpdir(), 'linli-preview-gateway-'));
   const nameKey = 'Solo_Test_Preview';
   const directory = join(root, nameKey);
@@ -31,11 +31,38 @@ test('local gateway serves cached preset preview media with range support', asyn
   });
   await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
   const base = `http://127.0.0.1:${server.address().port}`;
+  t.after(async () => { await new Promise(resolve => server.close(resolve)); store.close(); });
   const response = await fetch(`${base}/toy/music/preview/${nameKey}`, { headers: { range: 'bytes=0-5' } });
   assert.equal(response.status, 206);
   assert.equal(await response.text(), 'cached');
-  await new Promise(resolve => server.close(resolve));
-  store.close();
+  for (const [range, expected, contentRange] of [
+    ['bytes=-5', 'media', 'bytes 15-19/20'],
+    ['bytes=15-', 'media', 'bytes 15-19/20'],
+    ['bytes=15-99', 'media', 'bytes 15-19/20'],
+    ['bytes=-99', bytes.toString(), 'bytes 0-19/20'],
+  ]) {
+    const part = await fetch(`${base}/toy/music/preview/${nameKey}`, { headers: { range } });
+    assert.equal(part.status, 206, range);
+    assert.equal(part.headers.get('content-range'), contentRange, range);
+    assert.equal(await part.text(), expected, range);
+  }
+  for (const range of ['bytes=-0', 'bytes=20-', 'bytes=5-2', 'bytes=-', 'bytes=0-1,5-6']) {
+    const invalid = await fetch(`${base}/toy/music/preview/${nameKey}`, { headers: { range } });
+    assert.equal(invalid.status, 416, range);
+    assert.equal(invalid.headers.get('content-range'), 'bytes */20');
+    await invalid.text();
+  }
+  const head = await fetch(`${base}/toy/music/preview/${nameKey}`, { method: 'HEAD' });
+  assert.equal(head.status, 200);
+  assert.equal(Number(head.headers.get('content-length')), bytes.length);
+  assert.equal(await head.text(), '');
+  const missing = await fetch(`${base}/toy/music/preview/Solo_Missing`);
+  assert.equal(missing.status, 404);
+  await missing.text();
+  writeFileSync(join(directory, `${nameKey}_TOD1730_NI_L.mp4`), Buffer.alloc(0));
+  const empty = await fetch(`${base}/toy/music/preview/${nameKey}`);
+  assert.equal(empty.status, 404);
+  await empty.text();
 });
 
 test('local gateway smoke test covers health, send, process and list', async () => {
