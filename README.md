@@ -6,7 +6,7 @@
 
 ## 项目状态
 
-Phase 0–3 的基础功能已完成，持续记忆、关系账本和数据迁移已通过 Steam 离线及 DeepSeek 在线回信复验，并已合入 `main`（`phase3-letter-fusion-v1.0.0`）。Phase 4-1 正在开发。项目仍是开发版。
+Phase 0–3 的基础功能已完成，持续记忆、关系账本和数据迁移已通过 Steam 离线及 DeepSeek 在线回信复验，并已合入 `main`（`phase3-letter-fusion-v1.0.0`）。Phase 4 正在开发；4-1、4-3 和 4-4 已完成，4-2 仍待客户端歌单操作确认。项目仍是开发版。
 
 ## 当前功能
 
@@ -23,7 +23,7 @@ Phase 0–3 的基础功能已完成，持续记忆、关系账本和数据迁�
 * [x] **MIDI 解析与时间轴**：支持标准 MIDI 文件解析，提取音符、Tempo、延音踏板并生成时间轴清单。
 * [x] **WAV/MP4 媒体任务**：支持 MIDI 上传、任务创建、WAV 渲染、MP4 音频封装、状态轮询、取消、删除、失败状态和 SQLite 持久化恢复。
 * [x] **用户曲库与歌单**：保存用户曲目和歌单，支持分页、原版字段兼容、加入或移除歌单，以及离线曲库入口和本地生成曲目展示。
-* [ ] **原生 WebPlayer 播放/演奏接管**：上传 MIDI 目前尚未真正接管原生 WebPlayer、进入演奏桌面或稳定发声（`LINLI-PLAY-001`）。
+* [ ] **原生 WebPlayer 播放/演奏接管**：已修正原生 TOD 契约，并会把生成媒体写入游戏 `songStoragePath`；仍需在 Steam 0.0.9.627 中确认切歌、进入演奏桌面和稳定发声（`LINLI-PLAY-001`）。
 
 ### 可插拔模块与游戏资产
 
@@ -44,7 +44,7 @@ Phase 0–3 的基础功能已完成，持续记忆、关系账本和数据迁�
 
 ### 环境要求
 
-Node.js 22 及以上、pnpm 9 及以上：
+Node.js 22 及以上、pnpm 9 及以上。Windows 用户启动服务时优先使用仓库自带的 `scripts/start-local-service.ps1`；它会自动探测常见 Node.js 安装路径，不要求当前 PowerShell 已配置 PATH：
 
 **macOS / Linux**
 
@@ -98,9 +98,15 @@ notepad config/user-config.json
 配置保存后，在仓库根目录执行，并保持窗口运行：
 
 ```powershell
-node scripts/start-local-service.mjs
+.\scripts\start-local-service.ps1
 Invoke-RestMethod http://localhost:27149/health
 ```
+
+也可以双击 `scripts/start-local-service.cmd` 启动服务。
+
+`privacy.allowExternalModelRequests` 默认是 `true`。如果不希望来信或启用的记忆发送给外部模型，可将它改为 `false`；此时选择 `external.openai-compatible` 会阻止服务启动。只测试 MIDI 时仍可选择离线 provider。
+
+如果旧命令 `node scripts/start-local-service.mjs` 提示“node 不是命令”，请重新打开 PowerShell 后使用上面的仓库启动脚本；脚本会自动寻找常见 Node.js 安装位置。仍未找到时，请先安装 Node.js 22 及以上版本。
 
 返回 `ok: true` 后，本地服务已经启动。修改配置后必须重启这个服务才会生效。
 
@@ -144,7 +150,7 @@ node scripts/manage-user-data.mjs
 
 ```powershell
 pnpm test
-node scripts/start-local-service.mjs
+.\scripts\start-local-service.ps1
 Invoke-RestMethod http://localhost:27149/health
 ```
 
@@ -333,9 +339,9 @@ music.addToPlaylist(track);
 
 Phase 4 的 7 个子阶段按依赖关系交叉推进，不是严格串行：4-1 提供任务和媒体基础，4-2 可在接口稳定后并行完善曲库入口，4-3 可独立进行原生 WebPlayer 只读证据调查；4-4、4-6 和 4-7 仍要等待各自前置验收。每个 checkbox 只在该子阶段整体验收通过后勾选，局部开发完成不代表前置阶段已完成。
 
-#### [ ] Phase 4-1：用户 MIDI 预览和媒体任务
+#### [x] Phase 4-1：用户 MIDI 预览和媒体任务
 
-完成上传曲目的预览、本地音频媒体生成、任务生命周期（排队、处理中、轮询、取消、失败恢复和重启恢复）以及本地媒体播放。
+完成上传曲目的预览、本地音频媒体生成、任务生命周期（排队、处理中、轮询、取消、失败恢复和重启恢复）以及本地媒体播放。自动化测试和 Steam 实机上传、生成、播放验收均已通过。
 
 #### [ ] Phase 4-2：曲库、歌单和 App 选择入口
 
@@ -343,15 +349,15 @@ Phase 4 的 7 个子阶段按依赖关系交叉推进，不是严格串行：4-1
 
 设计与验收：[Phase 4-2 曲库、歌单和模块选择入口](./docs/phase4-2-library-playlist-and-module-entry.md)。
 
-#### [ ] Phase 4-3：`LINLI-PLAY-001` 原生证据调查
+#### [x] Phase 4-3：`LINLI-PLAY-001` 原生证据调查
 
-在获得原生 WebPlayer 只读反汇编、CEF 媒体事件或完整媒体请求后，定位本地曲目无法接管播放的问题。
+在获得原生 WebPlayer 只读反汇编、CEF 媒体事件或完整媒体请求后，定位本地曲目无法接管播放的问题，并确定可在服务侧修复的原生媒体契约。
 
-已开始只读核查；样本、证据与后续步骤见 [Phase 4-3 原生 WebPlayer 证据调查](./docs/phase4-3-native-webplayer-evidence.md)，尚未定位原生中断分支。
+只读调查已闭合调用链：原生层先按 `TOD12/TOD1730/TOD20` 选择条目，再检查 `<songStoragePath>/<id>/<文件名>` 是否存在，满足后才调用 WebPlayer；项目已按此契约实现修复。样本、证据与实现说明见 [Phase 4-3 原生 WebPlayer 证据调查](./docs/phase4-3-native-webplayer-evidence.md)。
 
-#### [ ] Phase 4-4：上传曲目 Steam 播放/演奏验收
+#### [x] Phase 4-4：上传曲目 Steam 播放/演奏验收
 
-在独立备份和正确版本基线下，验证上传曲目真正切换媒体、进入桌面演奏并完成进度推进。
+在独立备份和正确版本基线下，已验证上传曲目真正切换媒体、进入桌面演奏并完成进度推进。
 
 #### [ ] Phase 4-5：外部歌单与歌曲导入
 

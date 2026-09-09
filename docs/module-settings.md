@@ -60,7 +60,7 @@ Harness（消费显式记忆、预检、检查和重写）
 
 ```powershell
 node scripts/configure-modules.mjs config/module-settings.json
-node scripts/start-local-service.mjs
+.\scripts\start-local-service.ps1
 ```
 
 仓库已经内置 `third_party/olivia-lin` 的 Persona 资产和 `third_party/OliviaSoul/v18-harness` 的开发版 Harness，不需要用户再下载这两个仓库。可复制 `config/user-config.example.json` 到 `config/user-config.json` 作为起点；后者已被 Git 忽略。
@@ -71,7 +71,7 @@ node scripts/start-local-service.mjs
 $env:LINLI_MODEL_ENDPOINT = 'https://api.deepseek.com'
 $env:LINLI_MODEL_NAME = '<选择当前可用的模型名>'
 $env:DEEPSEEK_API_KEY = '<只在本机安全环境中设置，不要写入仓库>'
-node scripts/start-local-service.mjs
+.\scripts\start-local-service.ps1
 ```
 
 也可以使用 `LINLI_MODEL_API_KEY` 代替 `DEEPSEEK_API_KEY`。密钥只写本机私有配置或环境变量，不放入公开模块设置、日志或提交。外部 provider 不可用时，`letters.fallback` 可按所选实现的错误策略降级。

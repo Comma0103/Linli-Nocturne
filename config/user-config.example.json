@@ -62,7 +62,8 @@
   "music": {
     "renderer": "builtin.audio",
     "playbackAdapter": "olivia-lin.native",
-    "encoder": "builtin.audio-only-mp4"
+    "encoder": "builtin.audio-only-mp4",
+    "nativeUgcRoot": ""
   },
   "media": {
     "videoImporter": "builtin.ffprobe.mp4"
@@ -75,7 +76,7 @@
     "clientVersion": "0.0.9.627"
   },
   "privacy": {
-    "allowExternalModelRequests": false,
+    "allowExternalModelRequests": true,
     "allowExternalMediaSources": false
   }
 }

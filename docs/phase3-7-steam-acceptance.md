@@ -11,7 +11,7 @@ Phase 3 的领域服务、模型选择、后台 Worker、有限记忆、文字�
 在仓库根目录执行：
 
 ```powershell
-node scripts/start-local-service.mjs
+.\scripts\start-local-service.ps1
 ```
 
 默认服务地址为 `http://localhost:27149`。默认设置使用离线 fallback，因此不需要 API Key 就能验证发送、排队和本地回复链路。启用 bypass 时，服务会同时跳过发送限制、处理延迟，并向游戏兼容接口报告仍可写信，避免原版前端把写信按钮置灰。若要测试外部或本地模型，先按 [模块设置与实现选择](./module-settings.md) 选择 provider，再通过环境变量传递凭据；设置文件不会保存密钥。

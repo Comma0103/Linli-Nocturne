@@ -349,5 +349,7 @@ test('配置可移动、Python 命令不误作文件路径，外部请求遵循�
   await writeFile(path, JSON.stringify(config));
   assert.equal(loadUserConfig(path, { defaultSettings: DEFAULT_MODULE_SETTINGS }).options.provider.python, 'python');
   config.letters.baseModel.provider = 'external.openai-compatible'; await writeFile(path, JSON.stringify(config));
+  assert.doesNotThrow(() => loadUserConfig(path, { defaultSettings: DEFAULT_MODULE_SETTINGS }));
+  config.privacy.allowExternalModelRequests = false; await writeFile(path, JSON.stringify(config));
   assert.throws(() => loadUserConfig(path, { defaultSettings: DEFAULT_MODULE_SETTINGS }), /allowExternalModelRequests/u);
 });
