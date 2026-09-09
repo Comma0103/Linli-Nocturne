@@ -2,6 +2,8 @@
 
 当前开发版使用一个人类可读的 JSON 设置文件保存“选择哪种实现”。示例见 [`config/module-settings.example.json`](../config/module-settings.example.json)。`module-settings.json` 只保存实现 ID 和普通选项，不保存 API Key；普通用户的私有模型地址、模型名和 API Key 可以写在 Git 忽略的 `config/user-config.json`，也可以通过环境变量传给运行时。
 
+Phase 4-2 的模块选择验收已完成，范围是配置文件、终端向导和真实启动装配；当前没有游戏内 Renderer/Encoder 图形选择页。普通用户优先使用 `node scripts/configure-modules.mjs --user-config config/user-config.json`，保存后重启服务；已有 user-config 时仅修改下面的 module-settings 不会覆盖它。
+
 校验示例：
 
 ```powershell

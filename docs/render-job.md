@@ -20,6 +20,20 @@ stateDiagram-v2
 
 每个任务包含 `id`、`kind`、`inputAssetIds`、`rendererId`、`rendererVersion`、`status`、`progress`、`errorCode`、`attempt`、`createdAt` 和 `updatedAt`。渲染器不得直接修改业务表，只能提交事件和媒体产物；这样音频实现可以替换成定制演奏视频或 3D 手指同步实现，而不会改变信件和歌单模型。文字回信、视频回信和定制演奏可以共用这套任务生命周期，但由各自的领域服务负责输入和业务状态。
 
+## 当前 MIDI 任务与游戏状态的对应
+
+Phase 4-1/4-2 复用 RenderJob，但领域 `state`、RenderJob `status` 和游戏数字状态分开保存/转换，不能混用：
+
+| MIDI `state` | RenderJob `status` | 0.0.9.627 游戏 `state` |
+| --- | --- | --- |
+| `queued` | `queued` | 1 |
+| `processing` | `validating` / `rendering` | 2 |
+| `finished` | `produced` | 3 |
+| `canceled` | `cancelled` | 4 |
+| `failed` | `failed` | 5 |
+
+映射由 `src/gateway/midi-compat.js` 负责，仍兼容旧 `pending/running`。当前 MIDI 成功终点是 `produced`，已有视频资产导入才继续走 `published`，不能为对齐图示强行改写业务状态。恢复和协作式取消见 [Phase 4-1](./phase4-1-music-settings-and-media.md)；视频自动生成属于 Phase 6。
+
 ## 渲染器接口方向
 
 - `AudioRenderer`: MIDI -> WAV/MP3 + timing manifest。

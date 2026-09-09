@@ -49,14 +49,14 @@
 3. 取消尚未开始的任务不会启动 Renderer；支持 `AbortSignal` 的慢 Renderer 能在取消后停止且不发布媒体。
 4. 同一任务最多发布一个媒体产物；失败、取消和重启恢复不会留下半成品或错误曲目记录。
 5. 任务列表、单任务、批量查询、曲库分页、媒体 GET/HEAD/Range 和 WAV/MP4 MIME 契约继续通过回归测试。
-6. `pnpm test` 和 `git diff --check` 通过；本增量仍不代表 Steam 原生 WebPlayer 已修复。
+6. `pnpm test` 和 `git diff --check` 通过；本生命周期增量的自动化证据不单独证明 Steam 原生接管，后续修复与实机验收已由 Phase 4-3/4-4 完成。
 
 ### 实现与自动化验收记录
 
 - `/toy/midi/generate` 返回创建时的 `queued` 快照，后台处理随后持久化 `processing` 和终态；客户端后续查询可能直接看到终态，但生成响应本身必须为数字状态 `1`。
 - 上传输入写入 `midi-media/inputs`，SQLite 的 `midi_jobs` 记录输入路径、SHA-256、大小和文件名；服务重新创建时会恢复可读输入，缺失输入明确进入失败。
 - 媒体先写入带随机后缀的临时文件，再通过重命名发布；取消或失败不会发布半成品。支持 `AbortSignal` 的 Renderer 可响应取消，不支持强制终止的同步 Renderer 只保证不发布结果。
-- 生命周期首轮回归覆盖排队/取消不发布，以及重启时缺失输入失败；当前完整 `pnpm test` 为 130/130 通过。
+- 生命周期首轮回归覆盖排队/取消不发布，以及重启时缺失输入失败；当时完整 `pnpm test` 为 130/130 通过，后续歌单和试听回归见 [Phase 4-2](./phase4-2-library-playlist-and-module-entry.md)。
 
 ### 2026-09-09 进入下一阶段前的核查
 
@@ -69,3 +69,4 @@
 - 2026-09-09 在 Steam 0.0.9.627 的“我的上传”中上传 `linli-performance-10s.mid`，日志确认 `is_upload_success: true`。
 - 任务 `c842728e-2089-4395-bb4b-25d2f9739802` 进入 `produced`，媒体时长 10.25 秒，并成功写入原版 `songStoragePath`。
 - 客户端随后发出本地 MP4 的 `sendWebPlayerControlCmd`，持续收到 `currentTime` 进度事件并自然结束。
+- 此处记录的是音频 MP4、黑屏演奏和声音，不包括人物演奏视频或精确 3D 动画。歌单入口和最终 localhost 试听复验也已通过，记录归入 Phase 4-2。

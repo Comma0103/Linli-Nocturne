@@ -1,6 +1,8 @@
 # 普通用户流程
 
-## 首次启动
+## 首次启动（Phase 7 目标流程）
+
+下图是最终安装向导的设计，并非当前全部可用。开发版实际使用流程见 [README 用户配置指南](../README.md#用户配置指南)，配置文件及终端向导见 [user-config.md](./user-config.md)；首次原版安装仍有[补丁整合缺口](./original-installation.md#当前交付边界2026-09-09)。
 
 ```mermaid
 flowchart TD
@@ -31,13 +33,15 @@ flowchart TD
 ## MIDI
 
 1. 用户选择 `.mid` 文件，向导提示大小、音轨和时长。
-2. MusicService 校验 MIDI、解析音符与延音踏板，并生成预览。
-3. ModuleSettings 选择 AudioRenderer、VideoRenderer、Future3DRenderer 或其他已注册实现。
-4. GamePlaybackAdapter 把统一曲目中间表示转换为具体游戏或播放器的输入格式。
-5. 用户将结果加入歌单，原文件、派生媒体和任务日志均可备份。
+2. MidiJobService 保存输入并创建排队任务，通过已有 MIDI 解析器、Renderer 和 Encoder 生成音频媒体；游戏轮询处理中、成功、失败或取消结果。
+3. 用户通过配置文件或终端向导选择现有 Renderer、PlaybackAdapter 和 Encoder，重启本地服务后生效；视频生成及 3D Renderer 是后续能力，游戏内没有这类选择页。
+4. GamePlaybackAdapter 转换游戏曲目字段；原生适配器配合 NativeUgcMediaStore 把生成媒体镜像到游戏所需目录。
+5. 完成曲目进入“我的上传”，可试听、演奏、加入歌单；重复加入不产生重复项，移出歌单保留上传曲目。当前上传曲目演奏为黑屏和声音，人物与琴键同步画面留给 Phase 5。
+
+Phase 4-1 至 4-4 已在 0.0.9.627 验收。试听独立于底部演奏栏；预设试听使用已下载且命名受支持的缓存，覆盖范围见 [Phase 4-2](./phase4-2-library-playlist-and-module-entry.md)。下一步是外部音乐导入调研与设计，之后再做宽松演奏和 Phase 4 总验收。
 
 ## 安全和可恢复性
 
 - API Key 保存在 Git 忽略的本机 `config/user-config.json` 或环境变量中；当前 JSON 不提供加密，不随数据包导出。
 - 每次补丁前创建清单和备份；失败自动回滚。
-- 删除信件和媒体默认进入回收站，用户确认后才永久清理。
+- 统一回收站是后续恢复流程的目标，当前不能承诺所有删除均可撤销；歌单移除不删除上传曲目，MIDI 删除会清理任务与生成媒体，已有视频资产删除只解除关联并保留旧文件。

@@ -25,7 +25,7 @@ Phase 0、Phase 1 和 Phase 2 目前各有一份阶段总览文档。Phase 3 也
 
 Phase 3-6 已把上述信件文字链路、Worker、Provider、记忆和视频资产流程串起来，完成设置解析、错误恢复、网关端到端测试和文档同步；代表性验收提交为 `b5e7e8a`。Phase 3-7 已由用户完成离线 fallback 的 Steam 界面验收，Phase 3-8 又由用户在 Steam 中完成 DeepSeek + Persona + OliviaSoul Harness 真实模型验收。Phase 3 的代码链路和 Steam 用户路径现已完成；最终 App 设置页、视频自动生成、安装器和发行流程仍属于后续工作。
 
-Phase 3 完成后，下一阶段进入 Phase 4 的用户 MIDI 预览、曲库和播放/演奏调查。任何新增第三方 Provider、Harness、Persona、Renderer 或视频检查器都必须接入统一注册表和适配器，不得把现有实现写成唯一实现。
+Phase 3 完成后的音乐工作已推进至 Phase 4-1 至 4-4 验收完成，下一步是 Phase 4-5 外部音乐导入的调研与设计，见 [Phase 4 总览](./phase4.md)。任何新增第三方 Provider、Harness、Persona、Renderer 或视频检查器都必须接入统一注册表和适配器，不得把现有实现写成唯一实现。
 
 Phase 3 融合实现了第三方 Persona 素材包、Olivia-lin 离线人格引擎、`linli.fusion-v1` 和逐次执行留痕；用户已在 Steam 中完成离线与 DeepSeek 两轮实机验收，相关代码已合入 `main`。
 

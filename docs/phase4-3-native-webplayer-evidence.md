@@ -11,8 +11,8 @@
 - 远端 `main` 已核对到 `ad7602df05bf62ee852d72d69c688c22401a24ff`，与本轮开始时本地 HEAD 一致。
 - 前序核查复现了任务数字状态、真实启动入口的歌单写入及更换编码器后旧媒体格式三个问题，先在已有网关、`MusicService` 和 `MidiJobService` 中修正；详见 [Phase 4-1](./phase4-1-music-settings-and-media.md) 和 [Phase 4-2](./phase4-2-library-playlist-and-module-entry.md)。它们不构成原生播放根因的证据。
 - 复用 `baseline-verifier.js` 的 SHA-256 核对、`frontend-archive.js` 的只读归档解析及已有 `fflate`，不另造基线检查器或解包器。PE 样本检查复用本机已有 LIEF。
-- Phase 4-1 的专项验收和 Phase 4-2 的用户界面确认仍按各自文档推进；本里程碑的只读调查已独立完成，不替代 Phase 4-4 的 Steam 实机验收。
-- 本次仅在内存读取游戏文件和备份，不加载执行 DLL，不修改 Steam 目录，不启动游戏、不变更补丁或用户配置，不将游戏资源、完整日志或反编译源码提交到仓库。重大修复方案、游戏文件写入及新的实机操作须先向用户确认。
+- 本里程碑的只读调查不替代实际用户验收；Phase 4-1、4-2、4-4 现均已按各自文档完成，歌单与试听后续复验记录见 Phase 4-2。
+- 只读调查阶段仅在内存读取游戏文件和备份，不加载执行 DLL、不写入 Steam 目录，也不将游戏资源、完整日志或反编译源码提交到仓库。随后服务侧修复及用户实机验收按已确认方案推进；不能把调查阶段的范围当作后续工作从未发生。
 
 ## 调查步骤与验收标准
 
@@ -61,7 +61,7 @@ Phase 4-3 的完成标准是形成可复核的因果链与有证据支持的修�
 
 - `WebPlayerClient::play` 的包装函数在内部对象有效时跳转到 `0xA360`；`0xA360` 将收到的媒体字符串直接写入 `url`，没有看到按域名、UUID、扩展名或媒体轨道的拒绝分支。
 - `0xA360` 调用 `0xAE30`。后者先检查 `this+0x28` 的内部状态、状态中的有效标志以及 `this+0x30` 的 `QCefView` 指针；条件不满足时直接返回。条件满足时创建 `QCefEvent("playerControlCmd")`，把命令参数写入事件，再调用 `QCefView::broadcastEvent`。
-- 因此，当前最强的原生假设不是“WebPlayer 看到 localhost 后拒绝”，而是本地曲目路径调用时没有满足内部播放器状态/视图条件，或 `NutStudioUI` 没有把 `song` 继续转换成对这个对象的 `play(url, ...)` 调用。这个结果仍未证明是哪一个上游条件失败。
+- 此时尚未闭合上游调用链，曾怀疑播放器状态/视图条件不满足，或 `NutStudioUI` 没有继续调用 `play(url, ...)`。这是调查过程中的假设；最终已由下文 TOD 与本地文件检查证据定位，不作为当前待排查结论。
 
 对同一份、哈希与 0.0.9.627 基线一致的原版 `NutStudioUI.dll` 进行 Headless 反编译后，`FUN_1800627e0` → `FUN_180034a80` 的调用关系和 `FUN_180034a80` 的 `play` 分支证实了另一段链路：前端的 `sendWebPlayerControlCmd` 并不是直接把 URL 交给 CEF，而是先把 `song` JSON 交给一个带虚表的内部播放控制对象。该对象最终进入 `StudioManagerLite::onPlayerPlay`，再由 `playVideo` 执行 TOD 和本地文件检查。
 
@@ -89,7 +89,7 @@ Ghidra 运行时没有加载 `NutCommon.dll`、`QCefView.dll` 等依赖，因此
 
 同一份日志中还找到 8 次官方曲目的 `play` 命令和 3 次本地曲目的命令。两者都通过 `sendWebPlayerControlCmd` 发送 `song`，都包含 `videoUrl`、`videoByTodView` 和 TOD 选择；因此“前端没有发出播放命令”已经可以排除。
 
-| 字段 | 官方曲目样本 | 本地曲目样本 | 当前含义 |
+| 字段 | 官方曲目样本 | 本地曲目样本 | 调查早期线索（最终结论见下文） |
 | --- | --- | --- | --- |
 | `id` | 数字 ID，例如 `953`、`1051` | UUID，例如 `2fd9b144-…` | 是值得追踪的原生校验差异，但还没有反汇编或回调证据证明它是拒绝条件 |
 | `videoUrl` | HTTPS 静态资源，通常带鉴权查询参数 | `http://localhost:27149/toy/midi/media/...` 或 `https://localhost:27150/...` | 原生确实收到本地地址；地址协议、扩展名和鉴权处理仍需在原生调用链确认 |
@@ -110,11 +110,11 @@ Ghidra 运行时没有加载 `NutCommon.dll`、`QCefView.dll` 等依赖，因此
 
 - 自动化测试确认三组 TOD 字面量、日志路径发现、目录自动创建、原子写入、目录逃逸拦截和删除清理。
 - 配置未发现游戏路径时，任务仍可完成本地网关媒体生成，并在 `info.nativePlayback` 返回 `native_ugc_root_not_found` 及处理提示。
-- Steam 实机验收仍由 Phase 4-4 完成：生成曲目后，目标目录必须出现 `<歌曲 ID>/<歌曲 ID>.<扩展名>`，客户端必须切换曲目、进入演奏桌面、推进进度并发声。
+- Steam 实机验收已由 Phase 4-4 完成：生成曲目后，目标目录出现 `<歌曲 ID>/<歌曲 ID>.<扩展名>`，客户端切换曲目、进入演奏桌面、推进进度并发声，记录见 [Phase 4-1 实机验收](./phase4-1-music-settings-and-media.md#steam-实机验收记录)。
 
 ## 剩余不确定性与下一步
 
 - **Steam 实机验收已完成。** 2026-09-09 客户端成功上传、生成并播放 `linli-performance-10s.mid`；日志确认媒体写入原版 UGC 目录、WebPlayer 收到本地 MP4，进度从 0 推进到 10 秒并自然结束。
 - 调查期间 PATH 未找到 `dumpbin`、`llvm-objdump`、`objdump` 等反汇编工具；使用忽略目录中的 Capstone 做指令核对，并用 Ghidra Headless 完成交叉引用和反编译。它们没有加入项目依赖。
-- **工具选择记录**：若用户已有 IDA Pro 授权，优先使用 IDA 的自动分析和批处理脚本；否则默认采用免费的 Ghidra Headless Analyzer。两者都能输出可复核的函数、交叉引用和反编译结果；Binary Ninja 仅在已有 Commercial/Ultimate 授权时考虑。当前没有静默下载大型逆向套件，也不把工具安装当作游戏修改授权。
-- 若实机验收仍失败，先检查任务 `info.nativePlayback` 和目标目录文件，再决定是否需要新的原生观测；原版样本和只读调查结果应与将来安装补丁明确分开。
+- **工具选择记录**：本次实际使用 Ghidra Headless 完成调查。后续如需复查，优先复用已有工具和证据；用户已有 IDA Pro 授权时也可使用其分析和批处理能力，不为同一已闭合问题重新安装多套工具。
+- 若以后再次出现无法演奏，先检查任务 `info.nativePlayback`、缓存盘和目标目录文件，再决定是否需要新的原生观测；原版样本和只读调查结果应与将来安装补丁明确分开。

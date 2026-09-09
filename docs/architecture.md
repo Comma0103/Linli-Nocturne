@@ -3,21 +3,25 @@
 Game Client -> Local Gateway -> Domain Services -> Stores and Renderers
 
 核心模块：
+
+以下同时包含已实现模块和目标架构；Phase 4-1 至 4-4 的实现边界以 [Phase 4 总览](./phase4.md) 为准，DesktopApp、视频生成和 3D Renderer 尚未交付。
+
 - PatchManager：版本识别、备份、补丁、校验、回滚。
 - LocalGateway：兼容游戏前端的登录、信件、音乐、歌单和媒体接口。
 - LetterService：额度、延迟、状态领取、生成、检查、重试和记忆。
 - MemoryProvider：可替换的历史与关系输入；保留关闭、有限 `sqlite` 和实验版 `olivia-soul.sqlite`。模板默认开启持续记忆：完整成功往来保存在 letters，逐封摘要/滚动回忆/关系账本保存在 memory_summaries 和 memory_states；提示词预算不等于历史保留长度。
 - LetterWorker：后台处理信件和待更新摘要，分别互斥、续租和恢复；同一玩家串行生成回信。摘要调用在回信事务外进行，失败退避并最多尝试 3 次，不撤回已经成功的回信。
 - ModelAdapter：外部 API、可插拔 Harness、本地模型、离线人格引擎；OliviaSoul v18 通过适配器接入，其他 Harness 也可替换。
-- MusicService：MIDI 上传、解析、任务编排、曲库和歌单。
-- RenderPipeline：AudioRenderer、VideoRenderer、Future3DRenderer。
+- MusicService：已有 MIDI 导入、渲染入口和歌单；MidiJobService 负责客户端上传、持久化输入、后台媒体任务和已完成曲目查询，两者复用已有解析器、Renderer 和存储。
+- NativeUgcMediaStore：按原生契约镜像生成媒体，并从游戏已下载缓存解析预设试听文件；网关提供流式 GET/HEAD/Range，原生演奏继续沿用原有播放器。
+- 渲染链路：当前 AudioRenderer 与 Encoder 已实现；VideoRenderer、Future3DRenderer 是后续接口方向，不额外新建一套平行任务框架。
 - MediaStore：校验、元数据、Range 读取、备份。
 - DesktopApp：安装、配置、启动、诊断和恢复。
-- ModuleRegistry/ModuleSettings：登记可用实现，保存用户对 provider、renderer、播放适配器、人格和记忆的选择；敏感凭据不进入设置文件。
+- ModuleRegistry/ModuleSettings：登记可用实现，保存用户对 provider、renderer、播放适配器、人格和记忆的选择；敏感凭据不进入 module-settings，可保存在被 Git 忽略的私有 user-config。
 - VideoAssetService：将已有 MP4 作为信件附属资产导入、检查、发布、替换和删除；视频检查器通过 `media.videoImporter` 选择。
 - VideoReplyService：编排未来的“视频回信”领域流程，把文字回信上下文、角色/场景输入和可选即兴演奏交给独立的 `VideoGenerator`；它不复用 `videoImporter`。
 - VideoGeneratorRegistry：登记可替换的视频回信生成器。生成器可以是本地 fallback、外部视频模型适配器或本地高质量渲染器；当前版本只保留接口方向，不声称自动视频回信已经可用。
-- LocalApp 启动入口：把模块设置、SQLite、LetterWorker、兼容网关和媒体服务装配成一个开发版本地服务；默认离线 fallback，不把凭据写入设置文件。
+- LocalApp 启动入口：把模块设置、SQLite、LetterWorker、兼容网关和媒体服务装配成一个开发版本地服务；默认使用离线回信路径，支持私有 user-config。PowerShell/CMD 包装器负责探测 Node 和启动服务，不替代最终安装器。
 
 关键实体：
 Letter、MemoryEpisode、MemorySummary、MemoryState、MidiAsset、RenderJob、PlaylistItem、ClientBaseline、ModelProfile。
