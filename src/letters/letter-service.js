@@ -126,7 +126,11 @@ export class LetterService {
     return Math.max(0, this.limits.dailyLimit - this.store.countToday(recipient, startIso, endIso, this.conversationId));
   }
   detail(id) { const row = this.store.getLetter(id); return row?.conversation_id === this.conversationId ? row : null; }
-  execution(id) { return this.detail(id) ? { letterId: id, attempts: this.store.getLetterAttempts(id), provenance: this.store.getLetterAttempts(id).length ? 'recorded' : 'unknown' } : null; }
+  execution(id) {
+    if (!this.detail(id)) return null;
+    const attempts = this.store.getLetterAttempts(id);
+    return { letterId: id, attempts, provenance: attempts.length ? 'recorded' : 'unknown' };
+  }
   list() { return this.store.listLetters(50, this.conversationId); }
   unreadCount() { return this.store.countUnread(this.conversationId); }
   markRead(id) { return this.detail(id) ? this.store.markRead(id, this.clock().toISOString()) : null; }

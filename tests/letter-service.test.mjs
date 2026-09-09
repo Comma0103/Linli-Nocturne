@@ -16,7 +16,11 @@ test('letter service enforces original daily limit and delay by default', async 
   assert.equal(first.status, 'pending');
   assert.equal(await service.processNext(), null);
   now.setTime(now.getTime() + 5 * 60 * 1000);
-  assert.equal((await service.processNext()).status, 'replied');
+  const replied = await service.processNext();
+  assert.equal(replied.status, 'replied');
+  const execution = service.execution(first.id);
+  assert.equal(execution.provenance, 'recorded');
+  assert.equal(execution.attempts.length, 1);
   service.send({ body: '第二封' }); service.send({ body: '第三封' });
   assert.throws(() => service.send({ body: '第四封' }), LetterLimitError);
   store.close();
