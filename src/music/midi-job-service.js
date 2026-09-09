@@ -144,7 +144,7 @@ export class MidiJobService {
         renameSync(tempPath, mediaPath);
         tempPath = null;
       }
-      this.media.set(jobId, mediaBytes);
+      if (!mediaPath) this.media.set(jobId, mediaBytes);
       const nativeFilename = `${jobId}.${this.mediaExtension}`;
       const nativePlayback = this.nativeUgcMediaStore
         ? this.nativeUgcMediaStore.materialize({ songId: jobId, filename: nativeFilename, bytes: Buffer.from(mediaBytes) })
@@ -229,7 +229,7 @@ export class MidiJobService {
   }
   mediaBytes(jobId) {
     const id = String(jobId); const inMemory = this.media.get(id); if (inMemory) return inMemory; const job = this.get(id); if (!job?.mediaPath) return null;
-    try { const bytes = readFileSync(job.mediaPath); this.media.set(id, bytes); return bytes; } catch { return null; }
+    try { return readFileSync(job.mediaPath); } catch { return null; }
   }
 
   async drain() {
