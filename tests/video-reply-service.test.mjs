@@ -83,6 +83,9 @@ test('视频回信网关提供导入、播放和删除接口', async () => {
     assert.equal(media.status, 200);
     assert.equal(media.headers.get('content-type'), 'video/mp4');
     assert.equal((await media.arrayBuffer()).byteLength, 4);
+    const head = await fetch(item.replyVideoUrl, { method: 'HEAD' });
+    assert.equal(head.status, 200);
+    assert.equal(Number(head.headers.get('content-length')), 4);
     const range = await fetch(item.replyVideoUrl, { headers: { range: 'bytes=0-1' } });
     assert.equal(range.status, 206);
     assert.equal(range.headers.get('content-range'), 'bytes 0-1/4');

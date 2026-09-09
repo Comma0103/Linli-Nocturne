@@ -1,5 +1,4 @@
 import { createServer } from 'node:http';
-import { readFile } from 'node:fs/promises';
 import { createReadStream, statSync } from 'node:fs';
 import { clientMidiJob, clientMidiPage, midiJobIds, midiPageParams } from './midi-compat.js';
 import { clientLetter } from './letter-compat.js';
@@ -130,22 +129,8 @@ export function createLocalGateway({ letterService, musicService = null, midiJob
         if (!asset || !letterService.detail(asset.letterId)) return sendJson(response, 404, { error: 'video_not_found' });
         const video = videoReplyService.mediaPath(decodeURIComponent(videoMedia[1]));
         if (!video) return sendJson(response, 404, { error: 'video_not_found' });
-        let bytes;
-        try { bytes = await readFile(video); } catch { return sendJson(response, 404, { error: 'video_not_found' }); }
-        const headers = { 'content-type': 'video/mp4', 'accept-ranges': 'bytes', 'access-control-allow-origin': '*' };
-        const range = request.headers.range;
-        let status = 200; let body = bytes;
-        if (range) {
-          const match = /^bytes=(\d*)-(\d*)$/u.exec(range);
-          if (!match || (!match[1] && !match[2])) { response.writeHead(416, { ...headers, 'content-range': `bytes */${bytes.length}` }); return response.end(); }
-          const suffix = match[1] ? null : Number(match[2]);
-          const start = match[1] ? Number(match[1]) : Math.max(0, bytes.length - suffix);
-          let end = match[1] && match[2] ? Number(match[2]) : bytes.length - 1;
-          if (!Number.isSafeInteger(start) || !Number.isSafeInteger(end) || start < 0 || start >= bytes.length || end < start) { response.writeHead(416, { ...headers, 'content-range': `bytes */${bytes.length}` }); return response.end(); }
-          end = Math.min(end, bytes.length - 1); body = bytes.subarray(start, end + 1); status = 206; headers['content-range'] = `bytes ${start}-${end}/${bytes.length}`;
-        }
-        headers['content-length'] = body.length;
-        response.writeHead(status, headers); return request.method === 'HEAD' ? response.end() : response.end(body);
+        if (!serveMediaFile(request, response, video, 'video/mp4')) return sendJson(response, 404, { error: 'video_not_found' });
+        return;
       }
       if (request.method === 'GET' && url.pathname === '/toy/searchPlaylist') {
         if (!musicService) return sendJson(response, 200, compatResponse({ list: [], hasMore: false, nextCursor: 0, total: 0 }));
