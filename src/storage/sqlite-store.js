@@ -2,6 +2,25 @@ import { mkdirSync } from 'node:fs';
 import { dirname } from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
 
+function hydrateMidiJob(job) {
+  if (!job) return null;
+  const info = JSON.parse(job.info_json);
+  const renderJob = info.renderJob ?? null;
+  return { jobId: job.job_id, state: job.state, filename: job.filename, createdAt: job.created_at, error: job.error,
+    status: renderJob?.status ?? (job.state === 'finished' ? 'produced' : job.state === 'canceled' ? 'cancelled' : job.state),
+    progress: renderJob?.progress ?? (job.state === 'finished' ? 1 : 0), attempt: renderJob?.attempt ?? 0,
+    errorCode: renderJob?.errorCode ?? null, info, mediaPath: job.media_path,
+    inputPath: job.input_path, inputSha256: job.input_sha256, inputSize: job.input_size, inputFilename: job.input_filename };
+}
+
+function hydrateVideoJob(row) {
+  if (!row) return null;
+  return { jobId: row.job_id, letterId: row.letter_id, assetId: row.asset_id, fileName: row.file_name, adapterId: row.adapter_id,
+    adapterVersion: row.adapter_version, status: row.status, errorCode: row.error_code, error: row.error,
+    metadata: JSON.parse(row.metadata_json || '{}'), mediaPath: row.media_path, size: row.size, createdAt: row.created_at,
+    publishedAt: row.published_at, deletedAt: row.deleted_at };
+}
+
 export class SqliteStore {
   constructor(filename = ':memory:') {
     if (filename !== ':memory:') mkdirSync(dirname(filename), { recursive: true });
@@ -415,27 +434,19 @@ export class SqliteStore {
   }
 
   getMidiJob(jobId) {
-    const job = this.db.prepare('SELECT * FROM midi_jobs WHERE job_id = ?').get(jobId);
-    if (!job) return null;
-    const info = JSON.parse(job.info_json);
-    const renderJob = info.renderJob ?? null;
-    return { jobId: job.job_id, state: job.state, filename: job.filename, createdAt: job.created_at, error: job.error,
-      status: renderJob?.status ?? (job.state === 'finished' ? 'produced' : job.state === 'canceled' ? 'cancelled' : job.state),
-      progress: renderJob?.progress ?? (job.state === 'finished' ? 1 : 0), attempt: renderJob?.attempt ?? 0,
-      errorCode: renderJob?.errorCode ?? null, info, mediaPath: job.media_path,
-      inputPath: job.input_path, inputSha256: job.input_sha256, inputSize: job.input_size, inputFilename: job.input_filename };
+    return hydrateMidiJob(this.db.prepare('SELECT * FROM midi_jobs WHERE job_id = ?').get(jobId));
   }
 
   listMidiJobs(limit = 20, offset = 0) {
     return this.db.prepare('SELECT * FROM midi_jobs ORDER BY created_at DESC LIMIT ? OFFSET ?').all(limit, offset)
-      .map(job => this.getMidiJob(job.job_id));
+      .map(hydrateMidiJob);
   }
 
   countMidiJobs() { return this.db.prepare('SELECT COUNT(*) AS count FROM midi_jobs').get().count; }
 
   listFinishedMidiJobs(limit = 20, offset = 0) {
     return this.db.prepare("SELECT * FROM midi_jobs WHERE state = 'finished' ORDER BY created_at DESC LIMIT ? OFFSET ?").all(limit, offset)
-      .map(job => this.getMidiJob(job.job_id));
+      .map(hydrateMidiJob);
   }
 
   countFinishedMidiJobs() { return this.db.prepare("SELECT COUNT(*) AS count FROM midi_jobs WHERE state = 'finished'").get().count; }
@@ -452,7 +463,7 @@ export class SqliteStore {
   }
 
   listRecoverableMidiJobs() {
-    return this.db.prepare("SELECT * FROM midi_jobs WHERE state IN ('queued', 'processing') ORDER BY created_at").all().map(job => this.getMidiJob(job.job_id));
+    return this.db.prepare("SELECT * FROM midi_jobs WHERE state IN ('queued', 'processing') ORDER BY created_at").all().map(hydrateMidiJob);
   }
 
   deleteMidiJob(jobId) { return this.db.prepare('DELETE FROM midi_jobs WHERE job_id = ?').run(jobId).changes > 0; }
@@ -494,20 +505,19 @@ export class SqliteStore {
   }
 
   getVideoJob(jobId) {
-    const row = this.db.prepare('SELECT * FROM video_jobs WHERE job_id = ?').get(jobId);
-    return row ? { jobId: row.job_id, letterId: row.letter_id, assetId: row.asset_id, fileName: row.file_name, adapterId: row.adapter_id, adapterVersion: row.adapter_version, status: row.status, errorCode: row.error_code, error: row.error, metadata: JSON.parse(row.metadata_json || '{}'), mediaPath: row.media_path, size: row.size, createdAt: row.created_at, publishedAt: row.published_at, deletedAt: row.deleted_at } : null;
+    return hydrateVideoJob(this.db.prepare('SELECT * FROM video_jobs WHERE job_id = ?').get(jobId));
   }
 
-  listVideoJobs(letterId) { return this.db.prepare('SELECT job_id FROM video_jobs WHERE letter_id = ? ORDER BY created_at DESC').all(letterId).map(row => this.getVideoJob(row.job_id)); }
+  listVideoJobs(letterId) { return this.db.prepare('SELECT * FROM video_jobs WHERE letter_id = ? ORDER BY created_at DESC').all(letterId).map(hydrateVideoJob); }
   getVideoAsset(assetId) {
     const row = this.db.prepare(`SELECT v.*, a.active FROM video_jobs v LEFT JOIN letter_video_assets a ON a.asset_id = v.asset_id WHERE v.asset_id = ? ORDER BY v.created_at DESC LIMIT 1`).get(assetId);
-    return row ? { ...this.getVideoJob(row.job_id), active: row.active === 1 } : null;
+    const job = hydrateVideoJob(row);
+    return job ? { ...job, active: row.active === 1 } : null;
   }
   getActiveVideo(letterId) {
-    const row = this.db.prepare('SELECT job_id FROM letter_video_assets WHERE letter_id = ? AND active = 1').get(letterId);
-    return row ? this.getVideoJob(row.job_id) : null;
+    return hydrateVideoJob(this.db.prepare('SELECT v.* FROM letter_video_assets a JOIN video_jobs v ON v.job_id = a.job_id WHERE a.letter_id = ? AND a.active = 1').get(letterId));
   }
-  listActiveVideos() { return this.db.prepare('SELECT letter_id, job_id FROM letter_video_assets WHERE active = 1').all().map(row => ({ letterId: row.letter_id, ...this.getVideoJob(row.job_id) })); }
+  listActiveVideos() { return this.db.prepare('SELECT a.letter_id, v.* FROM letter_video_assets a JOIN video_jobs v ON v.job_id = a.job_id WHERE a.active = 1').all().map(row => ({ letterId: row.letter_id, ...hydrateVideoJob(row) })); }
   deleteActiveVideo(letterId, at) {
     const current = this.getActiveVideo(letterId);
     if (!current) return false;
