@@ -322,6 +322,34 @@ for (const originalExtension of ['wav', 'mp4']) test(`更换编码器并重启�
   await nextMedia.arrayBuffer();
 });
 
+test('MIDI gateway preserves empty persisted media responses', async t => {
+  const store = new SqliteStore();
+  const mediaRoot = mkdtempSync(join(tmpdir(), 'linli-empty-midi-media-'));
+  const encoder = Object.assign(() => Buffer.alloc(0), { extension: 'wav', contentType: 'audio/wav' });
+  const midiService = new MidiJobService({ store, mediaRoot, mediaEncoder: encoder });
+  const server = createLocalGateway({ midiJobService: midiService });
+  await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
+  t.after(async () => { await new Promise(resolve => server.close(resolve)); store.close(); });
+  const base = `http://127.0.0.1:${server.address().port}`;
+  const upload = midiService.createUpload({ filename: 'empty.mid', uploadUrl: base });
+  midiService.receiveUpload(upload.key, midi);
+  const job = midiService.generate({ midiUrl: upload.url, mediaBaseUrl: base });
+  await midiService.drain();
+  assert.equal(midiService.get(job.jobId).state, 'finished');
+  const url = midiService.get(job.jobId).info.audioUrl;
+  const response = await fetch(url);
+  assert.equal(response.status, 200);
+  assert.equal(response.headers.get('content-length'), '0');
+  assert.equal((await response.arrayBuffer()).byteLength, 0);
+  const head = await fetch(url, { method: 'HEAD' });
+  assert.equal(head.status, 200);
+  assert.equal(head.headers.get('content-length'), '0');
+  const range = await fetch(url, { headers: { range: 'bytes=0-0' } });
+  assert.equal(range.status, 416);
+  assert.equal(range.headers.get('content-range'), 'bytes */0');
+  await range.arrayBuffer();
+});
+
 test('MIDI gateway serves encoded media with the encoder MIME type and extension', async t => {
   const store = new SqliteStore();
   const letters = new LetterService({ store, modelAdapter: new ModelAdapter(new FallbackLetterProvider()), limits: { bypass: true } });

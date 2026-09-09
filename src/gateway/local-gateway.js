@@ -26,15 +26,28 @@ function compatResponse(data) { return { code: 0, message: 'success', data }; }
 function htmlEscape(value) { return String(value).replace(/[&<>"']/gu, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[char])); }
 function publicVideoJob(job) { if (!job) return null; const { mediaPath, ...visible } = job; return visible; }
 
-function serveMediaFile(request, response, filePath, contentType, onServed = null) {
+function serveMediaFile(request, response, filePath, contentType, onServed = null, allowEmpty = false) {
   let size;
   try {
     const stat = statSync(filePath);
-    if (!stat.isFile() || stat.size === 0) return false;
+    if (!stat.isFile() || (!allowEmpty && stat.size === 0)) return false;
     size = stat.size;
   } catch { return false; }
   const headers = { 'content-type': contentType, 'access-control-allow-origin': '*', 'accept-ranges': 'bytes' };
   const range = request.headers.range;
+  if (size === 0) {
+    if (range) {
+      onServed?.({ status: 416, contentType, bytes: 0 });
+      response.writeHead(416, { ...headers, 'content-range': 'bytes */0' });
+      response.end();
+      return true;
+    }
+    headers['content-length'] = 0;
+    onServed?.({ status: 200, contentType, bytes: 0 });
+    response.writeHead(200, headers);
+    response.end();
+    return true;
+  }
   let status = 200;
   let start = 0;
   let end = size - 1;
@@ -189,7 +202,7 @@ export function createLocalGateway({ letterService, musicService = null, midiJob
         }
         const contentType = midiJobService.mediaFormat(job).contentType;
         if (job.mediaPath) {
-          const served = serveMediaFile(request, response, job.mediaPath, contentType, result => mediaLogger?.({ method: request.method, pathname: url.pathname, range: request.headers.range ?? null, ...result }));
+          const served = serveMediaFile(request, response, job.mediaPath, contentType, result => mediaLogger?.({ method: request.method, pathname: url.pathname, range: request.headers.range ?? null, ...result }), true);
           if (!served) {
             mediaLogger?.({ method: request.method, pathname: url.pathname, range: request.headers.range ?? null, status: 404, contentType: null, bytes: 0 });
             return sendJson(response, 404, { error: 'media_not_found' });
