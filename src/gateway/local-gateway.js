@@ -26,7 +26,7 @@ function compatResponse(data) { return { code: 0, message: 'success', data }; }
 function htmlEscape(value) { return String(value).replace(/[&<>"']/gu, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[char])); }
 function publicVideoJob(job) { if (!job) return null; const { mediaPath, ...visible } = job; return visible; }
 
-function serveMediaFile(request, response, filePath, contentType) {
+function serveMediaFile(request, response, filePath, contentType, onServed = null) {
   let size;
   try {
     const stat = statSync(filePath);
@@ -40,15 +40,16 @@ function serveMediaFile(request, response, filePath, contentType) {
   let end = size - 1;
   if (range) {
     const match = /^bytes=(\d*)-(\d*)$/u.exec(range);
-    if (!match || (!match[1] && !match[2])) { response.writeHead(416, { ...headers, 'content-range': `bytes */${size}` }); response.end(); return true; }
+    if (!match || (!match[1] && !match[2])) { onServed?.({ status: 416, contentType, bytes: 0 }); response.writeHead(416, { ...headers, 'content-range': `bytes */${size}` }); response.end(); return true; }
     start = match[1] ? Number(match[1]) : Math.max(0, size - Number(match[2]));
     end = match[1] && match[2] ? Number(match[2]) : size - 1;
-    if (!Number.isSafeInteger(start) || !Number.isSafeInteger(end) || start < 0 || start >= size || end < start) { response.writeHead(416, { ...headers, 'content-range': `bytes */${size}` }); response.end(); return true; }
+    if (!Number.isSafeInteger(start) || !Number.isSafeInteger(end) || start < 0 || start >= size || end < start) { onServed?.({ status: 416, contentType, bytes: 0 }); response.writeHead(416, { ...headers, 'content-range': `bytes */${size}` }); response.end(); return true; }
     end = Math.min(end, size - 1);
     status = 206;
     headers['content-range'] = `bytes ${start}-${end}/${size}`;
   }
   headers['content-length'] = end - start + 1;
+  onServed?.({ status, contentType, bytes: end - start + 1 });
   response.writeHead(status, headers);
   if (request.method === 'HEAD') { response.end(); return true; }
   const stream = createReadStream(filePath, { start, end });
@@ -181,12 +182,25 @@ export function createLocalGateway({ letterService, musicService = null, midiJob
       }
       const media = url.pathname.match(/^\/toy\/midi\/media\/([^/]+?)(?:\.(?:mp4|wav))?$/u);
       if (midiJobService && media && (request.method === 'GET' || request.method === 'HEAD')) {
+        const job = midiJobService.get(media[1]);
+        if (!job) {
+          mediaLogger?.({ method: request.method, pathname: url.pathname, range: request.headers.range ?? null, status: 404, contentType: null, bytes: 0 });
+          return sendJson(response, 404, { error: 'media_not_found' });
+        }
+        const contentType = midiJobService.mediaFormat(job).contentType;
+        if (job.mediaPath) {
+          const served = serveMediaFile(request, response, job.mediaPath, contentType, result => mediaLogger?.({ method: request.method, pathname: url.pathname, range: request.headers.range ?? null, ...result }));
+          if (!served) {
+            mediaLogger?.({ method: request.method, pathname: url.pathname, range: request.headers.range ?? null, status: 404, contentType: null, bytes: 0 });
+            return sendJson(response, 404, { error: 'media_not_found' });
+          }
+          return;
+        }
         const bytes = midiJobService.mediaBytes(media[1]);
         if (!bytes) {
           mediaLogger?.({ method: request.method, pathname: url.pathname, range: request.headers.range ?? null, status: 404, contentType: null, bytes: 0 });
           return sendJson(response, 404, { error: 'media_not_found' });
         }
-        const contentType = midiJobService.mediaFormat(midiJobService.get(media[1])).contentType;
         const range = request.headers.range;
         let status = 200;
         let body = bytes;
