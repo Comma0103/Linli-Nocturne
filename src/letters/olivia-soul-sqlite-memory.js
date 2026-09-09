@@ -28,6 +28,7 @@ export class OliviaSoulSqliteMemoryProvider extends SqliteMemoryProvider {
     const old = rows.slice(0, Math.max(0, rows.length - 10));
     const blocks = [];
     const sources = [];
+    const sourceIds = new Set();
     let used = 0;
     let truncated = false;
     const add = (text, source = null, order = 0) => {
@@ -37,16 +38,23 @@ export class OliviaSoulSqliteMemoryProvider extends SqliteMemoryProvider {
       const selected = text.length > available ? (text.slice(0, Math.max(0, available - suffix.length)) + suffix).slice(0, available) : text;
       blocks.push({ text: selected, order }); used += selected.length + (blocks.length > 1 ? 2 : 0);
       truncated ||= selected.length < text.length;
-      if (source) sources.push({ source_letter_id: source.id });
+      if (source) {
+        sources.push({ source_letter_id: source.id });
+        sourceIds.add(source.id);
+      }
     };
     // 老摘要是历史概览，近期原文优先占预算；不把两个版本的当前关系重复注入。
     const bulkValid = state?.bulk_summary && info.version === MEMORY_VERSION && Array.isArray(info.bulkHashes)
       && info.bulkHashes.every((hash, index) => old[index] && exchangeHash(old[index]) === hash);
-    for (const row of [...recent].reverse()) add('近期往来 ' + row.id + ' ' + row.created_at + '\n来信：' + row.body + '\n回信：' + row.reply, row, 100 + recent.indexOf(row));
+    for (let index = recent.length - 1; index >= 0; index -= 1) {
+      const row = recent[index];
+      add('近期往来 ' + row.id + ' ' + row.created_at + '\n来信：' + row.body + '\n回信：' + row.reply, row, 100 + index);
+    }
     if (bulkValid) add('十封以前五段式回忆（当时状态，较新原文优先）：\n' + state.bulk_summary);
-    for (const row of middle) {
+    for (let index = 0; index < middle.length; index += 1) {
+      const row = middle[index];
       const cached = summaries.get(row.id);
-      add('逐封摘要 ' + row.id + '：' + (cached?.content_md5 === exchangeHash(row) ? cached.summary : '摘要待更新；来信：' + row.body + '\n回信：' + row.reply), row, 50 + middle.indexOf(row));
+      add('逐封摘要 ' + row.id + '：' + (cached?.content_md5 === exchangeHash(row) ? cached.summary : '摘要待更新；来信：' + row.body + '\n回信：' + row.reply), row, 50 + index);
     }
     // 检索出错仅影响补充证据，不丢弃已有有效记忆。
     let retrieval;
@@ -55,11 +63,12 @@ export class OliviaSoulSqliteMemoryProvider extends SqliteMemoryProvider {
     for (const item of retrieval.evidence) add('旧信原文证据 ' + item.letterId + ' md5:' + item.contentMd5
       + '\n来信：' + item.incoming + '\n回信：' + item.reply, { id: item.letterId }, 10 + item.order);
     const uncovered = old.slice(bulkValid ? info.bulkHashes.length : 0);
-    for (const row of uncovered) {
-      if (sources.some(source => source.source_letter_id === row.id)) continue;
+    for (let index = 0; index < uncovered.length; index += 1) {
+      const row = uncovered[index];
+      if (sourceIds.has(row.id)) continue;
       const cached = summaries.get(row.id);
       add('尚未并入旧信回忆 ' + row.id + '：' + (cached?.content_md5 === exchangeHash(row) ? cached.summary
-        : '来信：' + row.body + '\n回信：' + row.reply), row, 5 + uncovered.indexOf(row) / Math.max(1, uncovered.length));
+        : '来信：' + row.body + '\n回信：' + row.reply), row, 5 + index / Math.max(1, uncovered.length));
     }
     const latest = rows.at(-1);
     const ledgerIndex = rows.findIndex(row => row.id === info.ledgerThrough);

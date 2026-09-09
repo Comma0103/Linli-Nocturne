@@ -66,6 +66,23 @@ test('分层记忆按 5/5/旧信增量整理，原文在窗口之外仍可检索
   assert.ok(recalled.context.indexOf(ids[7]) < recalled.context.indexOf(ids[11]), '近期往来按时间顺序呈现');
 });
 
+test('长历史记忆保持有界上下文且不重复来源', async t => {
+  const store = new SqliteStore(); t.after(() => store.close());
+  const base = Date.parse('2026-01-01T00:00:00.000Z');
+  for (let index = 0; index < 300; index += 1) {
+    const id = `history-${index}`;
+    const createdAt = new Date(base + index * 60_000).toISOString();
+    store.insertLetter({ id, recipient: '林离', body: `旧信 ${index}`, createdAt, availableAt: createdAt });
+    store.db.prepare("UPDATE letters SET status = 'replied', reply = ?, memory_allowed = 1 WHERE id = ?").run(`回信 ${index}`, id);
+  }
+  const memory = new OliviaSoulSqliteMemoryProvider({ store, maxContextChars: 4_000,
+    retrieval: async () => ({ evidence: [], queryCount: 0 }) });
+  const recalled = await memory.recall({ contextLimit: 4_000, letter: { body: '新信' } });
+  assert.ok(recalled.context.length <= 4_000);
+  const sourceIds = recalled.episodes.map(episode => episode.source_letter_id);
+  assert.equal(new Set(sourceIds).size, sourceIds.length);
+});
+
 test('摘要提示词直接来自上游实际文件，模型连接仍可替换', async () => {
   const prompts = loadSoulMemoryPrompts();
   const received = [];
