@@ -14,6 +14,20 @@ test('OpenAI 兼容 provider 传入本地时间上下文，而不是只传 UTC',
   assert.equal(context.localHour, 22); assert.equal(context.timeOfDay, '深夜');
 });
 
+test('explicit Harness and memory tasks preserve their assembled user message without a second letter wrapper', async () => {
+  const payloads = [];
+  const provider = new OpenAICompatibleProvider({ endpoint: 'http://example.test/v1', model: 'test', systemPrompt: 'default persona',
+    fetchImpl: async (_url, init) => { payloads.push(JSON.parse(init.body)); return new Response(JSON.stringify({ choices: [{ message: { content: 'result' } }] })); } });
+  const prompt = '从历史初始化账本。\n' + JSON.stringify({ currentLetter: { body: '今天练了钢琴' }, history: '一份历史' });
+  await provider.generate({ system: '预检员，只检查 currentLetter.body', prompt, memory: '不得重复追加', persona: '不得重复追加' });
+  assert.deepEqual(payloads[0].messages, [{ role: 'system', content: '预检员，只检查 currentLetter.body' }, { role: 'user', content: prompt }]);
+  await provider.generate({ system: '', prompt: '独立任务' });
+  assert.deepEqual(payloads[1].messages, [{ role: 'user', content: '独立任务' }]);
+  await provider.generate({ system: null, prompt: '普通来信', memory: '保留历史' });
+  assert.equal(JSON.parse(payloads[2].messages[1].content).currentLetter.body, '普通来信');
+  assert.equal(JSON.parse(payloads[2].messages[1].content).history, '保留历史');
+});
+
 test('provider chain uses external, local and fallback through one generate contract', async () => {
   const calls = [];
   const external = new ExternalApiProvider({ generate: async () => { calls.push('external'); return { text: '外部回信' }; } });

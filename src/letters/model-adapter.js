@@ -132,7 +132,9 @@ export class OpenAICompatibleProvider extends FunctionProvider {
         headers: { 'content-type': 'application/json', authorization: `Bearer ${apiKey}` },
         body: JSON.stringify({ model, messages: [
           ...(systemText ? [{ role: 'system', content: systemText }] : []),
-          { role: 'user', content: JSON.stringify({ currentLetter: { sender: userDisplayName, recipient, body: prompt }, history: memory,
+          // Explicit systems belong to already assembled Harness/memory tasks.
+          // Wrapping their instructions as a new letter makes precheck screen the task itself.
+          { role: 'user', content: system != null ? String(prompt) : JSON.stringify({ currentLetter: { sender: userDisplayName, recipient, body: prompt }, history: memory,
             ...(previousState ? { relationshipState: previousState } : {}),
             ...(now ? { now, timeZone, localDateTime, localHour, timeOfDay } : {}) }) },
         ] }),

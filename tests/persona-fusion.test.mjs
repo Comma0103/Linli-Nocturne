@@ -221,6 +221,7 @@ for (const kind of ['external-api', 'local-model']) test(`真实 PowerShell 四�
     assert.doesNotMatch(call.body.messages[0].content, /不超过\s*200\s*字|到\s*220\s*字/u);
     assert.doesNotMatch(call.body.messages[0].content, /昨天听了雨/u);
     assert.match(call.body.messages[1].content, /昨天听了雨/u);
+    assert.doesNotMatch(call.body.messages[1].content, /^\{"currentLetter":/u, '阶段指令不能被二次包装成用户来信');
     assert.doesNotMatch(call.body.messages[1].content, /素材 craft|素材 examples/u);
   }
   assert.match(received[1].body.messages[0].content, /至少一个具体细节/u);
