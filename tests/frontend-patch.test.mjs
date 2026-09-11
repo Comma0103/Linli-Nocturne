@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { strFromU8, strToU8, unzipSync, zipSync } from 'fflate';
 import { applyFrontendPatch, applyOfflineMidiFeaturePatch, applyOfflineUserSongPatch, inspectFrontendArchive, OFFLINE_FEATURE_PATCHES, planFrontendPatch } from '../src/patcher/frontend-archive.js';
+import { coverSource } from './fixtures/playlist-cover.mjs';
 
 const endpoints = ['/signIn', '/getUserInfo', '/letter/send', '/letter/list', '/letter/detail', '/letter/unread_count', '/letter/share', '/letter/resend', '/addToPlaylist', '/delFromPlaylist', '/searchPlaylist'];
 const midiEndpoints = ['/genObjectUploadUrl', '/midi/generate', '/midi/getGenerateResult', '/midi/cancelGenerate', '/midi/deleteJob', '/midi/listJobs', '/midi/batchGetResult', '/midi/importShareCode', '/searchUserSongs'];
@@ -41,6 +42,7 @@ test('frontend patch applies audited offline feature gates only when all signatu
     'const i=h1(xs(At(t)?s:t)).map(a=>Qo(a)),',
     'async function An(e,t){return Te.post("/addToPlaylist",{itemType:e.itemType,itemId:e.itemId},t).then(s=>{const i=s.data;return i})}',
     'async function Us(e,t){return Te.get("/searchPlaylist").then(s=>({list:s.data.list.map(i=>({...i,itemId:i.itemId,id:i.itemId}))}))}',
+    coverSource,
   ]).join(';');
   const fixtureWithOfflineGates = zipSync({ 'assets/main-offline.js': strToU8(offlineSource) });
   const result = applyFrontendPatch(fixtureWithOfflineGates, { serviceUrl: 'http://127.0.0.1:27149', includeMidi: true, includeOfflineFeatures: true });

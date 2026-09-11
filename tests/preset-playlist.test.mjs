@@ -5,7 +5,8 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { zipSync, strToU8 } from 'fflate';
 import { createLocalApp } from '../src/app/local-app.js';
-import { applyOfflinePresetPlaylistPatch, inspectFrontendArchive } from '../src/patcher/frontend-archive.js';
+import { applyOfflinePresetPlaylistPatch, applyPlaylistCoverFallbackPatch, inspectFrontendArchive } from '../src/patcher/frontend-archive.js';
+import { coverSource } from './fixtures/playlist-cover.mjs';
 
 // Audited 0.0.9.627 API functions: both callers originally send/return only IDs.
 const source = `/*LinliNocturnePatch:compat-routes-v1*/
@@ -23,20 +24,23 @@ test('preset patch preserves assets, is idempotent and rejects missing or duplic
   assert.throws(() => applyOfflinePresetPlaylistPatch(archive(source.replace('LinliNocturnePatch', 'OtherPatch'))), /marker/);
 });
 
-test('patched preset playlist restores legacy rows and persists playable metadata through the real gateway', async () => {
+for (const snakeCase of [false, true]) test(`patched preset playlist restores legacy rows and persists playable metadata (${snakeCase ? 'Steam snake_case wire format' : 'camelCase'})`, async () => {
   const root = mkdtempSync(join(tmpdir(), 'linli-preset-playlist-'));
   const options = { dataRoot: root, settingsPath: join(root, 'missing.json'), port: 0, env: {} };
   let app = createLocalApp(options);
   let base;
+  const toWire = value => Array.isArray(value) ? value.map(toWire)
+    : value && typeof value === 'object' ? Object.fromEntries(Object.entries(value).map(([key, item]) => [key.replace(/[A-Z]/gu, char => '_' + char.toLowerCase()), toWire(item)])) : value;
   const transport = async (path, body) => {
-    const response = await fetch(base + path, { method: body ? 'POST' : 'GET', headers: { 'content-type': 'application/json' }, body: body ? JSON.stringify(body) : undefined });
+    // Steam's request interceptor converts keys recursively before sending JSON.
+    const response = await fetch(base + path, { method: body ? 'POST' : 'GET', headers: { 'content-type': 'application/json' }, body: body ? JSON.stringify(snakeCase ? toWire(body) : body) : undefined });
     assert.equal(response.status, 200);
     return response.json();
   };
   const view = { isOfflineMode: true };
   const song = { id: '1016', name: 'Preset test', nameKey: 'Solo_Test', iconUrl: 'test.png', audioDuration: 162, videoDuration: 165,
     performanceType: 'Solo', videoUrl: 'https://example.invalid/Solo_Test_TOD1730_NI_L.mp4',
-    videoByTodView: [1200, 1730, 2000].map(tod => ({ tod, url: `https://example.invalid/Solo_Test_TOD${tod}_NI_L.mp4`, duration: 165 })) };
+    videoByTodView: [1200, 1730, 2000].map(tod => ({ tod, view: 'NI', url: `https://example.invalid/Solo_Test_TOD${tod}_NI_L.mp4`, coverUrl: 'cover.png', duration: 165 })) };
   let loads = 0;
   const catalog = { songs: [], async load() { loads++; await Promise.resolve(); this.songs = [song]; } };
   const patched = inspectFrontendArchive(applyOfflinePresetPlaylistPatch(archive(source)).buffer).source;
@@ -48,6 +52,7 @@ test('patched preset playlist restores legacy rows and persists playable metadat
     assert.equal(item.songId, '1016');
     assert.equal(item.name, song.name);
     assert.equal(item.nameKey, song.nameKey);
+    assert.equal(item.iconUrl, song.iconUrl);
     assert.equal(item.videoDuration, 165);
     assert.equal(item.duration, 162);
     assert.equal(item.performanceType, 'Solo');
@@ -84,4 +89,25 @@ test('patched preset playlist restores legacy rows and persists playable metadat
     assert.equal(app.store.compatPlaylist().some(x => x.itemType === 2 && x.itemId === '1016'), false);
     assert.equal(app.store.compatPlaylist().find(x => x.itemType === 3).name, 'Uploaded MIDI');
   } finally { await app.stop(); rmSync(root, { recursive: true, force: true }); }
+});
+
+test('playlist cover retains available images and shows the same note for missing or failed images', () => {
+  const original = '/*LinliNocturnePatch:compat-routes-v1*/' + coverSource;
+  const result = applyPlaylistCoverFallbackPatch(archive(original));
+  assert.equal(applyPlaylistCoverFallbackPatch(result.buffer).alreadyPatched, true);
+  assert.throws(() => applyPlaylistCoverFallbackPatch(archive(original + coverSource)), /contract mismatch/);
+  assert.throws(() => applyPlaylistCoverFallbackPatch(archive(original.replace('src:o(d)', 'src:changed'))), /contract mismatch/);
+  const node = (type, props, children) => ({ type, props, children });
+  const api = new Function('o', 'r', '_', 'ae', 'Y', 'F', 'w', 'sx', 'k', 'x', 'V', 'n', 'Ue',
+    inspectFrontendArchive(result.buffer).source + ';return {imageError,playlistCover};')(
+    value => value, () => {}, node, value => value, () => null, node, 'BaseImage', {}, node, 'Icon', value => value, node, (slots, name) => slots[name]?.());
+  const missing = api.playlistCover('', { song: { name: 'Missing' } });
+  const present = api.playlistCover('cover.png', { song: { name: 'Available' } });
+  assert.equal(present.type, 'BaseImage');
+  assert.equal(present.props.src, 'cover.png');
+  assert.equal(api.imageError(false, { $slots: present.children }), null);
+  const failed = api.imageError(true, { $slots: present.children });
+  assert.deepEqual(failed.children[0][0].children[0], missing.children[0]);
+  assert.equal(missing.children[0].props.type, 'perform');
+  assert.equal(api.imageError(true, { $slots: {} }).children[0], undefined); // Other image callers keep their existing fallback.
 });

@@ -248,6 +248,16 @@ export function createLocalGateway({ letterService, musicService = null, midiJob
       if (request.method === 'POST' && url.pathname === '/toy/addToPlaylist') {
         if (!musicService) return sendJson(response, 503, { code: 503, message: 'music_service_unavailable' });
         const body = await readJson(request);
+        // Steam's request interceptor recursively converts these keys to snake_case.
+        for (const field of ['nameKey', 'sourceName', 'iconUrl', 'coverUrl', 'songId', 'performanceId', 'videoDuration', 'videoUrl', 'mediaUrl', 'performanceType', 'videoByTodView']) {
+          body[field] ??= body[field.replace(/[A-Z]/gu, char => '_' + char.toLowerCase())];
+        }
+        if (Array.isArray(body.videoByTodView)) body.videoByTodView = body.videoByTodView.map(view => {
+          if (!view || typeof view !== 'object') return view;
+          const { cover_url, ...normalized } = view;
+          if (cover_url != null) normalized.coverUrl ??= cover_url;
+          return normalized;
+        });
         const itemType = Number(body.itemType ?? body.item_type);
         const itemId = String(body.itemId ?? body.item_id ?? body.id ?? body.songId ?? body.song_id ?? body.performanceId ?? body.performance_id ?? '').trim();
         if (!Number.isInteger(itemType) || !itemId) return sendJson(response, 400, { code: 400, message: 'playlist_item_incomplete' });

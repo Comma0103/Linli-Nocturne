@@ -124,6 +124,13 @@ export function applyOfflinePresetPlaylistPatch(buffer) {
   return applyKnownPatchSet(buffer, OFFLINE_PRESET_PLAYLIST_PATCHES, 'Offline preset playlist patch');
 }
 
+export function applyPlaylistCoverFallbackPatch(buffer) {
+  return applyKnownPatchSet(buffer, [
+    { id: 'image-error-slot', from: 'o(a)?(r(),_("div",{key:0,class:ae(["w-full h-full bg-grey-2",[{"rounded-2":p.rounded}]])},null,2))', to: 'o(a)?(r(),_("div",{key:0,class:ae(["w-full h-full bg-grey-2",[{"rounded-2":p.rounded}]])},[Ue(p.$slots,"error")],2))', expected: 1 },
+    { id: 'playlist-cover-error-note', from: 'F(w,{key:0,src:o(d),alt:y.song.name,class:"w-full h-full object-cover"},null,8,["src","alt"])', to: 'F(w,{key:0,src:o(d),alt:y.song.name,class:"w-full h-full object-cover"},{error:V(()=>[n("div",{class:"w-full h-full flex items-center justify-center"},[k(x,{class:"text-title-m text-primary-2",type:"perform"})])]),_:1},8,["src","alt"])', expected: 1 },
+  ], 'Playlist cover fallback patch');
+}
+
 function applyOfflinePreviewPatch(source, serviceUrl) {
   const patch = OFFLINE_MIDI_SUBMIT_PATCHES.find(item => item.id === 'offline-preview-local-media');
   if (!patch || occurrenceCount(source, patch.from) !== 1) return source;
@@ -187,5 +194,5 @@ export function applyFrontendPatch(buffer, options) {
   }
   const entries = { ...inspected.entries, [plan.mainPath]: strToU8(source) };
   const patchedBuffer = zipSync(entries, { level: 6 });
-  return { ...plan, alreadyPatched: false, buffer: plan.includeOfflineFeatures ? applyOfflinePresetPlaylistPatch(patchedBuffer).buffer : patchedBuffer };
+  return { ...plan, alreadyPatched: false, buffer: plan.includeOfflineFeatures ? applyPlaylistCoverFallbackPatch(applyOfflinePresetPlaylistPatch(patchedBuffer).buffer).buffer : patchedBuffer };
 }
