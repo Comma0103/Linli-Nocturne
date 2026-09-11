@@ -6,6 +6,8 @@
 
 在线验收如需禁止离线兜底，可在自己的第四套配置中设置 `letters.fallbackEnabled: false`。耗时较长的模型可显式设置 `letters.baseModel.external.timeoutMs`（毫秒，例如 `180000`）；未设置时当前 OpenAI 兼容 provider 使用 15000 毫秒。单次请求超时与 `letters.harness.timeoutMs` 的整个流程超时是两项不同限制。修改后需重启服务；实际成功应以执行记录中的在线 provider、Harness 各阶段和记忆元数据确认。
 
+本机后续 Steam 测试默认使用第四套组合：DeepSeek 外部 provider、`linli.persona-bundle`、`linli.fusion-v1` 和 `olivia-soul.sqlite` 持久记忆，关闭 fallback，并把外部模型超时设为 180000 毫秒。测试时可将 `letters.dailyLimitBypass` 设为 `true`；该开关同时覆盖写信和 MIDI 定制演奏的每日用量显示，客户端仍保留 `dailyLimit=3` 作为协议上限。私有 `config/user-config.json` 已被 Git 忽略，API Key 不写入本文或提交；示例模板继续保持无密钥、可离线启动。
+
 README 只介绍通用启动流程。本页先解释所有配置属性，再按信件、预设曲库和上传曲子等功能给出配置示例。配置保存后必须重启本地服务。
 
 当前主分支提供 `olivia-lin.offline`、`linli.persona-bundle`、`linli.fusion-v1` 和 `persona-contract`；这些资产已随仓库提供，不需要另行下载。
@@ -55,7 +57,7 @@ README 只介绍通用启动流程。本页先解释所有配置属性，再按�
 | `letters.systemPrompt`                  | 字符串                                                                      | 内置中文林离提示词         | 可选的基础模型系统提示词，会传给外部或本地 OpenAI 兼容 provider。                                             |
 | `letters.fallbackEnabled`               | 布尔值                                                                      | `true`                     | 普通外部或本地 provider 失败时是否允许回到可用的 fallback。完整 OliviaSoul Harness 的降级边界仍由其实现决定。 |
 | `letters.outputPolicy.providerId` | `persona-contract` 或 `none` | `persona-contract` | 保存前按所选 Persona 整理回信；林离素材包把玩家称呼放在首行，规范末尾 `—— 林离`。不强制时间/天气起首，不追加回信邀请。 |
-| `letters.dailyLimitBypass`              | 布尔值                                                                      | `false`                    | `true` 时跳过每日 3 封和 5 分钟等待，适合本地测试；不改变游戏中仍可写信的协议返回。                           |
+| `letters.dailyLimitBypass`              | 布尔值                                                                      | `false`                    | `true` 时跳过写信每日 3 封和 5 分钟等待，并让 MIDI 定制演奏的 `generatedToday` 返回 0，适合本地测试；不改变游戏中仍可写信的协议上限。 |
 
 #### Persona、Harness 和记忆
 
@@ -124,7 +126,7 @@ README 只介绍通用启动流程。本页先解释所有配置属性，再按�
 | 1. 最简单离线回信 | `offline-fallback` | 无 | 关闭 | 关闭 | 只验证服务和游戏链路，回信最简单 |
 | 2. 离线人格回信 | `olivia-lin.offline` | `linli.persona-bundle` | 关闭 | `sqlite` 或 `olivia-soul.sqlite` | 无需 API Key 的离线使用 |
 | 3. DeepSeek 直连 | `external.openai-compatible` | `linli.persona-bundle` | 关闭 | `sqlite` 或 `olivia-soul.sqlite` | DeepSeek 直接生成回信 |
-| 4. DeepSeek + Persona + Fusion Harness | `external.openai-compatible` | `linli.persona-bundle` | `linli.fusion-v1` | 推荐 `olivia-soul.sqlite` | 当前推荐的完整统一流程 |
+| 4. DeepSeek + Persona + Fusion Harness | `external.openai-compatible` | `linli.persona-bundle` | `linli.fusion-v1` | 推荐 `olivia-soul.sqlite` | 当前本机测试默认的完整统一流程 |
 | 5. DeepSeek + Persona + OliviaSoul v18 | `external.openai-compatible` | 通常为 `file` | `olivia-soul-v18` | 必须关闭项目记忆 | 旧版独立流程，Harness 自己管理记忆 |
 | 6. 本地模型直连 | `local.openai-compatible` | `linli.persona-bundle` | 关闭 | `sqlite` 或 `olivia-soul.sqlite` | 使用本机 OpenAI 兼容模型 |
 | 7. 本地模型 + Fusion Harness | `local.openai-compatible` | `linli.persona-bundle` | `linli.fusion-v1` | 推荐 `olivia-soul.sqlite` | 本地模型的完整统一流程 |

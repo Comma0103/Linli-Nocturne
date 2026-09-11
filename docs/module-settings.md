@@ -4,6 +4,8 @@
 
 Phase 4-2 的模块选择验收已完成，范围是配置文件、终端向导和真实启动装配；当前没有游戏内 Renderer/Encoder 图形选择页。普通用户优先使用 `node scripts/configure-modules.mjs --user-config config/user-config.json`，保存后重启服务；已有 user-config 时仅修改下面的 module-settings 不会覆盖它。
 
+2026-09-11 收尾验收使用的默认本机组合是 DeepSeek 外部 provider、`linli.persona-bundle`、`linli.fusion-v1` 和 `olivia-soul.sqlite`。该选择已在 Steam `0.0.9.627` 中完成在线回信、持久记忆和 MIDI/歌单回归；`letters.dailyLimitBypass` 属于 `user-config.json` 的运行策略，不是模块 ID，启动时会同时传给信件和 MIDI 服务。
+
 校验示例：
 
 ```powershell

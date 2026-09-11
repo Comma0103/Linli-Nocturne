@@ -19,3 +19,7 @@
 每封信的执行记录保存实际 provider、模型、Harness、Persona 哈希、记忆来源、阶段和降级原因；不保存 API Key、请求头、完整 Prompt 或推理过程。旧信缺少这些字段时标记为未知。
 
 实验保留 `olivia-soul-v18` 作为独立旧适配器；默认融合实现是 `linli.fusion-v1`，两者都不是框架唯一实现。
+
+## 2026-09-11 验收记录
+
+本机最终测试使用 `linli.persona-bundle`、`linli.fusion-v1` 和 `olivia-soul.sqlite`，DeepSeek 请求、Persona、Harness 阶段和持久记忆均有执行元数据并通过 Steam 回归。该组合是当前本机测试默认值，不改变第三方实现可替换的设计边界。

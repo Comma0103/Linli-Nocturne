@@ -6,6 +6,8 @@ Game Client -> Local Gateway -> Domain Services -> Stores and Renderers
 
 以下同时包含已实现模块和目标架构；Phase 4-1 至 4-4 的实现边界以 [Phase 4 总览](./phase4.md) 为准，DesktopApp、视频生成和 3D Renderer 尚未交付。
 
+2026-09-11 收尾验收确认了已有视频资产播放、第四套在线信件组合和原生 MIDI/歌单回归；这些是现有 `VideoAssetService`、LetterService 和 MusicService 链路的实机证据，不把合成视频播放扩展为自动视频生成，也不改变 DesktopApp、VideoGenerator 或 Future3DRenderer 的后续状态。
+
 - PatchManager：版本识别、备份、补丁、校验、回滚。
 - LocalGateway：兼容游戏前端的登录、信件、音乐、歌单和媒体接口。
 - LetterService：额度、延迟、状态领取、生成、检查、重试和记忆。

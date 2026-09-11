@@ -97,6 +97,12 @@ const adapter = createConfiguredModelAdapter({
 
 这次复验覆盖当时实验分支新增的 Persona 组合、持续记忆和执行留痕；相关代码和文档随后已随 `phase3-letter-fusion-v1.0.0` 合入 `main`。
 
+### 2026-09-11：第四套在线配置收尾复核
+
+本轮实验分支将本机 Steam 测试默认保持为 DeepSeek + `linli.persona-bundle` + `linli.fusion-v1` + `olivia-soul.sqlite`，外部模型超时为 180000 毫秒，`fallbackEnabled=false`。最新在线信件 `68ab08d0-c87a-4b6e-9a46-e8500c846323` 的 `precheck`、`draft`、`check`、`rewrite`、`recheck` 全部完成，执行记录标记实际 provider 为 `external-api`，无 fallback 或 provider 失败；记忆上下文也已写入并可读取。
+
+同一轮复核确认 `letters.dailyLimitBypass=true` 由启动装配同时传给 LetterService 和 MidiJobService。它只改变本地测试的每日用量显示与等待限制，不改变游戏协议；MIDI 批量结果实测返回 `generatedToday=0`、`dailyLimit=3`。用户已在 Steam 中完成对应在线写信和定制演奏回归，并确认本轮最终验收通过。私有配置和密钥仍不进入仓库，实验分支提交 `c18de54` 尚未合并 `main`。
+
 ## 本轮完成边界
 
-本轮完成“连接和复用 provider”以及一次真实 Steam 模型验收。人格质量沿用 OliviaSoul 的 Harness 规则；其他模型、Persona 和 Harness 仍可通过统一接口和模块设置替换。
+本轮完成“连接和复用 provider”以及真实 Steam 模型验收；2026-09-11 又完成第四套在线配置、持久记忆和 bypass 的收尾复核。人格质量沿用 OliviaSoul 的 Harness 规则；其他模型、Persona 和 Harness 仍可通过统一接口和模块设置替换。上述结论只覆盖已验证的模型、客户端版本和配置组合，不宣称所有外部 provider 或所有机器均已验收。

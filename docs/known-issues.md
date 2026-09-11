@@ -65,9 +65,17 @@
 
 ## Phase 4-2：歌单与试听修复已验收
 
-2026-09-09，用户确认歌单已显示原文件名，点击可以演奏；加入、去重、移除且保留上传曲目均正常。预设试听改用本地缓存，最终 localhost 版本已重启复测通过，三类预设样本和上传 MIDI 都能发声。日志仍有 Mixed Content 警告，不能单凭警告推翻用户实际播放结果；证据和接口回归见 [Phase 4-2](./phase4-2-library-playlist-and-module-entry.md)。
+2026-09-09，用户确认歌单已显示原文件名，点击可以演奏；加入、去重、移除且保留上传曲目均正常。预设试听改用本地缓存，最终 localhost 版本已重启复测通过，三类预设样本和上传 MIDI 都能发声。2026-09-11，预设歌单元数据/封面占位补丁已应用到真实 Steam 客户端，用户确认旧条目和新加入条目均可正确显示并进入演奏。日志仍有 Mixed Content 警告，不能单凭警告推翻用户实际播放结果；证据和接口回归见 [Phase 4-2](./phase4-2-library-playlist-and-module-entry.md)。
 
 保留边界：试听独立于底部演奏栏；缺失或采用哈希文件名的预设缓存尚不能由当前命名解析器识别。现有验收未遍历全曲库，不声明全部资源均可试听。
+
+## 2026-09-11 收尾复核：在线配置、bypass 与视频回信
+
+实验分支的最新在线回信 `68ab08d0-c87a-4b6e-9a46-e8500c846323` 已完成 `precheck`、`draft`、`check`、`rewrite`、`recheck`，实际 provider 为 `external-api`，配置为 DeepSeek + `linli.persona-bundle` + `linli.fusion-v1` + `olivia-soul.sqlite`，无 fallback 或 provider 失败。历史信件保留原有 `offline-fallback` 记录，不与本轮结果混淆。
+
+提交 `c18de54` 已让 `letters.dailyLimitBypass=true` 同时作用于信件和 `MidiJobService` 的每日用量：客户端仍看到 `dailyLimit=3`，但 `generatedToday=0`，定制演奏不会因测试递减。三条合成视频回信的播放入口和弹窗播放也已由用户在 Steam 中确认通过。
+
+本轮最终结论以用户的 Steam 实机确认作为验收证据；HTTP、任务状态和脱敏日志只用于辅助定位，不能替代声音、画面或自然结束的人工观察。外部音乐导入、宽松演奏、视频自动生成、3D 表现和发行安装器仍是未完成项。
 
 ## 从原版安装全部增量补丁：待整合
 

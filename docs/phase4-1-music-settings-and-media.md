@@ -70,3 +70,7 @@
 - 任务 `c842728e-2089-4395-bb4b-25d2f9739802` 进入 `produced`，媒体时长 10.25 秒，并成功写入原版 `songStoragePath`。
 - 客户端随后发出本地 MP4 的 `sendWebPlayerControlCmd`，持续收到 `currentTime` 进度事件并自然结束。
 - 此处记录的是音频 MP4、黑屏演奏和声音，不包括人物演奏视频或精确 3D 动画。歌单入口和最终 localhost 试听复验也已通过，记录归入 Phase 4-2。
+
+### 2026-09-11 收尾复核
+
+在上述生命周期验收基础上，实验分支又完成了预设歌单元数据/封面回退和 MIDI `bypass` 的 Steam 回归。用户确认上传 MIDI 与预设歌单均能进入演奏；`bypass=true` 时客户端每日结果保持 `dailyLimit=3`、`generatedToday=0`。本记录仍只覆盖音频媒体和黑屏演奏，不延伸到人物视频或 3D 同步。

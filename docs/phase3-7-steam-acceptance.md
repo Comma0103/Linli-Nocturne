@@ -61,3 +61,5 @@ Invoke-RestMethod http://localhost:27149/health
 
 本项是 Phase 3-7 的离线 fallback 用户路径验收；后续真实模型验收已完成，Phase 3 已整体收尾。2026-09-09，Phase 4-1 至 4-4 也已验收，`LINLI-PLAY-001` 已由 Phase 4-3/4-4 定位并修复；当前进度见 [Phase 4 总览](./phase4.md)，不在本项重复调查。
 
+2026-09-11 收尾说明：本页记录的离线 fallback 路径仍保持通过；同一 Steam 客户端的第四套在线配置、MIDI/歌单和合成视频回信回归已由用户在当前实验分支中另行确认。在线配置和持久记忆细节见 [Phase 3-2](./phase3-2-provider-and-harness.md)，不把本页的离线记录改写为在线证据。
+

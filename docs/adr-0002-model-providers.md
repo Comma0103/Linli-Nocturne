@@ -7,3 +7,7 @@
 ## 结果
 
 用户首次配置时可以通过 ModuleSettings 选择 provider、Harness、人格和记忆实现；高级设置允许按任务切换。API Key、端点和模型名不写入信件内容，也不进入 Git。外部/本地 provider 的具体网络或进程调用由调用方注入，便于用 fake provider 验证协议而不依赖真实服务。
+
+## 2026-09-11 验收回归
+
+第四套 DeepSeek + Persona + Fusion Harness + SQLite 持久记忆已在 Steam 中完成在线回信复核；`fallbackEnabled=false` 时执行记录显示实际 `external-api` provider 和完整 Harness 阶段。`dailyLimitBypass` 是本地测试策略，不改变 provider 选择，也不把历史 fallback 结果改写成在线结果。

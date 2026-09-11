@@ -37,3 +37,7 @@
 
 时区、最大尝试次数和重试延迟均为服务构造参数。外部 API 的端点、模型名和凭据只由 provider 配置持有，不写入 Letter 内容、SQLite 信件正文或 Git；真实网络 provider 和后台 worker 不属于本页首个里程碑范围，后续实现见上面的专项文档。
 
+## 2026-09-11 回归说明
+
+本里程碑的额度、等待、状态和重试契约继续作为第四套在线配置与 Steam 收尾验收的基础；`letters.dailyLimitBypass=true` 只在本地测试时放开额度/等待，不改变默认每日 3 封规则或游戏兼容字段。最新实验分支自动化回归保持通过，具体在线 provider 与持久记忆证据见 [Phase 3-2](./phase3-2-provider-and-harness.md)。
+

@@ -44,3 +44,7 @@
 ## 后续
 
 本轮提供设置后端和清晰配置文件；最终面向普通用户的图形设置界面在 Phase 7 使用同一份设置格式，不另造一套配置协议。
+
+## 2026-09-11 回归说明
+
+`ModuleRegistry` 的选择边界已在第四套在线配置和音乐回归中实际装配：DeepSeek provider、Persona、Fusion Harness、持久记忆、原生 PlaybackAdapter 和音频 Encoder 均由配置解析，不把实现写死在领域服务。游戏内图形设置页和完整安装器仍属于 Phase 7。
