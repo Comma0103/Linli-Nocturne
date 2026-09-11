@@ -108,8 +108,6 @@ notepad config/user-config.json
 
 只修改 `config/user-config.json`，不要修改模板。这个文件已被 Git 忽略。完整的 `user-config.json` 属性说明、允许取值，以及信件、预设曲库、上传 MIDI、视频回信和记忆等功能的配置示例，见 [`docs/user-config.md`](./docs/user-config.md)。
 
-本机 Steam 测试使用的第四套配置为 DeepSeek + `linli.persona-bundle` + `linli.fusion-v1` + `olivia-soul.sqlite`，并关闭 fallback、把外部模型超时设为 180000 毫秒；测试时可将 `letters.dailyLimitBypass` 设为 `true`，它同时作用于信件和 MIDI 定制演奏的每日用量显示。该私有配置不提交到仓库；示例模板仍保持无密钥、可离线启动。
-
 ### 2. 启动本地服务
 
 配置保存后，在仓库根目录执行，并保持窗口运行：
@@ -122,8 +120,6 @@ Invoke-RestMethod http://localhost:27149/health
 也可以双击 `scripts/start-local-service.cmd` 启动服务。
 
 `privacy.allowExternalModelRequests` 默认是 `true`。如果不希望来信或启用的记忆发送给外部模型，可将它改为 `false`；此时选择 `external.openai-compatible` 会阻止服务启动。只测试 MIDI 时仍可选择离线 provider。
-
-如果旧命令 `node scripts/start-local-service.mjs` 提示“node 不是命令”，请重新打开 PowerShell 后使用上面的仓库启动脚本；脚本会自动寻找常见 Node.js 安装位置。仍未找到时，请先安装 Node.js 22 及以上版本。
 
 返回 `ok: true` 后，本地服务已经启动。修改配置后必须重启这个服务才会生效。
 
@@ -147,7 +143,7 @@ node scripts/apply-install.mjs "你的 Steam 游戏目录" "游戏目录外的�
 
 保持本地服务运行，启动已完成接入的 Steam 客户端，试用想使用的功能。
 
-当前可使用已经接入的信件、MIDI 上传与生成、曲库与歌单、试听和演奏，以及视频回信资产管理。上传曲目从“我的上传”和歌单进入演奏、预设曲目加入歌单后的播放、三条合成视频回信播放和第四套在线写信均已通过本轮 Steam 0.0.9.627 验收。首次从原版游戏安装全部增量补丁的流程仍待整合，见[游戏接入的交付边界](./docs/original-installation.md#当前交付边界2026-09-09)。
+当前可使用已经接入的信件、MIDI 上传与生成、曲库与歌单、试听和演奏，以及已有视频回信资产管理。首次从原版游戏安装全部增量补丁的流程仍待整合，见[游戏接入的交付边界](./docs/original-installation.md#当前交付边界2026-09-09)。
 
 ### 5. 管理记忆和迁移数据
 
@@ -336,13 +332,11 @@ music.addToPlaylist(track);
 
 总览与验收边界： [Phase 3 信件体验总览](./docs/phase3.md)。
 
-#### [x] Phase 3-7：Steam 游戏界面实机验收（离线 fallback，已通过）
+#### [x] Phase 3-7：Steam 游戏界面实机验收（已通过）
 
 用开发版本地服务和原版 0.0.9.627 客户端，已由用户实际验证发送信件、看到回信处理中状态，并在重新打开信件后看到文字回信正文。验收记录见 [Phase 3-7 Steam 实机验收](./docs/phase3-7-steam-acceptance.md)。
 
-设计和操作步骤见 [Phase 3-7 Steam 实机验收](./docs/phase3-7-steam-acceptance.md)。
-
-#### [x] Phase 3-8：真实模型 Steam 实机验收（DeepSeek + Persona + OliviaSoul Harness）（`243c3e4`）
+#### [x] Phase 3-8：真实模型 Steam 实机验收（`243c3e4`）
 
 使用 DeepSeek 外部模型、已内置 Persona 和 OliviaSoul Harness，在 Steam 界面完成真实回信测试；已确认模型请求成功、Harness 实际运行、Persona 生效，以及游戏内显示以玩家名字“嘉树”开头的完整回信正文。设计与验收记录见 [Phase 3 Provider 与 OliviaSoul Harness](./docs/phase3-2-provider-and-harness.md)。
 
@@ -362,7 +356,7 @@ Phase 4 的 7 个子阶段按依赖关系交叉推进，不是严格串行：4-1
 
 #### [x] Phase 4-2：曲库、歌单和模块选择入口
 
-用户曲库、歌单增删去重、曲目名称与歌单演奏已通过实机验收，预设与上传曲目试听也已复验；本轮补丁还修复了预设加入歌单后的数字标题、零时长和缺少音符占位问题。播放器适配器、渲染器和编码器通过配置文件或终端向导选择，配置加载、重启生效及旧媒体保留格式已通过自动化验证；游戏内图形设置页属于 Phase 7。
+用户曲库、歌单增删去重、曲目名称与歌单演奏已通过实机验收，预设与上传曲目试听也已复验；预设加入歌单后的标题、时长和封面占位正常。播放器适配器、渲染器和编码器通过配置文件或终端向导选择，配置加载、重启生效及旧媒体保留格式已通过自动化验证；游戏内图形设置页属于 Phase 7。
 
 设计与验收：[Phase 4-2 曲库、歌单和模块选择入口](./docs/phase4-2-library-playlist-and-module-entry.md)。
 
@@ -374,11 +368,7 @@ Phase 4 的 7 个子阶段按依赖关系交叉推进，不是严格串行：4-1
 
 #### [x] Phase 4-4：上传曲目 Steam 播放/演奏验收
 
-在独立备份和正确版本基线下，已验证上传曲目真正切换媒体、进入桌面演奏并完成进度推进；预设歌单元数据/封面回退修复和本轮最终 Steam 实机回归也已通过。
-
-#### 2026-09-11：实验分支收尾验收
-
-`f51d630` 合并预设歌单的 snake_case/camelCase 元数据兼容和封面失败占位，`c18de54` 让同一 `bypass` 开关覆盖信件与 MIDI 每日用量。代码自动化回归为 `pnpm test` 142/142；用户随后在 Steam 中确认预设歌单播放、在线回信、合成视频回信和相关回归路径均通过。上述提交仍保留在实验分支，等待后续明确的合并与打标签指令。
+在独立备份和正确版本基线下，已验证上传曲目真正切换媒体、进入桌面演奏并完成进度推进；预设歌单播放和 Steam 实机回归也已通过。
 
 #### [ ] Phase 4-5：外部歌单与歌曲导入
 

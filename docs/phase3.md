@@ -33,4 +33,4 @@ Phase 3 融合实现了第三方 Persona 素材包、Olivia-lin 离线人格引�
 
 ## 2026-09-11 收尾复核
 
-实验分支在最终 Steam 回归中再次确认第四套 DeepSeek + Persona + `linli.fusion-v1` + `olivia-soul.sqlite` 在线写信，以及三条合成视频回信资产播放。`letters.dailyLimitBypass=true` 同时覆盖信件和 MIDI 定制演奏的本地每日用量显示；这些收尾改动尚未合并到 `main`。Phase 3 的自动视频生成仍未实现，已有资产播放和自动生成继续按两条能力线记录。
+最终 Steam 回归再次确认第四套 DeepSeek + Persona + `linli.fusion-v1` + `olivia-soul.sqlite` 在线写信，以及三条合成视频回信资产播放。`letters.dailyLimitBypass=true` 同时覆盖信件和 MIDI 定制演奏的本地每日用量显示；这些收尾改动已合入 `main`，并由 `phase4-steam-acceptance-v1.0.0` 标记。Phase 3 的自动视频生成仍未实现，已有资产播放和自动生成继续按两条能力线记录。

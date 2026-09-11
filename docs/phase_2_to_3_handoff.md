@@ -2,7 +2,7 @@
 
 > 本文保留 Phase 2 → Phase 3 的历史交接与旧 Prompt，不再作为当前开发指令。2026-09-09：Phase 3、Phase 4-1 至 4-4 已完成，`LINLI-PLAY-001` 已修复并通过实机验收；下文“必须保留的阻塞”和“进入/恢复调查”均为历史快照。新任务应使用 [Phase 3 → Phase 4 交接](./phase_3_to_4_handoff.md) 及 [Phase 4 总览](./phase4.md)，下一步是 Phase 4-5 调研与设计。首次安装补丁整合等仍未完成的事项见[游戏接入](./original-installation.md#当前交付边界2026-09-09)。
 
-> 2026-09-11 现状补充：本页历史 Prompt 中关于等待 `LINLI-PLAY-001`、预设歌单和实机播放的描述不代表当前阻塞。实验分支的 `f51d630`、`c18de54` 已完成对应收尾修复并由用户确认 Steam 最终验收通过；当前任务入口和未完成边界以 [Phase 3 → Phase 4 交接](./phase_3_to_4_handoff.md)、[Phase 4 总览](./phase4.md) 和 README 为准。
+> 2026-09-11 现状补充：本页历史 Prompt 中关于等待 `LINLI-PLAY-001`、预设歌单和实机播放的描述不代表当前阻塞。收尾提交 `f51d630`、`c18de54` 已完成对应修复并由用户确认 Steam 最终验收通过；当前任务入口和未完成边界以 [Phase 3 → Phase 4 交接](./phase_3_to_4_handoff.md)、[Phase 4 总览](./phase4.md) 和 README 为准。
 
 ## 1. 项目定位与不可变约束
 

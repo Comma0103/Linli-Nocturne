@@ -39,7 +39,7 @@
 
 ## 2026-09-11 收尾记录
 
-本分支后续提交 `f51d630`、`c18de54` 分别修复预设歌单元数据/封面回退和 MIDI 每日用量 bypass；完整自动化回归为 `pnpm test` 143/143，串行测试 143/143，`git diff --check` 通过。代码改动仍只在实验分支。
+本分支后续提交 `f51d630`、`c18de54` 分别修复预设歌单元数据/封面回退和 MIDI 每日用量 bypass；完整自动化回归为 `pnpm test` 143/143，串行测试 143/143，`git diff --check` 通过。相关代码已合入 `main`，并由 `phase4-steam-acceptance-v1.0.0` 标记。
 
 在用户明确授权并确认游戏退出后，验收流程将已验证的 `feapp.dat` 前端补丁部署到真实 Steam `0.0.9.627`，保留外置备份和 SHA-256 记录，未修改 `version.json` 或 `NutStudioUI.dll`。用户随后确认预设歌单旧/新曲目、在线第四套写信、MIDI/歌单演奏和三条合成视频回信播放均通过。
 
@@ -49,7 +49,7 @@
 
 本轮按“远程仓库干净 clone → 安装 → 启动 → 调用功能”的路径复核：
 
-- 使用实验分支的干净 clone 执行 `pnpm install --frozen-lockfile`，锁文件通过，依赖可安装。
+- 使用收尾提交的干净 clone 执行 `pnpm install --frozen-lockfile`，锁文件通过，依赖可安装。
 - 不创建任何本地配置时启动服务，`/health`、`/toy/signIn`、信件列表、曲单、用户曲目、MIDI 任务和视频回信管理页均返回预期响应；加入歌单和发送信件的网关请求也通过。
 - 复制 `config/user-config.example.json` 后再次启动；将 `letters.dailyLimitBypass` 临时设为 `true`，离线人格回信完整生成，正文、状态和剩余额度字段符合协议。默认关闭 bypass 时保留每日额度和五分钟等待，这是模板的预期行为。
 - 当前源码通过 `pnpm test` 143/143、`node --test --test-concurrency=1` 143/143、全部 JavaScript/Python 语法检查和 Markdown 相对链接检查；版本库未跟踪私有配置、数据目录、日志、媒体或 API Key。

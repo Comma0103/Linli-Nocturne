@@ -99,9 +99,9 @@ const adapter = createConfiguredModelAdapter({
 
 ### 2026-09-11：第四套在线配置收尾复核
 
-本轮实验分支将本机 Steam 测试默认保持为 DeepSeek + `linli.persona-bundle` + `linli.fusion-v1` + `olivia-soul.sqlite`，外部模型超时为 180000 毫秒，`fallbackEnabled=false`。最新在线信件 `68ab08d0-c87a-4b6e-9a46-e8500c846323` 的 `precheck`、`draft`、`check`、`rewrite`、`recheck` 全部完成，执行记录标记实际 provider 为 `external-api`，无 fallback 或 provider 失败；记忆上下文也已写入并可读取。
+2026-09-11 在线复核使用 DeepSeek + `linli.persona-bundle` + `linli.fusion-v1` + `olivia-soul.sqlite`，外部模型超时为 180000 毫秒，`fallbackEnabled=false`。在线信件 `68ab08d0-c87a-4b6e-9a46-e8500c846323` 的 `precheck`、`draft`、`check`、`rewrite`、`recheck` 全部完成，执行记录标记实际 provider 为 `external-api`，无 fallback 或 provider 失败；记忆上下文也已写入并可读取。
 
-同一轮复核确认 `letters.dailyLimitBypass=true` 由启动装配同时传给 LetterService 和 MidiJobService。它只改变本地测试的每日用量显示与等待限制，不改变游戏协议；MIDI 批量结果实测返回 `generatedToday=0`、`dailyLimit=3`。用户已在 Steam 中完成对应在线写信和定制演奏回归，并确认本轮最终验收通过。私有配置和密钥仍不进入仓库，实验分支提交 `c18de54` 尚未合并 `main`。
+同一轮复核确认 `letters.dailyLimitBypass=true` 由启动装配同时传给 LetterService 和 MidiJobService。它只改变本地测试的每日用量显示与等待限制，不改变游戏协议；MIDI 批量结果实测返回 `generatedToday=0`、`dailyLimit=3`。用户已在 Steam 中完成对应在线写信和定制演奏回归，并确认本轮最终验收通过。私有配置和密钥仍不进入仓库，实验分支提交 `c18de54` 已随 `phase4-steam-acceptance-v1.0.0` 合入 `main`。
 
 ## 本轮完成边界
 

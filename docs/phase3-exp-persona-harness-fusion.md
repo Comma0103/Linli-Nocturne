@@ -173,9 +173,9 @@ SQLite 已持久化到硬盘，使用现有配置的数据目录即可跨进程�
 
 ### 5.3 2026-09-11：第四套配置与 bypass 收尾
 
-实验分支的最终在线复核使用 DeepSeek + `linli.persona-bundle` + `linli.fusion-v1` + `olivia-soul.sqlite`，关闭 fallback 并把外部模型超时设为 180000 毫秒。新信的五个 Harness 阶段均完成，执行记录标记实际 provider 为 `external-api`，并确认记忆上下文可跨重启读取；用户随后在 Steam 中确认在线写信正文显示正常。
+2026-09-11 的最终在线复核使用 DeepSeek + `linli.persona-bundle` + `linli.fusion-v1` + `olivia-soul.sqlite`，关闭 fallback 并把外部模型超时设为 180000 毫秒。新信的五个 Harness 阶段均完成，执行记录标记实际 provider 为 `external-api`，并确认记忆上下文可跨重启读取；用户随后在 Steam 中确认在线写信正文显示正常。
 
-同一轮修复 `letters.dailyLimitBypass=true` 的装配遗漏，使 LetterService 与 MidiJobService 共用该测试策略。信件和 MIDI 都不会因本地测试递减每日用量，MIDI 批量结果仍保留协议上限 `dailyLimit=3`。本次验收结论只针对该配置、该客户端版本和当前实验分支，不把历史 `offline-fallback` 信件记录改写成在线结果。
+同一轮修复 `letters.dailyLimitBypass=true` 的装配遗漏，使 LetterService 与 MidiJobService 共用该测试策略。信件和 MIDI 都不会因本地测试递减每日用量，MIDI 批量结果仍保留协议上限 `dailyLimit=3`。本次验收结论只针对该配置和该客户端版本，不把历史 `offline-fallback` 信件记录改写成在线结果。
 
 ## 6. 实施顺序与预计文件
 

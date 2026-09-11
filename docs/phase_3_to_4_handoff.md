@@ -4,7 +4,7 @@
 >
 > 2026-09-09 本轮盘点开始时，已用 `git ls-remote` 确认远端 `main` 与本地 HEAD 均为 `b5927f1931d793b97ca5e3cf34df1f69a532ca5f`，用户手动推送成功。Phase 4-1 至 4-4 已完成；歌单名称/演奏及最终 localhost 试听均已由用户实机确认，自动化验收见 Phase 4-2。Phase 3 融合已通过 `phase3-letter-fusion-v1.0.0` 合入；原交接快照 `615ff80` 仅作历史参考。此哈希是本次收尾改动前的核对点；接手时仍须核对分支、提交、工作区和测试，不把文档验收记录当作后续改动已推送的证明。
 
-> 2026-09-11 收尾补充：当前实验分支 `exp/ponytail-release-optimization` 已完成 `f51d630`、`c18de54` 的代码回归和 Steam `0.0.9.627` 用户最终验收。预设歌单元数据/封面回退、第四套在线配置、MIDI bypass、三条合成视频回信播放均已确认；这些提交仍在实验分支，后续合并 `main` 和打标签必须由用户另行明确授权。
+> 2026-09-11 收尾补充：`f51d630`、`c18de54` 已完成代码回归和 Steam `0.0.9.627` 用户最终验收。预设歌单元数据/封面回退、第四套在线配置、MIDI bypass、三条合成视频回信播放均已确认；这些提交已合入 `main`，并由 `phase4-steam-acceptance-v1.0.0` 标记。
 
 > Phase 3 融合补充（2026-09-08）：新称呼规则、可选时间/天气、自然收尾及弹性篇幅见 [融合实验 §5.2](./phase3-exp-persona-harness-fusion.md#52-steam-调试增量书信格式兜底)。用户已完成对应 Steam 离线/在线复验，成果已合入 `main`。
 
@@ -123,7 +123,7 @@ Persona/Harness 位于基础模型之上，不是与外部 API、本地模型互
 | 音乐配置是否生效 | 已完成：`loadUserConfig()` 会把 `music/media/threeD` 选择合入运行设置，local-app 会把所选 Renderer、PlaybackAdapter 和 Encoder 装配进 `MidiJobService`；有回归测试覆盖。 |
 | 时区是否完整传入 | 已完成：local-app 将用户时区传给 `LetterService` 和 `MidiJobService`，非默认时区日界线有回归测试覆盖。 |
 | 媒体格式是否一致 | 编码器声明的扩展名和 MIME 随成功任务保存，旧记录按原文件后缀恢复；更换编码器后，旧文件仍保持自己的后缀和 GET/HEAD/Range 响应类型。第三方输出的独立格式检查仍待补齐，不能把内置编码器验收推广到所有第三方实现。 |
-| 取消与恢复的深度 | 已有 `queued/processing` 后台处理、MIDI 输入持久化、协作式取消及重启恢复；数字状态映射遗漏已修复。Phase 4-2 历史收尾为 133/133；当前 `f51d630`、`c18de54` 后完整测试为 142/142；第三方 Renderer 是否支持强制中断仍取决于其实现。 |
+| 取消与恢复的深度 | 已有 `queued/processing` 后台处理、MIDI 输入持久化、协作式取消及重启恢复；数字状态映射遗漏已修复。Phase 4-2 历史收尾为 133/133；收尾提交后完整测试为 143/143；第三方 Renderer 是否支持强制中断仍取决于其实现。 |
 | 能力声明与实际实现 | ModuleRegistry 当前提供 ID、版本、标签、描述和工厂；RenderJob 是数据/状态模型，不是用户可选择的插件。threeD 仍是预留设置，尚无默认 3D 注册实现。模板中的 game/privacy 字段也不能仅因存在就视为已完整执行。 |
 | 信件 fallback 边界 | module-runtime 对 standalone Harness 显式关闭外层 fallback；不能把普通 provider 的降级测试推广成所有 Harness 组合的保证。保留已验收信件链路，涉及公共设置时补对应回归。 |
 
