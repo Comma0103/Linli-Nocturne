@@ -1,9 +1,10 @@
 import { createLocalApp } from '../src/app/local-app.js';
+import { fileURLToPath } from 'node:url';
 
 const app = createLocalApp({
-  dataRoot: process.env.LINLI_DATA_ROOT ?? 'data',
-  settingsPath: process.env.LINLI_MODULE_SETTINGS ?? 'config/module-settings.json',
-  userConfigPath: process.env.LINLI_USER_CONFIG ?? 'config/user-config.json',
+  dataRoot: process.env.LINLI_DATA_ROOT ?? fileURLToPath(new URL('../data', import.meta.url)),
+  settingsPath: process.env.LINLI_MODULE_SETTINGS ?? fileURLToPath(new URL('../config/module-settings.json', import.meta.url)),
+  userConfigPath: process.env.LINLI_USER_CONFIG ?? fileURLToPath(new URL('../config/user-config.json', import.meta.url)),
   host: process.env.LINLI_HOST ?? '127.0.0.1',
   port: Number(process.env.LINLI_PORT) || 27149,
 });

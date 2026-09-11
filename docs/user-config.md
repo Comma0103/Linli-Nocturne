@@ -2,6 +2,10 @@
 
 `config/user-config.json` 是普通用户的私有运行配置。它从 `config/user-config.example.json` 复制而来，已被 Git 忽略；只修改自己的配置文件，不要修改模板，也不要把它提交到仓库。
 
+本地启动脚本的默认配置和数据路径以项目目录为基准，不受启动时工作目录影响。`LINLI_USER_CONFIG`、`LINLI_MODULE_SETTINGS` 和 `LINLI_DATA_ROOT` 仍可显式覆盖路径。
+
+在线验收如需禁止离线兜底，可在自己的第四套配置中设置 `letters.fallbackEnabled: false`。耗时较长的模型可显式设置 `letters.baseModel.external.timeoutMs`（毫秒，例如 `180000`）；未设置时当前 OpenAI 兼容 provider 使用 15000 毫秒。单次请求超时与 `letters.harness.timeoutMs` 的整个流程超时是两项不同限制。修改后需重启服务；实际成功应以执行记录中的在线 provider、Harness 各阶段和记忆元数据确认。
+
 README 只介绍通用启动流程。本页先解释所有配置属性，再按信件、预设曲库和上传曲子等功能给出配置示例。配置保存后必须重启本地服务。
 
 当前主分支提供 `olivia-lin.offline`、`linli.persona-bundle`、`linli.fusion-v1` 和 `persona-contract`；这些资产已随仓库提供，不需要另行下载。
