@@ -53,12 +53,13 @@ export function createLocalApp({ dataRoot = 'data', settingsPath = 'config/modul
     encoder: { ...envOptions(env).encoder, ...userConfig.options.encoder },
   } : envOptions(env);
   const runtime = resolveModuleSelections(settings, { registries, options: runtimeOptions });
+  const bypass = userConfig?.bypass ?? env.LINLI_BYPASS === 'true';
   const letterService = new LetterService({
     store, modelAdapter: runtime.letters.modelAdapter, memoryProvider: runtime.letters.memoryProvider,
     personaProvider: runtime.letters.personaProvider, outputPolicy: runtime.letters.outputPolicy, conversationId: userConfig?.conversationId ?? 'default',
     timeZone: userConfig?.timeZone ?? env.LINLI_TIME_ZONE ?? 'Asia/Shanghai',
     userDisplayName: userConfig?.userDisplayName ?? env.LINLI_USER_DISPLAY_NAME ?? '',
-    limits: { bypass: userConfig?.bypass ?? env.LINLI_BYPASS === 'true' },
+    limits: { bypass },
   });
   const letterWorker = new LetterWorker({ letterService, intervalMs: Number(env.LINLI_WORKER_INTERVAL_MS) || 1_000 });
   const videoReplyService = new VideoReplyService({ store, mediaRoot: join(dataRoot, 'video-media'), importAdapter: runtime.media.videoImporter ?? registries.videoImporter.resolve('builtin.ffprobe.mp4', envOptions(env).videoImporter) });
@@ -69,6 +70,7 @@ export function createLocalApp({ dataRoot = 'data', settingsPath = 'config/modul
   const midiJobService = new MidiJobService({
     store, mediaRoot: join(dataRoot, 'midi-media'), renderer: runtime.music.renderer,
     playbackAdapter: runtime.music.playbackAdapter, mediaEncoder: runtime.music.mediaEncoder,
+    bypass,
     timeZone: userConfig?.timeZone ?? env.LINLI_TIME_ZONE ?? 'Asia/Shanghai',
     mediaExtension: runtime.music.mediaEncoder?.extension,
     mediaContentType: runtime.music.mediaEncoder?.contentType,

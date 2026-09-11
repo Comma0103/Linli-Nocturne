@@ -131,7 +131,7 @@ test('用户配置的音乐选择、时区和编码器媒体契约进入本地�
   await import('node:fs/promises').then(({ writeFile }) => writeFile(filename, JSON.stringify({
     version: 1,
     user: { displayName: '嘉树', timeZone: 'America/Los_Angeles' },
-    letters: { baseModel: { provider: 'offline-fallback' } },
+    letters: { baseModel: { provider: 'offline-fallback' }, dailyLimitBypass: true },
     music: { renderer: 'builtin.audio', playbackAdapter: 'generic', encoder: 'builtin.audio-only-mp4' },
   }), 'utf8'));
   const app = createLocalApp({ dataRoot: join(root, 'data'), userConfigPath: filename, port: 0 });
@@ -141,5 +141,8 @@ test('用户配置的音乐选择、时区和编码器媒体契约进入本地�
   assert.equal(app.midiJobService.mediaContentType, 'video/mp4');
   assert.equal(app.settings.letters.memory, 'sqlite');
   assert.equal(app.letterService.memoryProvider.enabled, true);
+  assert.equal(app.letterService.limits.bypass, true);
+  assert.equal(app.midiJobService.bypass, true);
+  assert.equal(app.midiJobService.dailyUsage().generatedToday, 0);
   await app.stop();
 });

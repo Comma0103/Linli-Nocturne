@@ -15,9 +15,10 @@ function renderJobFor(jobId, filename, renderer, clock) {
 }
 
 export class MidiJobService {
-  constructor({ clock = () => new Date(), timeZone = DEFAULT_TIME_ZONE, store = null, mediaRoot = null, playbackBaseUrl = '', mediaEncoder = null, mediaExtension = null, mediaContentType = null, nativeUgcMediaStore = null, renderer = new BuiltinAudioRenderer(), playbackAdapter = new OliviaLinPlaybackAdapter() } = {}) {
+  constructor({ clock = () => new Date(), timeZone = DEFAULT_TIME_ZONE, bypass = false, store = null, mediaRoot = null, playbackBaseUrl = '', mediaEncoder = null, mediaExtension = null, mediaContentType = null, nativeUgcMediaStore = null, renderer = new BuiltinAudioRenderer(), playbackAdapter = new OliviaLinPlaybackAdapter() } = {}) {
     this.clock = clock;
     this.dayBoundary = createDayBoundary(timeZone);
+    this.bypass = Boolean(bypass);
     this.store = store;
     this.mediaRoot = mediaRoot;
     this.inputRoot = mediaRoot ? join(mediaRoot, 'inputs') : null;
@@ -212,7 +213,7 @@ export class MidiJobService {
   batch(ids = []) { return { list: ids.map(id => this.get(id)).filter(Boolean) }; }
   dailyUsage() {
     const { startIso, endIso } = this.dayBoundary(this.clock()); const generatedToday = this.store ? this.store.countFinishedMidiJobsBetween(startIso, endIso) : [...this.jobs.values()].filter(job => job.state === 'finished' && job.createdAt >= startIso && job.createdAt < endIso).length;
-    return { generatedToday, dailyLimit: 3 };
+    return { generatedToday: this.bypass ? 0 : generatedToday, dailyLimit: 3 };
   }
   cancel(jobId) {
     const id = String(jobId); const job = this.get(id); if (!job || TERMINAL.has(job.state)) return job;

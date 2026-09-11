@@ -12,6 +12,7 @@ test('信件与 MIDI 在配置时区的午夜同步重置，数据库和内存�
   const options = { store, clock: () => now, timeZone: 'Asia/Shanghai' };
   const letters = new LetterService(options);
   const midi = new MidiJobService(options);
+  const bypassMidi = new MidiJobService({ ...options, bypass: true });
   const memoryMidi = new MidiJobService({ ...options, store: null });
   const job = { jobId: '昨日曲目', state: 'finished', filename: '样例.mid', createdAt: now.toISOString() };
   store.insertMidiJob(job);
@@ -20,6 +21,8 @@ test('信件与 MIDI 在配置时区的午夜同步重置，数据库和内存�
   assert.equal(letters.remainingToday(), 0);
   assert.throws(() => letters.send({ body: '超过额度' }), { code: 'daily_limit' });
   assert.equal(midi.dailyUsage().generatedToday, 1);
+  assert.equal(bypassMidi.dailyUsage().generatedToday, 0, 'bypass 模式不向客户端消耗定制演奏额度');
+  assert.equal(bypassMidi.dailyUsage().dailyLimit, 3);
   assert.deepEqual(memoryMidi.dailyUsage(), midi.dailyUsage());
 
   now = new Date('2026-09-06T16:00:00.000Z');
