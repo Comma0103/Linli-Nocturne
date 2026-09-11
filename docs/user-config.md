@@ -4,6 +4,8 @@
 
 本地启动脚本的默认配置和数据路径以项目目录为基准，不受启动时工作目录影响。`LINLI_USER_CONFIG`、`LINLI_MODULE_SETTINGS` 和 `LINLI_DATA_ROOT` 仍可显式覆盖路径。
 
+默认 MIDI MP4 编码和视频回信导入依赖 FFmpeg 发行版中的 `ffmpeg`、`ffprobe`，需要让它们在 PATH 中可执行；也可以用 `LINLI_FFMPEG_PATH`、`LINLI_FFPROBE_PATH` 指定路径。离线人格 provider 另外需要 Python 3；只使用 WAV、最简 fallback 或不导入视频时可不安装对应的可选工具。
+
 在线验收如需禁止离线兜底，可在自己的第四套配置中设置 `letters.fallbackEnabled: false`。耗时较长的模型可显式设置 `letters.baseModel.external.timeoutMs`（毫秒，例如 `180000`）；未设置时当前 OpenAI 兼容 provider 使用 15000 毫秒。单次请求超时与 `letters.harness.timeoutMs` 的整个流程超时是两项不同限制。修改后需重启服务；实际成功应以执行记录中的在线 provider、Harness 各阶段和记忆元数据确认。
 
 本机后续 Steam 测试默认使用第四套组合：DeepSeek 外部 provider、`linli.persona-bundle`、`linli.fusion-v1` 和 `olivia-soul.sqlite` 持久记忆，关闭 fallback，并把外部模型超时设为 180000 毫秒。测试时可将 `letters.dailyLimitBypass` 设为 `true`；该开关同时覆盖写信和 MIDI 定制演奏的每日用量显示，客户端仍保留 `dailyLimit=3` 作为协议上限。私有 `config/user-config.json` 已被 Git 忽略，API Key 不写入本文或提交；示例模板继续保持无密钥、可离线启动。

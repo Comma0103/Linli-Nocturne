@@ -25,6 +25,20 @@ test('开发版本地服务入口可以启动 Worker 和兼容网关', async () 
   } finally { await app.stop(); }
 });
 
+test('同一数据目录的第二个服务在绑定端口前被锁拒绝', async () => {
+  const root = mkdtempSync(join(tmpdir(), 'linli-local-app-lock-'));
+  const first = createLocalApp({ dataRoot: root, settingsPath: join(root, 'missing-settings.json'), port: 0 });
+  const second = createLocalApp({ dataRoot: root, settingsPath: join(root, 'missing-settings.json'), port: 0 });
+  await first.start();
+  try {
+    await assert.rejects(() => second.start(), /已有运行中的服务/u);
+    assert.equal(second.server.listening, false);
+  } finally {
+    await second.stop();
+    await first.stop();
+  }
+});
+
 test('真实启动入口可加入歌单，自动填时间，重复加入和重启后移除都正确', async () => {
   const root = mkdtempSync(join(tmpdir(), 'linli-app-playlist-'));
   const options = { dataRoot: root, settingsPath: join(root, 'missing.json'), port: 0, env: {} };

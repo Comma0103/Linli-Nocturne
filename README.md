@@ -84,6 +84,8 @@ Windows：winget install Python.Python.3.11
 Linux（Debian/Ubuntu）：sudo apt install python3
 ```
 
+默认的 MIDI MP4 编码和视频回信导入还需要 FFmpeg（同时提供 `ffmpeg` 与 `ffprobe`），并把这两个命令加入 PATH；也可以分别设置 `LINLI_FFMPEG_PATH` 和 `LINLI_FFPROBE_PATH` 指向可执行文件。只使用 WAV、最简 fallback 或不导入视频时不需要这两个工具。
+
 在 Windows 10/11、macOS 或 Linux 上均可运行本地服务；接入游戏还需要安装《BSide: Olivia Lin》本体。
 
 ```powershell

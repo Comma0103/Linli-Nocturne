@@ -83,8 +83,6 @@ export function createLocalApp({ dataRoot = 'data', settingsPath = 'config/modul
     settings, store, letterService, letterWorker, videoReplyService, midiJobService, server,
     async start() {
       await mkdir(dataRoot, { recursive: true });
-      await new Promise((resolve, reject) => { server.once('error', reject); server.listen(port, host, resolve); });
-      address = server.address();
       if (existsSync(lockPath)) {
         const owner = JSON.parse(readFileSync(lockPath, 'utf8'));
         let active = true;
@@ -92,7 +90,19 @@ export function createLocalApp({ dataRoot = 'data', settingsPath = 'config/modul
         if (active) throw new Error('此数据目录已有运行中的服务。');
         unlinkSync(lockPath);
       }
-      writeFileSync(lockPath, JSON.stringify({ pid: process.pid, id: lockId }), { flag: 'wx' });
+      try {
+        writeFileSync(lockPath, JSON.stringify({ pid: process.pid, id: lockId }), { flag: 'wx' });
+      } catch (error) {
+        if (error?.code === 'EEXIST') throw new Error('此数据目录已有运行中的服务。');
+        throw error;
+      }
+      try {
+        await new Promise((resolve, reject) => { server.once('error', reject); server.listen(port, host, resolve); });
+        address = server.address();
+      } catch (error) {
+        if (existsSync(lockPath) && JSON.parse(readFileSync(lockPath, 'utf8')).id === lockId) unlinkSync(lockPath);
+        throw error;
+      }
       letterWorker.start();
       return { host, port: address.port, serviceUrl: `http://localhost:${address.port}` };
     },
