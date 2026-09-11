@@ -36,9 +36,11 @@ test('frontend patch can opt into the audited MIDI routes', () => {
 });
 
 test('frontend patch applies audited offline feature gates only when all signatures match', () => {
-  const offlineSource = [...endpoints, ...midiEndpoints].map(endpoint => `fetch("${endpoint}")`).concat([
+  const offlineSource = [...endpoints, ...midiEndpoints].filter(endpoint => !['/addToPlaylist', '/searchPlaylist'].includes(endpoint)).map(endpoint => `fetch("${endpoint}")`).concat([
     ...OFFLINE_FEATURE_PATCHES.flatMap(patch => Array.from({ length: patch.expected }, () => patch.from)),
     'const i=h1(xs(At(t)?s:t)).map(a=>Qo(a)),',
+    'async function An(e,t){return Te.post("/addToPlaylist",{itemType:e.itemType,itemId:e.itemId},t).then(s=>{const i=s.data;return i})}',
+    'async function Us(e,t){return Te.get("/searchPlaylist").then(s=>({list:s.data.list.map(i=>({...i,itemId:i.itemId,id:i.itemId}))}))}',
   ]).join(';');
   const fixtureWithOfflineGates = zipSync({ 'assets/main-offline.js': strToU8(offlineSource) });
   const result = applyFrontendPatch(fixtureWithOfflineGates, { serviceUrl: 'http://127.0.0.1:27149', includeMidi: true, includeOfflineFeatures: true });

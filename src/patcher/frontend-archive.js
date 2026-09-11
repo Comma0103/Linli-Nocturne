@@ -110,6 +110,20 @@ export function applyOfflineMidiFeaturePatch(buffer) {
   return applyKnownPatchSet(buffer, [...OFFLINE_USER_SONG_PATCHES, ...OFFLINE_MIDI_SUBMIT_PATCHES.filter(patch => patch.id !== 'offline-preview-local-media')], 'Offline MIDI feature patch');
 }
 
+// The offline catalog already owns preset metadata. Keep the local playlist's
+// identity and timestamp while restoring the fields the ID-only API drops.
+const PRESET_PLAYLIST_ITEM = 'function linliPresetPlaylistItem(e){const t=Ie().isOfflineMode&&e.itemType===pt.PGC_SONG?Yn().songs.find(t=>String(t.id)===String(e.itemId)):null;return t?{...e,name:t.name,nameKey:t.nameKey,songId:String(t.id),iconUrl:t.iconUrl??"",duration:t.duration??t.audioDuration??0,videoDuration:t.videoDuration??t.duration??0,videoUrl:t.videoUrl??"",videoByTodView:t.videoByTodView,performanceType:t.performanceType??""}:e}';
+const OFFLINE_PRESET_PLAYLIST_PATCHES = [
+  { id: 'preset-playlist-add-load', from: 'async function An(e,t){return Te.post(', to: PRESET_PLAYLIST_ITEM + 'async function An(e,t){if(Ie().isOfflineMode&&e.itemType===pt.PGC_SONG)await Yn().load();return Te.post(', expected: 1 },
+  { id: 'preset-playlist-add-metadata', from: '{itemType:e.itemType,itemId:e.itemId},t).then(s=>{const i=s.data;', to: 'linliPresetPlaylistItem({itemType:e.itemType,itemId:e.itemId}),t).then(s=>{const i=s.data;', expected: 1 },
+  { id: 'preset-playlist-list-load', from: 'async function Us(e,t){return Te.get(', to: 'async function Us(e,t){if(Ie().isOfflineMode)await Yn().load();return Te.get(', expected: 1 },
+  { id: 'preset-playlist-list-metadata', from: 'list:s.data.list.map(i=>({...i,itemId:i.itemId,', to: 'list:s.data.list.map(linliPresetPlaylistItem).map(i=>({...i,itemId:i.itemId,', expected: 1 },
+];
+
+export function applyOfflinePresetPlaylistPatch(buffer) {
+  return applyKnownPatchSet(buffer, OFFLINE_PRESET_PLAYLIST_PATCHES, 'Offline preset playlist patch');
+}
+
 function applyOfflinePreviewPatch(source, serviceUrl) {
   const patch = OFFLINE_MIDI_SUBMIT_PATCHES.find(item => item.id === 'offline-preview-local-media');
   if (!patch || occurrenceCount(source, patch.from) !== 1) return source;
@@ -172,5 +186,6 @@ export function applyFrontendPatch(buffer, options) {
     source = applyOfflinePreviewPatch(source, plan.serviceUrl);
   }
   const entries = { ...inspected.entries, [plan.mainPath]: strToU8(source) };
-  return { ...plan, alreadyPatched: false, buffer: zipSync(entries, { level: 6 }) };
+  const patchedBuffer = zipSync(entries, { level: 6 });
+  return { ...plan, alreadyPatched: false, buffer: plan.includeOfflineFeatures ? applyOfflinePresetPlaylistPatch(patchedBuffer).buffer : patchedBuffer };
 }
